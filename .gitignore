@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.test
+*.log
+uploads/
+
+# Docker volumes
+postgres_data/
+redis_data/
+caddy_data/
+caddy_config/
+
+# Medusa
+.medusa/
+backend/.medusa/
+
+# Backup (dev only)
+_backup/
