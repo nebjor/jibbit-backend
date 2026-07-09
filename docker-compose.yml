@@ -1,0 +1,113 @@
+# jibbit.ch — Lokales Development Environment
+# Stack: MedusaJS v2 + PostgreSQL 16 + Redis 7 + Caddy (Reverse Proxy + Auto-SSL)
+#
+# Usage:
+#   docker compose up -d          → Alle Services starten
+#   docker compose logs -f medusa → Medusa Logs verfolgen
+#   docker compose down           → Alles stoppen
+
+services:
+  # ─── PostgreSQL 16 ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: jibbit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: medusa
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medusa_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis 7 ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: jibbit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── MedusaJS v2 Backend ───────────────────────────────────────
+  medusa:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jibbit-medusa
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Core
+      DATABASE_URL: postgres://medusa:${POSTGRES_PASSWORD:-medusa_dev_password}@postgres:5432/medusa
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: ${NODE_ENV:-development}
+
+      # CORS (Storefront + Admin)
+      STORE_CORS: ${STORE_CORS:-http://localhost:8000}
+      ADMIN_CORS: ${ADMIN_CORS:-http://localhost:5173,http://localhost:9000}
+      AUTH_CORS: ${AUTH_CORS:-http://localhost:5173,http://localhost:8000}
+
+      # Medusa
+      MEDUSA_BACKEND_URL: ${MEDUSA_BACKEND_URL:-http://localhost:9000}
+
+      # Payrexx
+      PAYREXX_INSTANCE: ${PAYREXX_INSTANCE}
+      PAYREXX_API_SECRET: ${PAYREXX_API_SECRET}
+      PAYREXX_WEBHOOK_SECRET: ${PAYREXX_WEBHOOK_SECRET}
+      PAYREXX_ENABLED_PSPS: ${PAYREXX_ENABLED_PSPS:-}
+
+      # Store URL für Redirects
+      STORE_URL: ${STORE_URL:-http://localhost:8000}
+
+      # SMTP (Infomaniak oder Resend)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@jibbit.ch}
+    ports:
+      - "9000:9000"
+    volumes:
+      - medusa_data:/app/uploads
+
+  # ─── Caddy (Reverse Proxy + Auto-SSL) ─────────────────────────
+  # In Produktion: Automatisch Let's Encrypt Zertifikate
+  # Lokal: HTTP-only (kein TLS nötig)
+  caddy:
+    image: caddy:2-alpine
+    container_name: jibbit-caddy
+    restart: unless-stopped
+    depends_on:
+      - medusa
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  redis_data:
+  medusa_data:
+  caddy_data:
+  caddy_config:

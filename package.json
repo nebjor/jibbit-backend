@@ -1,0 +1,22 @@
+{
+  "name": "jibbit-ch",
+  "version": "0.0.1",
+  "private": true,
+  "description": "jibbit.ch — Swiss headless e-commerce (MedusaJS v2 monorepo)",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=backend",
+    "dev:storefront": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=backend",
+    "build:storefront": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=backend",
+    "seed": "npm run seed --workspace=backend",
+    "db:migrate": "cd backend && npx medusa db:migrate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,195 @@
+openapi: 3.1.0
+info:
+  title: jibbit.ch — Payrexx Payment Provider API
+  description: |
+    Spezifikation der Payrexx-Integration für jibbit.ch.
+    Beschreibt den Payment-Flow (TWINT + Powerpay), Webhook-Handling und Security.
+  version: 1.0.0
+  contact:
+    name: jibbit.ch
+    url: https://jibbit.ch
+
+servers:
+  - url: https://api.jibbit.ch
+    description: Production
+  - url: http://localhost:9000
+    description: Local Development
+
+paths:
+  /hooks/payment/payrexx:
+    post:
+      operationId: handlePayrexxWebhook
+      summary: Payrexx Webhook Endpoint
+      description: |
+        Empfängt Webhook-Events von Payrexx bei Statusänderungen.
+        Validiert HMAC-SHA256 Signatur und verarbeitet das Event idempotent.
+      security: []
+      parameters:
+        - name: payrexx-signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 Signatur des Request Body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayrexxWebhookEvent"
+      responses:
+        "200":
+          description: Webhook erfolgreich verarbeitet
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        "400":
+          description: Ungültige Signatur oder Payload
+        "409":
+          description: Duplicate Webhook (Idempotency)
+
+  /store/payment-collections/{id}/payment-sessions:
+    post:
+      operationId: initiatePayrexxPayment
+      summary: Payment Session (Payrexx Gateway) erstellen
+      description: |
+        Erstellt einen Payrexx Gateway mit TWINT/Powerpay.
+        Gibt eine Redirect-URL zurück.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - provider_id
+              properties:
+                provider_id:
+                  type: string
+                  example: pp_payrexx_payrexx
+                context:
+                  type: object
+                  properties:
+                    customer:
+                      $ref: "#/components/schemas/CustomerContext"
+      responses:
+        "200":
+          description: Payment Session erstellt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentSessionResponse"
+
+components:
+  schemas:
+    PayrexxWebhookEvent:
+      type: object
+      required:
+        - transaction
+      properties:
+        transaction:
+          type: object
+          required:
+            - id
+            - status
+            - amount
+          properties:
+            id:
+              type: integer
+              description: Payrexx Transaction ID
+            status:
+              type: string
+              enum:
+                - waiting
+                - confirmed
+                - cancelled
+                - declined
+                - refunded
+                - partially-refunded
+                - error
+            amount:
+              type: integer
+              description: Betrag in Rappen (cents)
+            referenceId:
+              type: string
+              description: Medusa Payment Session ID
+            psp:
+              type: string
+              description: Verwendeter PSP (z.B. twint, powerpay)
+            time:
+              type: string
+              format: date-time
+
+    CustomerContext:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+
+    PaymentSessionResponse:
+      type: object
+      properties:
+        payment_session:
+          type: object
+          properties:
+            id:
+              type: string
+            provider_id:
+              type: string
+            data:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: Payrexx Gateway ID
+                hash:
+                  type: string
+                  description: Gateway Hash
+                link:
+                  type: string
+                  format: uri
+                  description: Redirect-URL für TWINT/Powerpay Bezahlung
+                status:
+                  type: string
+                referenceId:
+                  type: string
+
+    ShippingRate:
+      type: object
+      description: |
+        Schweizer Versandlogik:
+        - Fixpreis: CHF 9.00
+        - Ab CHF 100.00 Warenwert: CHF 0.00 (Gratisversand)
+      properties:
+        amount:
+          type: integer
+          description: Versandkosten in Rappen
+          example: 900
+        currency:
+          type: string
+          example: CHF
+        is_free:
+          type: boolean
+          description: true wenn Warenwert >= 100.00 CHF
+
+  securitySchemes:
+    payrexxHmac:
+      type: apiKey
+      in: header
+      name: payrexx-signature
+      description: HMAC-SHA256 Signatur

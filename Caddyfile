@@ -1,0 +1,45 @@
+# ─── Produktion: jibbit.ch ────────────────────────────────────
+# Caddy generiert automatisch Let's Encrypt Zertifikate.
+# Für lokales Testing: ersetze Domain durch :80
+
+{
+	# Email für Let's Encrypt ACME
+	email admin@jibbit.ch
+}
+
+# API Backend
+api.jibbit.ch {
+	reverse_proxy medusa:9000
+
+	# Security Headers
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-XSS-Protection "0"
+		-Server
+	}
+
+	# Webhook-Endpoint: Keine Rate-Limits (Payrexx Retries)
+	handle /hooks/payment/* {
+		reverse_proxy medusa:9000
+	}
+}
+
+# Storefront (Next.js)
+jibbit.ch, www.jibbit.ch {
+	# In Produktion: reverse_proxy zum Next.js Container
+	# Für jetzt: Platzhalter
+	respond "jibbit.ch Storefront — coming soon" 200
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://media.payrexx.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.jibbit.ch https://api.payrexx.com;"
+		X-XSS-Protection "0"
+		-Server
+	}
+}
