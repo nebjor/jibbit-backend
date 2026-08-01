@@ -12,13 +12,17 @@
  * - HMAC-SHA256 Webhook-Signatur-Validierung (Header: X-Webhook-Signature)
  * - Plausibilitätsprüfung der Beträge (> 0, endlich) beim Gateway-Erstellen
  *   und beim Webhook-Eingang
- * - Idempotency via processedWebhooks Set (in-memory! → in Produktion Redis)
+ * - Idempotency via Redis (`SET key val NX EX ttl`, atomar). Der Key ist
+ *   pro Payrexx-Instance (= Tenant) genamespaced, siehe idempotency-store.ts
+ *   und den Kommentar bei WEBHOOK_IDEMPOTENCY_TTL_SECONDS unten. Ohne
+ *   REDIS_URL fällt der Store auf eine in-memory Variante zurück (nur für
+ *   lokale Entwicklung geeignet — service.ts loggt das als Warnung).
  *
  * NICHT implementiert (bewusst dokumentiert):
  * - Ein echter "Price Manipulation Guard", der den Webhook-Betrag gegen den
  *   Cart-/Payment-Session-Betrag abgleicht. getWebhookActionAndData() hat
  *   keinen Zugriff auf die Payment Session; Medusa selbst prüft den Betrag
- *   beim Autorisieren nicht gegen den Provider-Report. Siehe README/Report.
+ *   beim Autorisieren nicht gegen den Provider-Report. Siehe SECURITY-NOTES.md.
  */
 
 import { AbstractPaymentProvider, BigNumber } from "@medusajs/framework/utils"
@@ -46,6 +50,11 @@ import type {
   WebhookActionResult,
 } from "@medusajs/framework/types"
 import { PayrexxClient } from "./client"
+import {
+  IdempotencyStore,
+  InMemoryIdempotencyStore,
+  RedisIdempotencyStore,
+} from "./idempotency-store"
 
 export interface PayrexxProviderOptions {
   instance: string
@@ -56,6 +65,13 @@ export interface PayrexxProviderOptions {
 
 type InjectedDependencies = {
   logger: Logger
+  /**
+   * Optional — nur zum Injizieren in Tests (z.B. InMemoryIdempotencyStore),
+   * damit kein Test einen echten Redis-Server braucht. Medusa's DI-Container
+   * registriert diesen Key normalerweise nicht; der Constructor baut in dem
+   * Fall selbst einen RedisIdempotencyStore aus REDIS_URL.
+   */
+  idempotencyStore?: IdempotencyStore
 }
 
 class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProviderOptions> {
@@ -67,9 +83,24 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
 
   /**
    * Idempotency-Store: Verhindert doppelte Buchungen bei Webhook-Retries.
-   * In Produktion: Redis SET mit TTL verwenden.
+   * Redis-backed in Produktion (siehe idempotency-store.ts), atomares
+   * check-and-set, per Tenant genamespaced.
    */
-  private processedWebhooks: Set<string> = new Set()
+  private idempotencyStore_: IdempotencyStore
+
+  /**
+   * TTL für Idempotency-Keys. Payrexx' genaues Retry-Fenster für Webhooks
+   * ist uns nicht öffentlich dokumentiert bekannt — 48h ist eine grosszügige
+   * Annahme mit Sicherheitsmarge, KEIN verifizierter Wert. Vor
+   * Produktivbetrieb mit Payrexx-Support abgleichen.
+   *
+   * Akzeptierter Trade-off: nach Ablauf der TTL würde ein erneut
+   * zugestelltes "confirmed"-Event (extrem später Retry, oder Payrexx
+   * schickt es aus anderem Grund nochmal) als neu behandelt und ERNEUT
+   * verarbeitet. Eine unbegrenzte TTL ist keine Alternative — der Store
+   * würde nie leer und wüchse pro Tenant unbegrenzt.
+   */
+  private static readonly WEBHOOK_IDEMPOTENCY_TTL_SECONDS = 60 * 60 * 48 // 48h
 
   constructor(container: InjectedDependencies, options: PayrexxProviderOptions) {
     super(container, options)
@@ -79,6 +110,34 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       instance: options.instance,
       apiSecret: options.apiSecret,
     })
+    this.idempotencyStore_ =
+      container.idempotencyStore ?? this.createDefaultIdempotencyStore()
+  }
+
+  /**
+   * Baut den produktiven Idempotency-Store aus REDIS_URL (wie STORE_URL an
+   * anderer Stelle in diesem Modul auch direkt aus process.env gelesen wird
+   * — medusa-config.ts reicht REDIS_URL nur an projectConfig.redisUrl durch,
+   * nicht an die Provider-Options, siehe medusa-config.ts).
+   *
+   * Kein REDIS_URL konfiguriert → in-memory Fallback + laute Warnung. Das
+   * ist für lokale Entwicklung ok, in Produktion (mehrere Instanzen,
+   * Prozess-Restarts) NICHT sicher — exakt das Problem, das dieser Store
+   * ersetzt.
+   */
+  private createDefaultIdempotencyStore(): IdempotencyStore {
+    const redisUrl = process.env.REDIS_URL
+
+    if (!redisUrl) {
+      this.logger_.warn(
+        "Payrexx: REDIS_URL not set — falling back to an in-memory webhook " +
+          "idempotency store. This does NOT survive a process restart or a " +
+          "second instance and must not be used in production."
+      )
+      return new InMemoryIdempotencyStore()
+    }
+
+    return new RedisIdempotencyStore({ redisUrl, logger: this.logger_ })
   }
 
   static validateOptions(options: Record<string, unknown>): void {
@@ -421,17 +480,71 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       return { action: "not_supported" }
     }
 
-    // 2. Idempotency Check — verhindert doppelte Buchungen bei Retries
+    // 2. Idempotency Check — verhindert doppelte Buchungen bei Retries.
+    //
+    // Namespacing: Der Key enthält options_.instance, die Payrexx-Merchant-
+    // Instance — faktisch der Tenant in der Multi-Tenant-Architektur (siehe
+    // docs/multi-tenancy-architecture.md, §8: pro Tenant ein eigener
+    // Payrexx-Account). Selbst wenn sich mehrere Tenants ein Redis teilen
+    // (§6.3 des Dokuments erwägt genau das als Alternative zu Redis pro
+    // Tenant), können sich Transaktions-IDs zweier Tenants hier NIE
+    // überschneiden — eine blanke Transaktions-ID als Key wäre sonst ein
+    // Cross-Tenant-Hazard: Tenant A könnte (unabsichtlich per ID-Kollision
+    // oder absichtlich) einen Webhook von Tenant B als "schon verarbeitet"
+    // maskieren oder umgekehrt fälschlich blockieren.
     const webhookTransaction = (data as any)?.transaction
     const transactionId = webhookTransaction?.id
-    const idempotencyKey = `${transactionId}-${webhookTransaction?.status}`
+    const idempotencyKey = `payrexx:webhook:${this.options_.instance}:${transactionId}-${webhookTransaction?.status}`
 
-    if (this.processedWebhooks.has(idempotencyKey)) {
+    let isNewWebhook: boolean
+    try {
+      isNewWebhook = await this.idempotencyStore_.checkAndSet(
+        idempotencyKey,
+        PayrexxPaymentProviderService.WEBHOOK_IDEMPOTENCY_TTL_SECONDS
+      )
+    } catch (err) {
+      // Store nicht erreichbar (z.B. Redis down). Drei Optionen abgewogen:
+      //
+      // (a) FAIL-OPEN: trotzdem verarbeiten, ohne Dedup-Garantie.
+      // (b) FAIL-CLOSED via `not_supported`: wie einen "unbekannten Status"
+      //     behandeln. Das ist ein STILLER Drop — die Webhook-Route
+      //     antwortet Payrexx trotzdem mit 2xx (es wird kein Fehler
+      //     geworfen), Payrexx stoppt also seine Retries. Die Zahlung wäre
+      //     damit UNWIDERRUFLICH verloren, nicht nur verzögert. Nie richtig.
+      // (c) FAIL-CLOSED via throw: Route liefert 5xx, Payrexx retried
+      //     später erneut — würde Exactly-Once erhalten, ABER nur wenn
+      //     Payrexx lange genug retried, um einen Redis-Ausfall zu
+      //     überbrücken. Payrexx' Retry-Fenster ist uns nicht bekannt
+      //     (nicht öffentlich dokumentiert); ein kurzes Retry-Fenster plus
+      //     ein länger andauernder Redis-Ausfall würde die Zahlung dann
+      //     genauso verlieren wie (b), nur mit Umweg über mehrere 5xx.
+      //
+      // Gewählt: (a) FAIL-OPEN. Die Begründung ist modul-spezifisch, nicht
+      // generisch: capturePayment() wird in diesem Modul NIE vom Webhook
+      // ausgelöst, sondern ausschliesslich vom Admin (siehe
+      // capturePayment() oben). Ein doppelt verarbeiteter Webhook kann hier
+      // also nie doppelt Geld bewegen — im schlimmsten Fall wird ein
+      // bereits gesetzter "authorized"-Status ein zweites Mal gesetzt, was
+      // im Payrexx-Dashboard und in der Medusa-Order sichtbar und manuell
+      // korrigierbar ist. Ein verlorener Webhook (das Risiko bei (b)/(c) im
+      // Fehlerfall) ist dagegen eine bezahlte, nie erfasste Bestellung —
+      // für niemanden sichtbar bis zur Kundenreklamation.
+      //
+      // Wichtig: fail-open gilt NUR für einen geworfenen Fehler des Stores.
+      // Eine regulär beantwortete `false` (= "schon gesehen") überspringt
+      // IMMER — dieser catch-Block fängt ausschliesslich Store-Ausfälle.
+      this.logger_.error(
+        `Payrexx idempotency store unavailable (${String(err)}); processing ` +
+          `webhook ${idempotencyKey} without duplicate-detection guarantee ` +
+          `(fail-open, see comment in getWebhookActionAndData).`
+      )
+      isNewWebhook = true
+    }
+
+    if (!isNewWebhook) {
       this.logger_.info(`Duplicate webhook ignored: ${idempotencyKey}`)
       return { action: "not_supported" }
     }
-
-    this.processedWebhooks.add(idempotencyKey)
 
     // 3. Status-basierte Aktion
     const status = webhookTransaction?.status
