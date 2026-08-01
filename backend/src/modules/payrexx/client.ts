@@ -10,7 +10,6 @@
 
 import axios, { AxiosInstance } from "axios"
 import crypto from "crypto"
-import qs from "querystring"
 
 export interface PayrexxGatewayRequest {
   amount: number // in Rappen (cents)
@@ -86,7 +85,11 @@ export class PayrexxClient {
   }
 
   /**
-   * HMAC-SHA256 Signatur für Payrexx API Requests
+   * HMAC-SHA256 Signatur für ausgehende Payrexx API Requests (`ApiSignature`).
+   *
+   * Payrexx spezifiziert für die REST API eine BASE64-kodierte HMAC-SHA256
+   * über den Query-String — bewusst ein anderes Encoding als bei den
+   * eingehenden Webhooks (dort HEX). Die Asymmetrie ist kein Bug.
    */
   private buildSignature(queryString: string): string {
     return crypto
@@ -96,23 +99,52 @@ export class PayrexxClient {
   }
 
   /**
-   * Validiert eingehende Webhook-Signaturen (HMAC-SHA256).
+   * Header, in dem Payrexx die Webhook-Signatur ausliefert.
+   * https://docs.payrexx.com/developer/guides/webhook
+   */
+  static readonly WEBHOOK_SIGNATURE_HEADER = "x-webhook-signature"
+
+  /**
+   * Validiert eingehende Webhook-Signaturen (HMAC-SHA256, lowercase HEX).
    * Schützt gegen Webhook Forgery (OWASP).
+   *
+   * Payrexx: "The signature is provided in the X-Webhook-Signature HTTP header
+   * and is generated as a lowercase hex-encoded SHA-256 HMAC."
+   *
+   * Gibt IMMER einen Boolean zurück — auch bei leerer, zu kurzer oder
+   * nicht-hexadezimaler Signatur. (crypto.timingSafeEqual wirft bei
+   * ungleicher Buffer-Länge eine RangeError; ein Angreifer könnte damit
+   * eine leere Signatur schicken und einen 500er statt eines 401 erzeugen.)
    */
   static verifyWebhookSignature(
     payload: string,
     signature: string,
     secret: string
   ): boolean {
+    if (!signature || !secret) {
+      return false
+    }
+
     const computed = crypto
       .createHmac("sha256", secret)
       .update(payload)
       .digest("hex")
 
+    const normalized = signature.trim().toLowerCase()
+
+    // Buffer.from(x, "hex") verschluckt ungültige Zeichen still —
+    // deshalb Format und Länge vorab prüfen.
+    if (normalized.length !== computed.length) {
+      return false
+    }
+    if (!/^[0-9a-f]+$/.test(normalized)) {
+      return false
+    }
+
     // Timing-safe comparison gegen Timing-Attacken
     return crypto.timingSafeEqual(
       Buffer.from(computed, "hex"),
-      Buffer.from(signature, "hex")
+      Buffer.from(normalized, "hex")
     )
   }
 

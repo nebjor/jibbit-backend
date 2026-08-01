@@ -8,10 +8,17 @@
  * 3. Webhook → getWebhookActionAndData → authorize/capture
  * 4. Admin → capturePayment / refundPayment
  *
- * Security:
- * - HMAC-SHA256 Webhook-Signatur-Validierung
- * - Server-seitige Preisvalidierung (Price Manipulation Guard)
- * - Idempotency via processedWebhooks Set (Redis-basiert in Produktion)
+ * Security (Ist-Zustand, nicht Wunschzustand):
+ * - HMAC-SHA256 Webhook-Signatur-Validierung (Header: X-Webhook-Signature)
+ * - Plausibilitätsprüfung der Beträge (> 0, endlich) beim Gateway-Erstellen
+ *   und beim Webhook-Eingang
+ * - Idempotency via processedWebhooks Set (in-memory! → in Produktion Redis)
+ *
+ * NICHT implementiert (bewusst dokumentiert):
+ * - Ein echter "Price Manipulation Guard", der den Webhook-Betrag gegen den
+ *   Cart-/Payment-Session-Betrag abgleicht. getWebhookActionAndData() hat
+ *   keinen Zugriff auf die Payment Session; Medusa selbst prüft den Betrag
+ *   beim Autorisieren nicht gegen den Provider-Report. Siehe README/Report.
  */
 
 import { AbstractPaymentProvider, BigNumber } from "@medusajs/framework/utils"
@@ -97,15 +104,42 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
   async initiatePayment(
     input: InitiatePaymentInput
   ): Promise<InitiatePaymentOutput> {
-    const { amount, currency_code, context } = input
+    const { amount, currency_code, context, data } = input
 
     const storeUrl = process.env.STORE_URL || "http://localhost:8000"
 
+    // Die Medusa-Payment-Session-ID kommt NICHT über den Context, sondern über
+    // data.session_id — PaymentModuleService.createPaymentSession() setzt
+    // `data: { ...input.data, session_id: paymentSession.id }` und zusätzlich
+    // `context.idempotency_key = paymentSession.id`.
+    // (node_modules/@medusajs/payment/dist/services/payment-module.js)
+    // Ohne diese ID kann der Webhook später keine Session zuordnen.
+    const sessionId =
+      (data?.session_id as string | undefined) ??
+      context?.idempotency_key ??
+      ""
+
+    if (!sessionId) {
+      this.logger_.warn(
+        "Payrexx: initiatePayment without a session id — webhooks will not be attributable."
+      )
+    }
+
+    // Medusa v2 liefert Dezimalbeträge (CHF 27.00 === 27),
+    // die Payrexx-API erwartet Rappen. Umrechnung ist zwingend.
+    const amountInRappen = Math.round(Number(amount) * 100)
+
+    if (!Number.isFinite(amountInRappen) || amountInRappen <= 0) {
+      throw new Error(
+        `Payrexx: invalid payment amount (${String(amount)} ${currency_code}). Amount must be a positive number.`
+      )
+    }
+
     const gateway = await this.client.createGateway({
-      amount: Number(amount), // Medusa liefert Betrag in Minor Units (cents)
+      amount: amountInRappen,
       currency: currency_code.toUpperCase(),
       purpose: `jibbit.ch Bestellung`,
-      referenceId: context?.session_id as string || "",
+      referenceId: sessionId,
       successRedirectUrl: `${storeUrl}/checkout/success`,
       failedRedirectUrl: `${storeUrl}/checkout/failed`,
       cancelRedirectUrl: `${storeUrl}/checkout/cancel`,
@@ -236,7 +270,7 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
 
     const result = await this.client.refundTransaction(
       transactionId,
-      Number(input.amount)
+      Math.round(Number(input.amount) * 100) // Dezimalbetrag → Rappen
     )
 
     return {
@@ -338,11 +372,14 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       }
     }
 
-    // Neuen Gateway mit aktualisierten Daten erstellen
+    // Neuen Gateway mit aktualisierten Daten erstellen.
+    // `data` muss durchgereicht werden, sonst geht die session_id verloren
+    // und der Webhook kann die Session nicht mehr zuordnen.
     return this.initiatePayment({
       amount: input.amount,
       currency_code: input.currency_code,
       context: input.context,
+      data: input.data,
     })
   }
 
@@ -353,7 +390,8 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
    * Security:
    * - HMAC-SHA256 Signatur-Validierung (Webhook Forgery Protection)
    * - Idempotency Check (keine doppelten Buchungen)
-   * - Price Manipulation Guard (Server-seitige Betragsvalidierung)
+   * - Betrags-Plausibilität (> 0). KEIN Abgleich gegen den Cart-Betrag —
+   *   dafür fehlt hier der Zugriff auf die Payment Session.
    */
   async getWebhookActionAndData(
     payload: ProviderWebhookPayload["payload"]
@@ -361,8 +399,22 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
     const { data, rawData, headers } = payload
 
     // 1. HMAC-SHA256 Signatur validieren (Webhook Forgery Protection)
-    const signature = (headers as Record<string, string>)?.["payrexx-signature"] || ""
-    const rawBody = typeof rawData === "string" ? rawData : JSON.stringify(rawData)
+    // Payrexx liefert die Signatur in "X-Webhook-Signature" (lowercase hex).
+    // Node/Express normalisiert Header-Namen auf lowercase.
+    const headerBag = (headers ?? {}) as Record<string, string | string[]>
+    const rawSignature =
+      headerBag[PayrexxClient.WEBHOOK_SIGNATURE_HEADER] ??
+      headerBag["X-Webhook-Signature"] ??
+      // Legacy-Fallback: so hiess der Header in der ersten Implementierung.
+      headerBag["payrexx-signature"] ??
+      ""
+    const signature = Array.isArray(rawSignature) ? rawSignature[0] : rawSignature
+    const rawBody =
+      typeof rawData === "string"
+        ? rawData
+        : Buffer.isBuffer(rawData)
+          ? rawData.toString("utf8")
+          : JSON.stringify(rawData)
 
     if (!PayrexxClient.verifyWebhookSignature(rawBody, signature, this.options_.webhookSecret)) {
       this.logger_.error("Payrexx webhook signature verification failed!")
@@ -390,13 +442,35 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       return { action: "not_supported" }
     }
 
+    // 4. Betrag: Payrexx meldet Rappen, Medusa erwartet Dezimalbeträge.
+    // Plausibilitätsprüfung — ein Betrag <= 0 oder NaN ist nie legitim.
+    const amountInRappen = Number(webhookTransaction?.amount)
+    const amountDecimal = amountInRappen / 100
+
+    const requiresAmount = [
+      "confirmed",
+      "waiting",
+      "refunded",
+      "partially-refunded",
+    ].includes(status)
+
+    if (requiresAmount && (!Number.isFinite(amountInRappen) || amountInRappen <= 0)) {
+      this.logger_.error(
+        `Payrexx webhook with implausible amount rejected: ${String(webhookTransaction?.amount)} (session ${sessionId})`
+      )
+      return {
+        action: "failed",
+        data: { session_id: sessionId, amount: new BigNumber(0) },
+      }
+    }
+
     switch (status) {
       case "confirmed":
         return {
           action: "authorized",
           data: {
             session_id: sessionId,
-            amount: new BigNumber(webhookTransaction.amount),
+            amount: new BigNumber(amountDecimal),
           },
         }
 
@@ -406,7 +480,7 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
           action: "authorized",
           data: {
             session_id: sessionId,
-            amount: new BigNumber(webhookTransaction.amount),
+            amount: new BigNumber(amountDecimal),
           },
         }
 
@@ -416,14 +490,22 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
           action: "captured",
           data: {
             session_id: sessionId,
-            amount: new BigNumber(webhookTransaction.amount),
+            amount: new BigNumber(amountDecimal),
           },
         }
 
       case "cancelled":
       case "declined":
       case "error":
-        return { action: "failed", data: { session_id: sessionId } }
+        return {
+          action: "failed",
+          data: {
+            session_id: sessionId,
+            amount: new BigNumber(
+              Number.isFinite(amountDecimal) ? amountDecimal : 0
+            ),
+          },
+        }
 
       default:
         this.logger_.warn(`Unknown Payrexx webhook status: ${status}`)

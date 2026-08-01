@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse, MedusaNextFunction } from "@medusajs/framework/http"
 import { defineMiddlewares } from "@medusajs/medusa"
-import { z } from "zod"
+import { z } from "@medusajs/framework/zod"
 
 const addressSchema = z.object({
   postal_code: z.string().min(4, "Postal code is required (min 4 chars)"),
