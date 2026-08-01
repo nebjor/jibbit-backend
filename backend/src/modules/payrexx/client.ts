@@ -88,14 +88,33 @@ export class PayrexxClient {
    * HMAC-SHA256 Signatur für ausgehende Payrexx API Requests (`ApiSignature`).
    *
    * Payrexx spezifiziert für die REST API eine BASE64-kodierte HMAC-SHA256
-   * über den Query-String — bewusst ein anderes Encoding als bei den
-   * eingehenden Webhooks (dort HEX). Die Asymmetrie ist kein Bug.
+   * über den Query-String (ohne den Parameter `instance`) — bewusst ein
+   * anderes Encoding als bei den eingehenden Webhooks (dort HEX).
+   * Die Asymmetrie ist kein Bug.
+   *
+   * Quelle: https://developers.payrexx.com/reference/rest-api
+   * "Build url encoded query string, calculate binary hmac hash using your
+   *  instance's API Secret as key, encode it with base64."
    */
   private buildSignature(queryString: string): string {
     return crypto
       .createHmac("sha256", this.apiSecret)
       .update(queryString)
       .digest("base64")
+  }
+
+  /**
+   * RFC-1738-Encoding, wie es Payrexx für den signierten Query-String
+   * verlangt: "The query string has to be RFC 1738 encoded, that means you
+   * have to replace spaces by '+'."
+   *
+   * encodeURIComponent() kodiert Leerzeichen als %20. Da `purpose` immer ein
+   * Leerzeichen enthält ("jibbit.ch Bestellung"), hätte JEDE Gateway-Anfrage
+   * eine nicht verifizierbare Signatur produziert. Signatur und Body werden
+   * aus demselben String gebaut, die Umstellung ist also konsistent.
+   */
+  private static rfc1738(value: string | number | boolean): string {
+    return encodeURIComponent(String(value)).replace(/%20/g, "+")
   }
 
   /**
@@ -168,10 +187,11 @@ export class PayrexxClient {
       params.cancelRedirectUrl = request.cancelRedirectUrl
     }
 
-    // Build query string for signature
+    // Build query string for signature (RFC 1738 — Leerzeichen als "+")
+    const enc = PayrexxClient.rfc1738
     const queryParts: string[] = []
     for (const [key, val] of Object.entries(params)) {
-      queryParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`)
+      queryParts.push(`${enc(key)}=${enc(val)}`)
     }
 
     // PSP IDs hinzufügen (TWINT, Powerpay)
@@ -184,7 +204,7 @@ export class PayrexxClient {
     // Payment method names
     if (request.pm?.length) {
       request.pm.forEach((pm, i) => {
-        queryParts.push(`pm%5B${i}%5D=${encodeURIComponent(pm)}`)
+        queryParts.push(`pm%5B${i}%5D=${enc(pm)}`)
       })
     }
 
@@ -192,7 +212,7 @@ export class PayrexxClient {
     if (request.fields) {
       for (const [fieldKey, fieldVal] of Object.entries(request.fields)) {
         queryParts.push(
-          `fields%5B${encodeURIComponent(fieldKey)}%5D%5Bvalue%5D=${encodeURIComponent(fieldVal.value)}`
+          `fields%5B${enc(fieldKey)}%5D%5Bvalue%5D=${enc(fieldVal.value)}`
         )
       }
     }
