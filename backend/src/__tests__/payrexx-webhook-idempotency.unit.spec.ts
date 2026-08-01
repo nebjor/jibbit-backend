@@ -152,6 +152,29 @@ describe("Payrexx webhook idempotency", () => {
     expect(retry.action).toBe("not_supported")
   })
 
+  it("treats a different status for the same transaction id as a distinct event, not a duplicate", async () => {
+    // Der Idempotency-Key enthält Transaktions-ID UND Status
+    // (`${transactionId}-${status}`). Ohne den Status-Anteil würde ein
+    // "refunded"-Webhook für dieselbe Transaktion nach einem "confirmed"
+    // fälschlich als Duplikat verschluckt — ein echtes Refund-Event würde
+    // Medusa nie erreichen.
+    const sharedStore = new InMemoryIdempotencyStore()
+    const tenantA = makeService("tenant-a-instance", sharedStore)
+
+    const confirmed = await tenantA.service.getWebhookActionAndData(
+      signedWebhookPayload(CONFIRMED_TRANSACTION)
+    )
+    const refunded = await tenantA.service.getWebhookActionAndData(
+      signedWebhookPayload({
+        ...CONFIRMED_TRANSACTION,
+        status: "refunded",
+      })
+    )
+
+    expect(confirmed.action).toBe("authorized")
+    expect(refunded.action).toBe("captured") // NICHT "not_supported"
+  })
+
   it("fails OPEN (processes the webhook) when the idempotency store is unavailable", async () => {
     const brokenStore: IdempotencyStore = {
       checkAndSet: jest.fn().mockRejectedValue(new Error("ECONNREFUSED")),
