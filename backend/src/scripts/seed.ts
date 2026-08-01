@@ -1,14 +1,29 @@
+/**
+ * Seed für jibbit.ch — Schweizer Headshop.
+ *
+ * Ersetzt den Medusa-Demo-Seed (Europe/EUR, Kopenhagen, Medusa-T-Shirts).
+ *
+ * WICHTIG — Einheiten:
+ * Medusa v2 speichert Beträge als DEZIMALZAHLEN, nicht in Rappen.
+ * CHF 27.00 === 27. Alle `amount`-Werte hier sind Franken, keine Rappen.
+ *
+ * Provider-IDs (verifiziert gegen die DB nach `medusa db:migrate`):
+ *   payment_provider      → pp_system_default, pp_payrexx_payrexx
+ *   fulfillment_provider  → swiss-shipping_swiss-shipping
+ * `manual_manual` existiert in diesem Projekt NICHT — medusa-config.ts
+ * registriert ausschliesslich den swiss-shipping Provider.
+ *
+ * Der Seed ist so weit wie möglich idempotent (Region, Lager, Steuerregion,
+ * Fulfillment-Set, Kategorien und Produkte werden vor dem Anlegen geprüft),
+ * damit er beim Iterieren nicht in Unique-Constraint-Fehler läuft.
+ */
+
 import { CreateInventoryLevelInput, ExecArgs } from "@medusajs/framework/types";
 import {
   ContainerRegistrationKeys,
   Modules,
   ProductStatus,
 } from "@medusajs/framework/utils";
-import {
-  createWorkflow,
-  transform,
-  WorkflowResponse,
-} from "@medusajs/framework/workflows-sdk";
 import {
   createApiKeysWorkflow,
   createInventoryLevelsWorkflow,
@@ -22,137 +37,200 @@ import {
   createTaxRegionsWorkflow,
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
-  updateStoresStep,
   updateStoresWorkflow,
 } from "@medusajs/medusa/core-flows";
-import { ApiKey } from "../../.medusa/types/query-entry-points";
 
-const updateStoreCurrencies = createWorkflow(
-  "update-store-currencies",
-  (input: {
-    supported_currencies: { currency_code: string; is_default?: boolean }[];
-    store_id: string;
-  }) => {
-    const normalizedInput = transform({ input }, (data) => {
-      return {
-        selector: { id: data.input.store_id },
-        update: {
-          supported_currencies: data.input.supported_currencies.map(
-            (currency) => {
-              return {
-                currency_code: currency.currency_code,
-                is_default: currency.is_default ?? false,
-              };
-            }
-          ),
-        },
-      };
-    });
+// Der Stock-Seed importierte `ApiKey` aus ../../.medusa/types/query-entry-points.
+// Diese Datei wird generiert und existiert vor dem ersten Build nicht — der
+// Import bricht `medusa exec` und den Typecheck. Hier wird ohnehin nur die ID
+// gebraucht.
+type SeedApiKey = { id: string };
 
-    const stores = updateStoresStep(normalizedInput);
+// ─── Konstanten ────────────────────────────────────────────────
+const CURRENCY = "chf";
+const COUNTRY = "ch";
+const SALES_CHANNEL_NAME = "Default Sales Channel";
+const REGION_NAME = "Schweiz";
+const STOCK_LOCATION_NAME = "Lager Zürich";
+const FULFILLMENT_SET_NAME = "Versand Schweiz";
+const FULFILLMENT_PROVIDER_ID = "swiss-shipping_swiss-shipping";
 
-    return new WorkflowResponse(stores);
-  }
-);
+/**
+ * CHF — Dezimalbeträge, nicht Rappen.
+ * NUR für Beschriftungen. Die tatsächliche Berechnung macht
+ * SwissShippingProviderService.calculatePrice() mit den Werten aus
+ * medusa-config.ts (fixedPrice / freeShippingThreshold) — beide Stellen
+ * müssen synchron gehalten werden.
+ */
+const SHIPPING_FLAT_PRICE = 9;
+const FREE_SHIPPING_THRESHOLD = 100;
 
-export default async function seedDemoData({ container }: ExecArgs) {
+/** Schweizer MwSt.-Normalsatz seit 01.01.2024. */
+const CH_VAT_RATE = 8.1;
+
+// Der Stock-Seed definierte hier einen eigenen "update-store-currencies"
+// Workflow, der nur `updateStoresStep` aufruft. Das reicht hier NICHT:
+// `is_tax_inclusive` wird nicht am Store gespeichert, sondern von
+// `updateStoresWorkflow` als `price_preference` (attribute=currency_code)
+// upgesertet. Deshalb wird direkt der Core-Workflow verwendet.
+
+export default async function seedJibbitData({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
   const link = container.resolve(ContainerRegistrationKeys.LINK);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
   const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT);
   const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
   const storeModuleService = container.resolve(Modules.STORE);
+  const regionModuleService = container.resolve(Modules.REGION);
+  const stockLocationModuleService = container.resolve(Modules.STOCK_LOCATION);
+  const taxModuleService = container.resolve(Modules.TAX);
 
-  const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
-
-  logger.info("Seeding store data...");
+  // ─── Store + Sales Channel ───────────────────────────────────
+  logger.info("Seeding store data (CHF)...");
   const [store] = await storeModuleService.listStores();
+
   let defaultSalesChannel = await salesChannelModuleService.listSalesChannels({
-    name: "Default Sales Channel",
+    name: SALES_CHANNEL_NAME,
   });
 
   if (!defaultSalesChannel.length) {
-    // create the default sales channel
     const { result: salesChannelResult } = await createSalesChannelsWorkflow(
       container
     ).run({
       input: {
-        salesChannelsData: [
-          {
-            name: "Default Sales Channel",
-          },
-        ],
+        salesChannelsData: [{ name: SALES_CHANNEL_NAME }],
       },
     });
     defaultSalesChannel = salesChannelResult;
   }
 
-  await updateStoreCurrencies(container).run({
-    input: {
-      store_id: store.id,
-      supported_currencies: [
-        {
-          currency_code: "eur",
-          is_default: true,
-        },
-        {
-          currency_code: "usd",
-        },
-      ],
-    },
-  });
-
   await updateStoresWorkflow(container).run({
     input: {
       selector: { id: store.id },
       update: {
+        supported_currencies: [
+          {
+            currency_code: CURRENCY,
+            is_default: true,
+            // Entscheidend: erzeugt die price_preference
+            // (attribute=currency_code, value=chf, is_tax_inclusive=true).
+            //
+            // Ohne diese Preference rechnet Medusa die 8.1% MwSt. ON TOP auf
+            // den gepflegten Preis (CHF 2.50 → item_total 2.70). Die
+            // Preference auf der REGION allein genügt nicht: isTaxInclusive()
+            // in @medusajs/pricing greift sie nur, wenn der Preis selbst eine
+            // `region_id`-Price-Rule trägt — unsere Preise sind
+            // währungsbasiert.
+            is_tax_inclusive: true,
+          },
+        ],
         default_sales_channel_id: defaultSalesChannel[0].id,
       },
     },
   });
-  logger.info("Seeding region data...");
-  const { result: regionResult } = await createRegionsWorkflow(container).run({
-    input: {
-      regions: [
-        {
-          name: "Europe",
-          currency_code: "eur",
-          countries,
-          payment_providers: ["pp_system_default"],
-        },
-      ],
-    },
+
+  // ─── Region Schweiz ──────────────────────────────────────────
+  logger.info("Seeding region data (Schweiz / CHF)...");
+
+  const existingRegions = await regionModuleService.listRegions({
+    name: REGION_NAME,
   });
-  const region = regionResult[0];
+
+  let region = existingRegions[0];
+
+  if (!region) {
+    const { result: regionResult } = await createRegionsWorkflow(container).run({
+      input: {
+        regions: [
+          {
+            name: REGION_NAME,
+            currency_code: CURRENCY,
+            countries: [COUNTRY],
+            // Schweizer Detailhandel kommuniziert Endkundenpreise INKLUSIVE
+            // MwSt. Ohne dieses Flag schlägt Medusa die 8.1% auf den
+            // gepflegten Preis auf (CHF 2.50 → 2.70 im Warenkorb).
+            is_tax_inclusive: true,
+            // pp_payrexx_payrexx ist registriert und in der DB vorhanden.
+            // Solange keine Payrexx-Credentials gesetzt sind, schlägt
+            // initiatePayment zur Laufzeit fehl — pp_system_default bleibt
+            // deshalb als funktionierende Dev-Zahlart aktiv.
+            payment_providers: ["pp_system_default", "pp_payrexx_payrexx"],
+          },
+        ],
+      },
+    });
+    region = regionResult[0];
+  } else {
+    logger.info(`Region "${REGION_NAME}" exists — skipped.`);
+  }
   logger.info("Finished seeding regions.");
 
-  logger.info("Seeding tax regions...");
-  await createTaxRegionsWorkflow(container).run({
-    input: countries.map((country_code) => ({
-      country_code,
-      provider_id: "tp_system",
-    })),
-  });
-  logger.info("Finished seeding tax regions.");
+  // ─── Steuerregion Schweiz ────────────────────────────────────
+  logger.info("Seeding tax region (CH, 8.1% MwSt.)...");
 
-  logger.info("Seeding stock location data...");
-  const { result: stockLocationResult } = await createStockLocationsWorkflow(
-    container
-  ).run({
-    input: {
-      locations: [
+  const existingTaxRegions = await taxModuleService.listTaxRegions({
+    country_code: COUNTRY,
+  });
+
+  if (!existingTaxRegions.length) {
+    await createTaxRegionsWorkflow(container).run({
+      input: [
         {
-          name: "European Warehouse",
-          address: {
-            city: "Copenhagen",
-            country_code: "DK",
-            address_1: "",
+          country_code: COUNTRY,
+          provider_id: "tp_system",
+          default_tax_rate: {
+            name: "MwSt. Normalsatz",
+            code: "CH-VAT-STD",
+            rate: CH_VAT_RATE,
           },
         },
       ],
-    },
-  });
-  const stockLocation = stockLocationResult[0];
+    });
+  } else {
+    logger.info("Tax region 'ch' exists — skipped.");
+  }
+  logger.info("Finished seeding tax regions.");
+
+  // ─── Lager ───────────────────────────────────────────────────
+  logger.info("Seeding stock location (Schweiz)...");
+
+  const existingLocations = await stockLocationModuleService.listStockLocations(
+    { name: STOCK_LOCATION_NAME }
+  );
+
+  let stockLocation = existingLocations[0];
+
+  if (!stockLocation) {
+    const { result: stockLocationResult } = await createStockLocationsWorkflow(
+      container
+    ).run({
+      input: {
+        locations: [
+          {
+            name: STOCK_LOCATION_NAME,
+            address: {
+              city: "Zürich",
+              country_code: "CH",
+              postal_code: "8005",
+              address_1: "Hardturmstrasse 1",
+            },
+          },
+        ],
+      },
+    });
+    stockLocation = stockLocationResult[0];
+
+    await link.create({
+      [Modules.STOCK_LOCATION]: {
+        stock_location_id: stockLocation.id,
+      },
+      [Modules.FULFILLMENT]: {
+        fulfillment_provider_id: FULFILLMENT_PROVIDER_ID,
+      },
+    });
+  } else {
+    logger.info(`Stock location "${STOCK_LOCATION_NAME}" exists — skipped.`);
+  }
 
   await updateStoresWorkflow(container).run({
     input: {
@@ -163,16 +241,9 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
 
-  await link.create({
-    [Modules.STOCK_LOCATION]: {
-      stock_location_id: stockLocation.id,
-    },
-    [Modules.FULFILLMENT]: {
-      fulfillment_provider_id: "manual_manual",
-    },
-  });
+  // ─── Fulfillment ─────────────────────────────────────────────
+  logger.info("Seeding fulfillment data (swiss-shipping)...");
 
-  logger.info("Seeding fulfillment data...");
   const shippingProfiles = await fulfillmentModuleService.listShippingProfiles({
     type: "default",
   });
@@ -193,135 +264,93 @@ export default async function seedDemoData({ container }: ExecArgs) {
     shippingProfile = shippingProfileResult[0];
   }
 
-  const fulfillmentSet = await fulfillmentModuleService.createFulfillmentSets({
-    name: "European Warehouse delivery",
-    type: "shipping",
-    service_zones: [
-      {
-        name: "Europe",
-        geo_zones: [
-          {
-            country_code: "gb",
-            type: "country",
-          },
-          {
-            country_code: "de",
-            type: "country",
-          },
-          {
-            country_code: "dk",
-            type: "country",
-          },
-          {
-            country_code: "se",
-            type: "country",
-          },
-          {
-            country_code: "fr",
-            type: "country",
-          },
-          {
-            country_code: "es",
-            type: "country",
-          },
-          {
-            country_code: "it",
-            type: "country",
-          },
-        ],
-      },
-    ],
-  });
+  const existingSets = await fulfillmentModuleService.listFulfillmentSets(
+    { name: FULFILLMENT_SET_NAME },
+    { relations: ["service_zones"] }
+  );
 
-  await link.create({
-    [Modules.STOCK_LOCATION]: {
-      stock_location_id: stockLocation.id,
-    },
-    [Modules.FULFILLMENT]: {
-      fulfillment_set_id: fulfillmentSet.id,
-    },
-  });
+  let fulfillmentSet = existingSets[0];
 
-  await createShippingOptionsWorkflow(container).run({
-    input: [
-      {
-        name: "Standard Shipping",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Standard",
-          description: "Ship in 2-3 days.",
-          code: "standard",
+  if (!fulfillmentSet) {
+    fulfillmentSet = await fulfillmentModuleService.createFulfillmentSets({
+      name: FULFILLMENT_SET_NAME,
+      type: "shipping",
+      service_zones: [
+        {
+          name: "Schweiz",
+          geo_zones: [
+            {
+              country_code: COUNTRY,
+              type: "country",
+            },
+          ],
         },
-        prices: [
-          {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
-          },
-          {
-            region_id: region.id,
-            amount: 10,
-          },
-        ],
-        rules: [
-          {
-            attribute: "enabled_in_store",
-            value: "true",
-            operator: "eq",
-          },
-          {
-            attribute: "is_return",
-            value: "false",
-            operator: "eq",
-          },
-        ],
+      ],
+    });
+
+    await link.create({
+      [Modules.STOCK_LOCATION]: {
+        stock_location_id: stockLocation.id,
       },
-      {
-        name: "Express Shipping",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Express",
-          description: "Ship in 24 hours.",
-          code: "express",
+      [Modules.FULFILLMENT]: {
+        fulfillment_set_id: fulfillmentSet.id,
+      },
+    });
+
+    // EINE `calculated` Option, der Preis kommt aus
+    // SwissShippingProviderService.calculatePrice() (CHF 9.00, ab CHF 100.00
+    // Warenwert CHF 0.00).
+    //
+    // WARUM NICHT zwei FLAT Optionen mit `item_total`-Rules (naheliegender
+    // und in vielen Tutorials so gezeigt)? Weil numerische Rules in Medusa
+    // 2.13.6 nachweislich falsch auswerten:
+    //
+    //   @medusajs/fulfillment/dist/utils/utils.js → isContextValid()
+    //     const isDate = (str) => !isNaN(Date.parse(str))
+    //     gte: (a, b) => isDate(a) && isDate(b)
+    //       ? new Date(a) >= new Date(b)
+    //       : Number(a) >= Number(b)
+    //
+    // `Date.parse("5")` ist in V8 GÜLTIG (→ 2001-05-01), `Date.parse("100")`
+    // ebenfalls (→ Jahr 100). Damit gilt `"5" gte "100"` als TRUE und
+    // `"5" lt "100"` als FALSE — die Schwelle kehrt sich um. Verifiziert:
+    // ein Warenkorb über CHF 5.00 bekam ausschliesslich "Gratisversand".
+    //
+    // Rules mit String-Gleichheit (enabled_in_store, is_return) sind davon
+    // nicht betroffen und bleiben.
+    await createShippingOptionsWorkflow(container).run({
+      input: [
+        {
+          name: "Standardversand Schweiz",
+          price_type: "calculated",
+          provider_id: FULFILLMENT_PROVIDER_ID,
+          service_zone_id: fulfillmentSet.service_zones[0].id,
+          shipping_profile_id: shippingProfile.id,
+          type: {
+            label: "Standard",
+            description: `Schweizer Post, 2–3 Werktage. CHF ${SHIPPING_FLAT_PRICE}.00 — ab CHF ${FREE_SHIPPING_THRESHOLD}.00 Warenwert gratis.`,
+            code: "standard",
+          },
+          // `calculated` Optionen führen KEINE hinterlegten Preise —
+          // CreateCalculatedShippingOptionInput kennt kein `prices`.
+          rules: [
+            {
+              attribute: "enabled_in_store",
+              value: "true",
+              operator: "eq",
+            },
+            {
+              attribute: "is_return",
+              value: "false",
+              operator: "eq",
+            },
+          ],
         },
-        prices: [
-          {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
-          },
-          {
-            region_id: region.id,
-            amount: 10,
-          },
-        ],
-        rules: [
-          {
-            attribute: "enabled_in_store",
-            value: "true",
-            operator: "eq",
-          },
-          {
-            attribute: "is_return",
-            value: "false",
-            operator: "eq",
-          },
-        ],
-      },
-    ],
-  });
+      ],
+    });
+  } else {
+    logger.info(`Fulfillment set "${FULFILLMENT_SET_NAME}" exists — skipped.`);
+  }
   logger.info("Finished seeding fulfillment data.");
 
   await linkSalesChannelsToStockLocationWorkflow(container).run({
@@ -332,8 +361,9 @@ export default async function seedDemoData({ container }: ExecArgs) {
   });
   logger.info("Finished seeding stock location data.");
 
+  // ─── Publishable API Key ─────────────────────────────────────
   logger.info("Seeding publishable API key data...");
-  let publishableApiKey: ApiKey | null = null;
+  let publishableApiKey: SeedApiKey | null = null;
   const { data } = await query.graph({
     entity: "api_key",
     fields: ["id"],
@@ -351,7 +381,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
       input: {
         api_keys: [
           {
-            title: "Webshop",
+            title: "jibbit.ch Webshop",
             type: "publishable",
             created_by: "",
           },
@@ -359,7 +389,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
       },
     });
 
-    publishableApiKey = publishableApiKeyResult as ApiKey;
+    publishableApiKey = publishableApiKeyResult as SeedApiKey;
   }
 
   await linkSalesChannelsToApiKeyWorkflow(container).run({
@@ -370,553 +400,322 @@ export default async function seedDemoData({ container }: ExecArgs) {
   });
   logger.info("Finished seeding publishable API key data.");
 
-  logger.info("Seeding product data...");
+  // ─── Kategorien ──────────────────────────────────────────────
+  logger.info("Seeding product data (Headshop-Sortiment)...");
 
-  const { result: categoryResult } = await createProductCategoriesWorkflow(
-    container
-  ).run({
-    input: {
-      product_categories: [
-        {
-          name: "Shirts",
-          is_active: true,
-        },
-        {
-          name: "Sweatshirts",
-          is_active: true,
-        },
-        {
-          name: "Pants",
-          is_active: true,
-        },
-        {
-          name: "Merch",
-          is_active: true,
-        },
-      ],
-    },
+  const CATEGORY_NAMES = [
+    "Papers",
+    "Filter & Tips",
+    "Aschenbecher",
+    "Kräutermischungen",
+  ];
+
+  // ACHTUNG: `productModuleService.listProductCategories()` liefert die Zeilen
+  // OHNE `name` (das Feld ist nicht in der Default-Selektion — `cat.name` ist
+  // null). Ein lokaler Namensvergleich darauf schlägt still fehl und der Seed
+  // lief beim zweiten Lauf in "Product category with handle: papers, already
+  // exists". query.graph selektiert explizit und ist hier die richtige Quelle.
+  const { data: existingCategories } = await query.graph({
+    entity: "product_category",
+    fields: ["id", "name"],
   });
 
-  await createProductsWorkflow(container).run({
-    input: {
-      products: [
-        {
-          title: "Medusa T-Shirt",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Shirts")!.id,
-          ],
-          description:
-            "Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.",
-          handle: "t-shirt",
-          weight: 400,
-          status: ProductStatus.PUBLISHED,
-          shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-back.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-back.png",
-            },
-          ],
-          options: [
-            {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
-            },
-            {
-              title: "Color",
-              values: ["Black", "White"],
-            },
-          ],
-          variants: [
-            {
-              title: "S / Black",
-              sku: "SHIRT-S-BLACK",
-              options: {
-                Size: "S",
-                Color: "Black",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "S / White",
-              sku: "SHIRT-S-WHITE",
-              options: {
-                Size: "S",
-                Color: "White",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M / Black",
-              sku: "SHIRT-M-BLACK",
-              options: {
-                Size: "M",
-                Color: "Black",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M / White",
-              sku: "SHIRT-M-WHITE",
-              options: {
-                Size: "M",
-                Color: "White",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L / Black",
-              sku: "SHIRT-L-BLACK",
-              options: {
-                Size: "L",
-                Color: "Black",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L / White",
-              sku: "SHIRT-L-WHITE",
-              options: {
-                Size: "L",
-                Color: "White",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL / Black",
-              sku: "SHIRT-XL-BLACK",
-              options: {
-                Size: "XL",
-                Color: "Black",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL / White",
-              sku: "SHIRT-XL-WHITE",
-              options: {
-                Size: "XL",
-                Color: "White",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
-        },
-        {
-          title: "Medusa Sweatshirt",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Sweatshirts")!.id,
-          ],
-          description:
-            "Reimagine the feeling of a classic sweatshirt. With our cotton sweatshirt, everyday essentials no longer have to be ordinary.",
-          handle: "sweatshirt",
-          weight: 400,
-          status: ProductStatus.PUBLISHED,
-          shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-back.png",
-            },
-          ],
-          options: [
-            {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
-            },
-          ],
-          variants: [
-            {
-              title: "S",
-              sku: "SWEATSHIRT-S",
-              options: {
-                Size: "S",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M",
-              sku: "SWEATSHIRT-M",
-              options: {
-                Size: "M",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L",
-              sku: "SWEATSHIRT-L",
-              options: {
-                Size: "L",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL",
-              sku: "SWEATSHIRT-XL",
-              options: {
-                Size: "XL",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
-        },
-        {
-          title: "Medusa Sweatpants",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Pants")!.id,
-          ],
-          description:
-            "Reimagine the feeling of classic sweatpants. With our cotton sweatpants, everyday essentials no longer have to be ordinary.",
-          handle: "sweatpants",
-          weight: 400,
-          status: ProductStatus.PUBLISHED,
-          shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-back.png",
-            },
-          ],
-          options: [
-            {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
-            },
-          ],
-          variants: [
-            {
-              title: "S",
-              sku: "SWEATPANTS-S",
-              options: {
-                Size: "S",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M",
-              sku: "SWEATPANTS-M",
-              options: {
-                Size: "M",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L",
-              sku: "SWEATPANTS-L",
-              options: {
-                Size: "L",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL",
-              sku: "SWEATPANTS-XL",
-              options: {
-                Size: "XL",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
-        },
-        {
-          title: "Medusa Shorts",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Merch")!.id,
-          ],
-          description:
-            "Reimagine the feeling of classic shorts. With our cotton shorts, everyday essentials no longer have to be ordinary.",
-          handle: "shorts",
-          weight: 400,
-          status: ProductStatus.PUBLISHED,
-          shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-back.png",
-            },
-          ],
-          options: [
-            {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
-            },
-          ],
-          variants: [
-            {
-              title: "S",
-              sku: "SHORTS-S",
-              options: {
-                Size: "S",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M",
-              sku: "SHORTS-M",
-              options: {
-                Size: "M",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L",
-              sku: "SHORTS-L",
-              options: {
-                Size: "L",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL",
-              sku: "SHORTS-XL",
-              options: {
-                Size: "XL",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
-        },
+  const missingCategories = CATEGORY_NAMES.filter(
+    (name) => !existingCategories.some((cat: any) => cat.name === name)
+  );
+
+  let categories: { id: string; name: string }[] = existingCategories.filter(
+    (cat: any) => CATEGORY_NAMES.includes(cat.name)
+  );
+
+  if (missingCategories.length) {
+    const { result: categoryResult } = await createProductCategoriesWorkflow(
+      container
+    ).run({
+      input: {
+        product_categories: missingCategories.map((name) => ({
+          name,
+          is_active: true,
+        })),
+      },
+    });
+    categories = [...existingCategories, ...categoryResult];
+  }
+
+  const categoryId = (name: string): string => {
+    const found = categories.find((cat) => cat.name === name);
+    if (!found) {
+      throw new Error(`Seed: product category "${name}" not found.`);
+    }
+    return found.id;
+  };
+
+  /**
+   * Sortiment. Alle Preise in CHF als DEZIMALBETRÄGE (4.5 === CHF 4.50).
+   * Keine `images` — für die echten Produktbilder liegen keine Rechte /
+   * URLs vor; die pflegt der Shop-Betreiber im Admin nach.
+   */
+  const productDefinitions = [
+    {
+      title: "RAW Classic King Size Slim",
+      handle: "raw-classic-king-size-slim",
+      category: "Papers",
+      description:
+        "Ungebleichte Blättchen aus reinem Naturfaser-Hanf. RAW Classic ist der Klassiker unter den King Size Slim Papers — dünn, langsam abbrennend, ohne Chlor und ohne Farbstoffe. 32 Blatt pro Heftchen.",
+      weight: 12,
+      variants: [
+        { title: "1 Heftchen", sku: "RAW-CLS-KSS-1", price: 2.5 },
+        { title: "5er Pack", sku: "RAW-CLS-KSS-5", price: 11.5 },
+        { title: "Box (50 Heftchen)", sku: "RAW-CLS-KSS-50", price: 99 },
       ],
     },
+    {
+      title: "RAW Black Organic Hemp 1 1/4",
+      handle: "raw-black-organic-hemp-1-1-4",
+      category: "Papers",
+      description:
+        "Die dünnsten Papers von RAW: Organic Hemp im Black-Finish, 1 1/4 Format. Bio-Hanf, ungebleicht, mit natürlichem Gummi-Arabikum-Streifen. 50 Blatt pro Heftchen.",
+      weight: 10,
+      variants: [
+        { title: "1 Heftchen", sku: "RAW-BLK-114-1", price: 2.9 },
+        { title: "5er Pack", sku: "RAW-BLK-114-5", price: 13.5 },
+      ],
+    },
+    {
+      title: "Elements Ultra Thin Rice King Size Slim",
+      handle: "elements-ultra-thin-rice-kss",
+      category: "Papers",
+      description:
+        "Blättchen aus Reisstroh, die praktisch rückstandsfrei abbrennen — es bleibt nur feine Asche. Gummierung aus Zuckersaft. 32 Blatt pro Heftchen.",
+      weight: 11,
+      variants: [
+        { title: "1 Heftchen", sku: "ELE-UTR-KSS-1", price: 2.9 },
+        { title: "5er Pack", sku: "ELE-UTR-KSS-5", price: 13.5 },
+      ],
+    },
+    {
+      title: "OCB Premium Black King Size Slim",
+      handle: "ocb-premium-black-kss",
+      category: "Papers",
+      description:
+        "Der französische Klassiker. Ultradünnes, langsam abbrennendes Papier mit gleichmässigem Zug. 32 Blatt pro Heftchen.",
+      weight: 11,
+      variants: [
+        { title: "1 Heftchen", sku: "OCB-PRB-KSS-1", price: 2.4 },
+        { title: "5er Pack", sku: "OCB-PRB-KSS-5", price: 10.9 },
+        { title: "Box (50 Heftchen)", sku: "OCB-PRB-KSS-50", price: 94 },
+      ],
+    },
+    {
+      title: "Smoking Blue King Size",
+      handle: "smoking-blue-king-size",
+      category: "Papers",
+      description:
+        "Spanische Papers mit mittlerer Grammatur — etwas robuster als Ultra-Thin und dadurch angenehm zu drehen. 33 Blatt pro Heftchen.",
+      weight: 12,
+      variants: [
+        { title: "1 Heftchen", sku: "SMK-BLU-KS-1", price: 2.2 },
+        { title: "5er Pack", sku: "SMK-BLU-KS-5", price: 9.9 },
+      ],
+    },
+    {
+      title: "Zig Zag Blue Regular",
+      handle: "zig-zag-blue-regular",
+      category: "Papers",
+      description:
+        "Kurzformat-Blättchen im Regular-Size. Zig Zag Blue ist seit Generationen der Standard für kurze Drehs. 50 Blatt pro Heftchen.",
+      weight: 9,
+      variants: [
+        { title: "1 Heftchen", sku: "ZIG-BLU-REG-1", price: 1.9 },
+        { title: "5er Pack", sku: "ZIG-BLU-REG-5", price: 8.5 },
+      ],
+    },
+    {
+      title: "PURIZE Aktivkohlefilter 6 mm",
+      handle: "purize-aktivkohlefilter-6mm",
+      category: "Filter & Tips",
+      description:
+        "Aktivkohlefilter mit 6 mm Durchmesser und Keramikkappen gegen Durchrutschen. Filtert Teer und Schadstoffe, ohne den Zug zu blockieren. Made in Germany.",
+      weight: 60,
+      variants: [
+        { title: "50 Stück", sku: "PUR-AK6-50", price: 5.9 },
+        { title: "100 Stück", sku: "PUR-AK6-100", price: 9.9 },
+        { title: "250 Stück", sku: "PUR-AK6-250", price: 21.9 },
+      ],
+    },
+    {
+      title: "PURIZE XTRA Slim Aktivkohlefilter 5.9 mm",
+      handle: "purize-xtra-slim-5-9mm",
+      category: "Filter & Tips",
+      description:
+        "Die Slim-Variante mit 5.9 mm — passt in schlankere Drehs und behält trotzdem die volle Aktivkohle-Füllung. Mit Keramikkappen.",
+      weight: 55,
+      variants: [
+        { title: "50 Stück", sku: "PUR-XTS-50", price: 6.5 },
+        { title: "100 Stück", sku: "PUR-XTS-100", price: 10.9 },
+      ],
+    },
+    {
+      title: "RAW Perforated Tips",
+      handle: "raw-perforated-tips",
+      category: "Filter & Tips",
+      description:
+        "Ungebleichte, perforierte Filter-Tips zum Selberrollen. 50 Tips pro Heftchen, perforiert für einen sauberen Roll-In.",
+      weight: 15,
+      variants: [
+        { title: "1 Heftchen", sku: "RAW-TIP-PER-1", price: 1.5 },
+        { title: "10er Pack", sku: "RAW-TIP-PER-10", price: 12.9 },
+      ],
+    },
+    {
+      title: "Angel Filter Tips Slim",
+      handle: "angel-filter-tips-slim",
+      category: "Filter & Tips",
+      description:
+        "Schmale Kartontips im Slim-Format. Stabiler Karton, kein Nachrutschen, neutral im Geschmack. 50 Tips pro Heftchen.",
+      weight: 14,
+      variants: [
+        { title: "1 Heftchen", sku: "ANG-TIP-SLM-1", price: 1.4 },
+        { title: "10er Pack", sku: "ANG-TIP-SLM-10", price: 11.9 },
+      ],
+    },
+    {
+      title: "Greengo Kräutermischung",
+      handle: "greengo-kraeutermischung",
+      category: "Kräutermischungen",
+      description:
+        "Tabakfreie Kräutermischung aus Papaya-, Eukalyptus- und Kokosblättern. Nikotinfrei und ohne Zusatzstoffe — der Standard-Ersatz für Tabak beim Mischen.",
+      weight: 30,
+      variants: [
+        { title: "30 g", sku: "GRG-KRM-30", price: 6.9 },
+        { title: "3 x 30 g", sku: "GRG-KRM-90", price: 18.9 },
+      ],
+    },
+    {
+      title: "dubi Glasaschenbecher",
+      handle: "dubi-glasaschenbecher",
+      category: "Aschenbecher",
+      description:
+        "Schwerer Aschenbecher aus massivem Pressglas mit vier Ablagekerben. Spülmaschinenfest, standfest, unkaputtbar — der Klassiker für Tisch und Balkon.",
+      weight: 620,
+      variants: [
+        { title: "Klar", sku: "DUB-ASB-CLR", price: 14.9 },
+        { title: "Rauchglas", sku: "DUB-ASB-SMK", price: 16.9 },
+      ],
+    },
+    {
+      title: "dubi Glasaschenbecher XL",
+      handle: "dubi-glasaschenbecher-xl",
+      category: "Aschenbecher",
+      description:
+        "Die grosse Ausführung mit 16 cm Durchmesser für Runden zu mehreren. Massives Pressglas, sechs Ablagekerben, tiefe Mulde.",
+      weight: 1150,
+      variants: [{ title: "Klar", sku: "DUB-ASB-XL-CLR", price: 24.9 }],
+    },
+  ];
+
+  // Bereits vorhandene Produkte überspringen (Handle ist unique).
+  // Gleicher Fallstrick wie bei den Kategorien → query.graph mit explizitem
+  // Feld statt listProducts().
+  const { data: allProducts } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
   });
+  const existingHandles = new Set(allProducts.map((p: any) => p.handle));
+
+  const productsToCreate = productDefinitions.filter(
+    (p) => !existingHandles.has(p.handle)
+  );
+
+  if (productsToCreate.length) {
+    await createProductsWorkflow(container).run({
+      input: {
+        products: productsToCreate.map((product) => ({
+          title: product.title,
+          handle: product.handle,
+          description: product.description,
+          category_ids: [categoryId(product.category)],
+          weight: product.weight,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile!.id,
+          options: [
+            {
+              title: "Variante",
+              values: product.variants.map((v) => v.title),
+            },
+          ],
+          variants: product.variants.map((variant) => ({
+            title: variant.title,
+            sku: variant.sku,
+            options: {
+              Variante: variant.title,
+            },
+            prices: [
+              {
+                // CHF als DEZIMALBETRAG — 4.5 === CHF 4.50
+                amount: variant.price,
+                currency_code: CURRENCY,
+              },
+            ],
+          })),
+          sales_channels: [
+            {
+              id: defaultSalesChannel[0].id,
+            },
+          ],
+        })),
+      },
+    });
+    logger.info(`Created ${productsToCreate.length} products.`);
+  } else {
+    logger.info("All products already exist — skipped.");
+  }
   logger.info("Finished seeding product data.");
 
-  logger.info("Seeding inventory levels.");
+  // ─── Lagerbestände ───────────────────────────────────────────
+  logger.info("Seeding inventory levels...");
 
   const { data: inventoryItems } = await query.graph({
     entity: "inventory_item",
     fields: ["id"],
   });
 
-  const inventoryLevels: CreateInventoryLevelInput[] = [];
-  for (const inventoryItem of inventoryItems) {
-    const inventoryLevel = {
-      location_id: stockLocation.id,
-      stocked_quantity: 1000000,
-      inventory_item_id: inventoryItem.id,
-    };
-    inventoryLevels.push(inventoryLevel);
-  }
-
-  await createInventoryLevelsWorkflow(container).run({
-    input: {
-      inventory_levels: inventoryLevels,
-    },
+  const { data: existingLevels } = await query.graph({
+    entity: "inventory_level",
+    fields: ["inventory_item_id", "location_id"],
   });
 
+  const levelKey = (itemId: string, locationId: string) =>
+    `${itemId}::${locationId}`;
+  const seenLevels = new Set(
+    existingLevels.map((lvl: any) =>
+      levelKey(lvl.inventory_item_id, lvl.location_id)
+    )
+  );
+
+  const inventoryLevels: CreateInventoryLevelInput[] = [];
+  for (const inventoryItem of inventoryItems) {
+    if (seenLevels.has(levelKey(inventoryItem.id, stockLocation.id))) {
+      continue;
+    }
+    inventoryLevels.push({
+      location_id: stockLocation.id,
+      stocked_quantity: 1000,
+      inventory_item_id: inventoryItem.id,
+    });
+  }
+
+  if (inventoryLevels.length) {
+    await createInventoryLevelsWorkflow(container).run({
+      input: {
+        inventory_levels: inventoryLevels,
+      },
+    });
+    logger.info(`Created ${inventoryLevels.length} inventory levels.`);
+  } else {
+    logger.info("Inventory levels already present — skipped.");
+  }
+
   logger.info("Finished seeding inventory levels data.");
+  logger.info("jibbit.ch seed complete.");
 }
