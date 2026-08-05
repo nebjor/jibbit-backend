@@ -10,7 +10,8 @@
  *   --pricelist <name>   nur diese Odoo-Preisliste importieren (sonst: alle,
  *                        was bei mehreren Listen zu Konflikten führt)
  *   --currency <code>    Zielwährung in Medusa, Default chf
- *   --round <schritt>    z.B. 0.05 für Rundung auf 5 Rappen, Default 0.01
+ *   --round <schritt>    Rundungsschritt, Default 0.05 (Schweizer Preisoptik).
+ *                        --round 0.01 für rappengenaue Preise.
  *   --dry-run            nur anzeigen, nichts schreiben
  *
  * WICHTIG — Beträge sind Dezimalzahlen, nicht Rappen. CHF 27.00 === 27.
@@ -54,16 +55,28 @@ type PriceInput = {
 
 const BATCH = 50
 
+/**
+ * Schweizer Preisoptik: alles auf 5 Rappen. Der kleinste Münzwert ist
+ * CHF 0.05, Preise dazwischen wirken hier fremd.
+ */
+const ROUND_DEFAULT = 0.05
+
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(`--${name}`)
   return i >= 0 ? args[i + 1] : undefined
 }
 
-function roundTo(value: number, step: number): number {
+/**
+ * Auf `step` runden — und danach auf 2 Nachkommastellen festklopfen.
+ * Ohne das zweite Runden liefert die Binärarithmetik Werte wie
+ * 1.2000000000000002 (Math.round(1.175 / 0.05) * 0.05), und genau die
+ * landen dann als Preis in der Datenbank.
+ */
+export function roundTo(value: number, step: number): number {
   if (step <= 0) {
-    return value
+    return Number(value.toFixed(2))
   }
-  return Math.round(value / step) * step
+  return Number((Math.round(value / step) * step).toFixed(2))
 }
 
 /**
@@ -90,6 +103,28 @@ function validateTiers(tiers: ExportTier[]): string | null {
   return null
 }
 
+/**
+ * Nach dem Runden auf 5 Rappen können zwei benachbarte Staffeln auf demselben
+ * Preis landen (1.12 und 1.08 werden beide zu 1.10). In der Preistabelle stünde
+ * dann zweimal derselbe Betrag — es sähe aus, als lohne sich die grössere Menge
+ * nicht. Solche Stufen werden zu einer zusammengefasst.
+ *
+ * Die Staffeln sind hier bereits validiert, also lückenlos und aufsteigend
+ * sortiert — das Verschmelzen erhält beides.
+ */
+export function collapseEqual(prices: PriceInput[]): PriceInput[] {
+  const out: PriceInput[] = []
+  for (const price of prices) {
+    const last = out[out.length - 1]
+    if (last && last.amount === price.amount) {
+      last.max_quantity = price.max_quantity
+      continue
+    }
+    out.push({ ...price })
+  }
+  return out
+}
+
 const chunk = <T>(arr: T[], n: number): T[][] =>
   Array.from({ length: Math.ceil(arr.length / n) }, (_, i) =>
     arr.slice(i * n, i * n + n)
@@ -106,7 +141,7 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
 
   const pricelistFilter = flag(args, "pricelist")
   const currency = (flag(args, "currency") ?? "chf").toLowerCase()
-  const step = Number(flag(args, "round") ?? "0.01")
+  const step = Number(flag(args, "round") ?? String(ROUND_DEFAULT))
   const dryRun = args.includes("--dry-run")
 
   const raw: ExportEntry[] = JSON.parse(readFileSync(resolve(file), "utf8"))
@@ -229,6 +264,9 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
   // ─── Payload bauen ────────────────────────────────────────────
   const payload: { id: string; prices: PriceInput[] }[] = []
   const skipped: string[] = []
+  const flattened: string[] = []
+  const preview = new Map<string, PriceInput[]>()
+  let collapsed = 0
 
   for (const entry of entries) {
     const variantId = variantBySku.get(entry.sku as string)
@@ -242,12 +280,25 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
       continue
     }
 
-    const prices: PriceInput[] = entry.tiers.map((t) => ({
+    const rounded: PriceInput[] = entry.tiers.map((t) => ({
       amount: roundTo(t.price, step),
       currency_code: currency,
       min_quantity: t.min_quantity,
       max_quantity: t.max_quantity,
     }))
+
+    const prices = collapseEqual(rounded)
+    if (prices.length < rounded.length) {
+      collapsed += rounded.length - prices.length
+    }
+
+    // Nach dem Zusammenfassen kann eine einzige Stufe übrig bleiben — dann
+    // ist der Mengenrabatt durch die Rundung komplett verschwunden.
+    if (prices.length === 1) {
+      flattened.push(entry.sku as string)
+    }
+
+    preview.set(entry.sku as string, prices)
 
     payload.push({
       id: variantId,
@@ -260,24 +311,35 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
     skipped.slice(0, 10).forEach((s) => logger.warn(`  ${s}`))
   }
 
+  if (collapsed) {
+    logger.info(
+      `${collapsed} Staffeln fielen durch die Rundung auf ${step} mit der ` +
+        `darunterliegenden zusammen und wurden verschmolzen.`
+    )
+  }
+
+  if (flattened.length) {
+    logger.warn(
+      `${flattened.length} Artikel haben nach der Rundung gar keinen ` +
+        `Mengenrabatt mehr (der Unterschied war kleiner als ${step}): ` +
+        `${flattened.slice(0, 5).join(", ")}${flattened.length > 5 ? " …" : ""}`
+    )
+  }
+
   if (dryRun) {
     logger.info("— Probelauf, es wird nichts geschrieben —")
-    for (const entry of entries.slice(0, 10)) {
-      const variantId = variantBySku.get(entry.sku as string)
-      if (!variantId) {
-        continue
-      }
-      const staffeln = entry.tiers
+    for (const [sku, prices] of [...preview].slice(0, 10)) {
+      const staffeln = prices
         .map(
-          (t) =>
-            `${t.min_quantity}${t.max_quantity ? `–${t.max_quantity}` : "+"}: ` +
-            `${roundTo(t.price, step).toFixed(2)}`
+          (p) =>
+            `${p.min_quantity}${p.max_quantity ? `–${p.max_quantity}` : "+"}: ` +
+            `${p.amount.toFixed(2)}`
         )
         .join("  |  ")
-      logger.info(`  ${entry.sku?.padEnd(20)} ${staffeln}`)
+      logger.info(`  ${sku.padEnd(20)} ${staffeln}`)
     }
-    if (entries.length > 10) {
-      logger.info(`  … und ${entries.length - 10} weitere`)
+    if (preview.size > 10) {
+      logger.info(`  … und ${preview.size - 10} weitere`)
     }
     logger.info(`Würde ${payload.length} Varianten aktualisieren.`)
     return
