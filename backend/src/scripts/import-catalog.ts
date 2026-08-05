@@ -412,7 +412,7 @@ export default async function importCatalog({ container, args }: ExecArgs) {
   } else {
     logger.info(
       "Bestandsführung aus (manage_inventory=false) — Artikel sind sofort " +
-        "bestellbar. Mit --stock <n> stattdessen Bestände führen."
+        "bestellbar. Mit stock=<n> stattdessen Bestände führen."
     )
   }
 }
