@@ -67,6 +67,11 @@ services:
       # Medusa
       MEDUSA_BACKEND_URL: ${MEDUSA_BACKEND_URL:-http://localhost:9000}
 
+      # Session-Secrets: ohne diese fällt medusa-config.ts auf
+      # "supersecret" zurück — in Produktion inakzeptabel.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET muss gesetzt sein}
+      COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET muss gesetzt sein}
+
       # Payrexx
       PAYREXX_INSTANCE: ${PAYREXX_INSTANCE}
       PAYREXX_API_SECRET: ${PAYREXX_API_SECRET}
