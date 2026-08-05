@@ -237,17 +237,50 @@ rechnen lässt (siehe unten), statt die Formeln nachzubauen.
 
 ---
 
-## 6. Offene Punkte
+## 6. Entscheidungen
 
-- **Rundung.** Odoo liefert z.B. 0.9833. Auf CHF 0.05 runden (Schweizer
-  Preisoptik) oder auf 0.01? Muss entschieden werden, bevor importiert wird.
+### Rundung: CHF 0.05 — entschieden
+
+Odoo liefert Preise wie 0.9833. Alles wird auf **5 Rappen** gerundet, weil das
+in der Schweiz die kleinste Münze ist und Preise dazwischen fremd wirken.
+Default im Importer (`ROUND_DEFAULT`), mit `--round 0.01` überschreibbar.
+
+Zwei Nebenwirkungen, die der Importer deshalb selbst behandelt:
+
+- **Stufen fallen zusammen.** 1.12 und 1.08 werden beide zu 1.10. In der
+  Preistabelle stünde dann zweimal derselbe Betrag, und es sähe aus, als
+  lohne sich die grössere Menge nicht. `collapseEqual()` verschmilzt solche
+  Stufen zu einer.
+- **Der Rabatt verschwindet ganz.** Bleibt nach dem Verschmelzen nur eine
+  einzige Stufe übrig, war der ganze Mengenrabatt kleiner als 5 Rappen. Der
+  Importer meldet diese Artikel namentlich — bei billigen Einzelartikeln ist
+  das der Normalfall und kein Fehler, aber man will es wissen.
+
+Beim Runden wird zusätzlich auf zwei Nachkommastellen festgeklopft. Ohne das
+liefert `Math.round(1.175 / 0.05) * 0.05` den Wert `1.2000000000000002` — und
+genau der landete sonst als Preis in der Datenbank.
+
+### Display-Staffeln: später, vorerst Hinweistext
+
+Displays bekommen ebenfalls Staffelpreise (3 Displays billiger als 1 — der
+Wiederverkäuferfall). Das wird **separat** gemacht.
+
+Bis dahin steht auf der Display-Variante statt einer Preistabelle:
+
+> **Kontaktiere uns für Händlerpreise**
+
+Technisch ist daran nichts Besonderes: dieselbe Struktur, nur mehr
+Preiszeilen. Die PDP zeigt die Preistabelle ohnehin nur, wenn die Variante
+mehr als eine Staffel hat — solange das Display nur einen Preis hat, greift
+automatisch der Hinweistext. Es braucht also keine Sonderbehandlung, die
+später wieder rausmuss.
+
+## 7. Noch offen
+
 - **MwSt.** Odoo-Listenpreise sind normalerweise *exkl.* Steuer. Medusas
   `is_tax_inclusive` hängt an der Region. Vor dem Import einmal an einem
   Artikel gegenrechnen.
 - **Mehrere Preislisten.** Wenn es in Odoo B2C und B2B gibt: B2C → normale
   Variantenpreise, B2B → Medusa Price List mit Customer-Group-Regel. Der
-  Export trennt sie bereits.
-- **Display-Staffeln.** Bekommt auch das Display selbst Staffeln
-  (3 Displays billiger als 1)? Technisch identisch, nur mehr Preiszeilen.
-  Fachlich: wahrscheinlich ja, das ist der Wiederverkäuferfall.
-- **Admin-Betriebsregel** aus §3 Lücke 1 dokumentieren.
+  Export trennt sie bereits, der Importer verlangt dann `--pricelist`.
+- **Admin-Betriebsregel** aus §3 Lücke 1 ins Handbuch übernehmen.
