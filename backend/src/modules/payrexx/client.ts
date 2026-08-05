@@ -10,7 +10,6 @@
 
 import axios, { AxiosInstance } from "axios"
 import crypto from "crypto"
-import qs from "querystring"
 
 export interface PayrexxGatewayRequest {
   amount: number // in Rappen (cents)
@@ -86,7 +85,16 @@ export class PayrexxClient {
   }
 
   /**
-   * HMAC-SHA256 Signatur für Payrexx API Requests
+   * HMAC-SHA256 Signatur für ausgehende Payrexx API Requests (`ApiSignature`).
+   *
+   * Payrexx spezifiziert für die REST API eine BASE64-kodierte HMAC-SHA256
+   * über den Query-String (ohne den Parameter `instance`) — bewusst ein
+   * anderes Encoding als bei den eingehenden Webhooks (dort HEX).
+   * Die Asymmetrie ist kein Bug.
+   *
+   * Quelle: https://developers.payrexx.com/reference/rest-api
+   * "Build url encoded query string, calculate binary hmac hash using your
+   *  instance's API Secret as key, encode it with base64."
    */
   private buildSignature(queryString: string): string {
     return crypto
@@ -96,23 +104,66 @@ export class PayrexxClient {
   }
 
   /**
-   * Validiert eingehende Webhook-Signaturen (HMAC-SHA256).
+   * RFC-1738-Encoding, wie es Payrexx für den signierten Query-String
+   * verlangt: "The query string has to be RFC 1738 encoded, that means you
+   * have to replace spaces by '+'."
+   *
+   * encodeURIComponent() kodiert Leerzeichen als %20. Da `purpose` immer ein
+   * Leerzeichen enthält ("jibbit.ch Bestellung"), hätte JEDE Gateway-Anfrage
+   * eine nicht verifizierbare Signatur produziert. Signatur und Body werden
+   * aus demselben String gebaut, die Umstellung ist also konsistent.
+   */
+  private static rfc1738(value: string | number | boolean): string {
+    return encodeURIComponent(String(value)).replace(/%20/g, "+")
+  }
+
+  /**
+   * Header, in dem Payrexx die Webhook-Signatur ausliefert.
+   * https://docs.payrexx.com/developer/guides/webhook
+   */
+  static readonly WEBHOOK_SIGNATURE_HEADER = "x-webhook-signature"
+
+  /**
+   * Validiert eingehende Webhook-Signaturen (HMAC-SHA256, lowercase HEX).
    * Schützt gegen Webhook Forgery (OWASP).
+   *
+   * Payrexx: "The signature is provided in the X-Webhook-Signature HTTP header
+   * and is generated as a lowercase hex-encoded SHA-256 HMAC."
+   *
+   * Gibt IMMER einen Boolean zurück — auch bei leerer, zu kurzer oder
+   * nicht-hexadezimaler Signatur. (crypto.timingSafeEqual wirft bei
+   * ungleicher Buffer-Länge eine RangeError; ein Angreifer könnte damit
+   * eine leere Signatur schicken und einen 500er statt eines 401 erzeugen.)
    */
   static verifyWebhookSignature(
     payload: string,
     signature: string,
     secret: string
   ): boolean {
+    if (!signature || !secret) {
+      return false
+    }
+
     const computed = crypto
       .createHmac("sha256", secret)
       .update(payload)
       .digest("hex")
 
+    const normalized = signature.trim().toLowerCase()
+
+    // Buffer.from(x, "hex") verschluckt ungültige Zeichen still —
+    // deshalb Format und Länge vorab prüfen.
+    if (normalized.length !== computed.length) {
+      return false
+    }
+    if (!/^[0-9a-f]+$/.test(normalized)) {
+      return false
+    }
+
     // Timing-safe comparison gegen Timing-Attacken
     return crypto.timingSafeEqual(
       Buffer.from(computed, "hex"),
-      Buffer.from(signature, "hex")
+      Buffer.from(normalized, "hex")
     )
   }
 
@@ -136,10 +187,11 @@ export class PayrexxClient {
       params.cancelRedirectUrl = request.cancelRedirectUrl
     }
 
-    // Build query string for signature
+    // Build query string for signature (RFC 1738 — Leerzeichen als "+")
+    const enc = PayrexxClient.rfc1738
     const queryParts: string[] = []
     for (const [key, val] of Object.entries(params)) {
-      queryParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`)
+      queryParts.push(`${enc(key)}=${enc(val)}`)
     }
 
     // PSP IDs hinzufügen (TWINT, Powerpay)
@@ -152,7 +204,7 @@ export class PayrexxClient {
     // Payment method names
     if (request.pm?.length) {
       request.pm.forEach((pm, i) => {
-        queryParts.push(`pm%5B${i}%5D=${encodeURIComponent(pm)}`)
+        queryParts.push(`pm%5B${i}%5D=${enc(pm)}`)
       })
     }
 
@@ -160,7 +212,7 @@ export class PayrexxClient {
     if (request.fields) {
       for (const [fieldKey, fieldVal] of Object.entries(request.fields)) {
         queryParts.push(
-          `fields%5B${encodeURIComponent(fieldKey)}%5D%5Bvalue%5D=${encodeURIComponent(fieldVal.value)}`
+          `fields%5B${enc(fieldKey)}%5D%5Bvalue%5D=${enc(fieldVal.value)}`
         )
       }
     }

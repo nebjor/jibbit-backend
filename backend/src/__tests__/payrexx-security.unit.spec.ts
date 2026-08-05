@@ -69,12 +69,51 @@ describe("Payrexx Security Tests", () => {
       ).toBe(false)
     })
 
-    it("should reject empty signature", () => {
+    it("should reject empty signature without throwing", () => {
       const payload = JSON.stringify({ transaction: { id: 1 } })
 
-      expect(() => {
+      // Vorher warf crypto.timingSafeEqual hier eine RangeError (ungleiche
+      // Buffer-Länge) — ein Angreifer konnte damit einen 500er provozieren.
+      // Der Verifier gibt jetzt deterministisch false zurück.
+      expect(
         PayrexxClient.verifyWebhookSignature(payload, "", WEBHOOK_SECRET)
-      }).toThrow()
+      ).toBe(false)
+    })
+
+    it("should reject a signature of the wrong length", () => {
+      const payload = JSON.stringify({ transaction: { id: 1 } })
+
+      expect(
+        PayrexxClient.verifyWebhookSignature(payload, "abcdef", WEBHOOK_SECRET)
+      ).toBe(false)
+    })
+
+    it("should reject a non-hexadecimal signature", () => {
+      const payload = JSON.stringify({ transaction: { id: 1 } })
+
+      // 64 Zeichen, aber kein gültiges Hex — Buffer.from(..., "hex") würde
+      // hier still abschneiden statt zu scheitern.
+      expect(
+        PayrexxClient.verifyWebhookSignature(payload, "z".repeat(64), WEBHOOK_SECRET)
+      ).toBe(false)
+    })
+
+    it("should accept an uppercase hex signature", () => {
+      const payload = JSON.stringify({ transaction: { id: 2 } })
+
+      const crypto = require("crypto")
+      const validSignature = crypto
+        .createHmac("sha256", WEBHOOK_SECRET)
+        .update(payload)
+        .digest("hex")
+
+      expect(
+        PayrexxClient.verifyWebhookSignature(
+          payload,
+          validSignature.toUpperCase(),
+          WEBHOOK_SECRET
+        )
+      ).toBe(true)
     })
   })
 
