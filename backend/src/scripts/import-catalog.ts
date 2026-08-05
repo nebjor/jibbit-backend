@@ -101,15 +101,39 @@ function slugify(name: string): string {
 }
 
 /**
- * Deterministische SKU aus Handle und Gebinde. Bewusst lesbar statt kurz —
- * echte Lieferanten-Artikelnummern kennt dieses Script nicht, und eine SKU,
- * die man beim Kommissionieren lesen kann, ist mehr wert als eine kryptische.
- * Im Admin jederzeit überschreibbar.
+ * Deterministische SKU aus dem Produktnamen und dem Gebinde.
+ *
+ * Der Name wird NICHT einfach abgeschnitten, sondern auf die ersten drei
+ * Buchstaben je Wort verkürzt. Beim Abschneiden fällt sonst genau das Wort
+ * weg, das die Artikel unterscheidet:
+ *
+ *   "RAW Kristallglas Aschenbecher Darkside" -> RAW-KRISTALLGLAS-ASCHENBECHE
+ *   "RAW Kristallglas Aschenbecher Rainbow"  -> RAW-KRISTALLGLAS-ASCHENBECHE
+ *
+ * Beide Aschenbecher hätten dieselbe SKU bekommen. Mit der Wortkürzung wird
+ * daraus RAW-KRI-ASC-DAR bzw. RAW-KRI-ASC-RAI.
+ *
+ * Echte Lieferanten-Artikelnummern kennt dieses Script nicht — im Admin
+ * jederzeit überschreibbar.
  */
-function skuFor(handle: string, variant: CatalogVariant): string {
-  const base = handle.toUpperCase().replace(/-/g, "-").slice(0, 28)
+function skuFor(name: string, variant: CatalogVariant): string {
+  const base = name
+    .toUpperCase()
+    .replace(/Ä/g, "AE")
+    .replace(/Ö/g, "OE")
+    .replace(/Ü/g, "UE")
+    .replace(/Ø/g, "O")
+    .split(/[^A-Z0-9]+/)
+    .filter(Boolean)
+    .slice(0, 6)
+    .map((word) => word.slice(0, 3))
+    .join("-")
+
   const suffix =
-    variant.pack_type === "single" ? "EA" : `${variant.pack_type === "box" ? "BX" : "D"}${variant.units_per_pack}`
+    variant.pack_type === "single"
+      ? "EA"
+      : `${variant.pack_type === "box" ? "BX" : "D"}${variant.units_per_pack}`
+
   return `${base}-${suffix}`
 }
 
@@ -240,7 +264,7 @@ export default async function importCatalog({ container, args }: ExecArgs) {
       category_ids: categoryEntry ? [categoryEntry.id] : [],
       variants: entry.variants.map((v) => ({
         title: v.label,
-        sku: skuFor(handle, v),
+        sku: skuFor(entry.product, v),
         manage_inventory: manageInventory,
         options: { [OPTION_TITLE]: v.label },
         metadata: {
@@ -259,6 +283,27 @@ export default async function importCatalog({ container, args }: ExecArgs) {
         { title: OPTION_TITLE, values: entry.variants.map((v) => v.label) },
       ],
     })
+  }
+
+  // SKUs müssen shopweit eindeutig sein. Lieber hier abbrechen als beim
+  // Anlegen auf einen Unique-Constraint laufen und halb importiert dastehen.
+  const seenSkus = new Map<string, string>()
+  const collisions: string[] = []
+  for (const p of toCreate) {
+    for (const v of p.variants) {
+      const owner = seenSkus.get(v.sku)
+      if (owner) {
+        collisions.push(`${v.sku}: "${owner}" und "${p.title}"`)
+        continue
+      }
+      seenSkus.set(v.sku, p.title)
+    }
+  }
+
+  if (collisions.length) {
+    logger.error(`SKU-Kollisionen — nichts wurde angelegt:`)
+    collisions.forEach((c) => logger.error(`  ${c}`))
+    return
   }
 
   // ─── Bericht ──────────────────────────────────────────────────
