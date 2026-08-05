@@ -1,0 +1,373 @@
+/**
+ * Legt den Katalog aus catalog.json in Medusa an — Produkte, Varianten und
+ * Staffelpreise in einem Durchgang.
+ *
+ *   node scripts/parse-price-rules.mjs preisregeln.txt
+ *   cd backend
+ *   npx medusa exec ./src/scripts/import-catalog.ts ../odoo-export/catalog.json dry-run
+ *
+ * Argumente OHNE Bindestrich-Präfix — `medusa exec` lehnt unbekannte Optionen
+ * ab, siehe script-args.ts.
+ *
+ * Optionen:
+ *   dry-run        nur anzeigen, nichts schreiben
+ *   round=<step>   Rundung, Default 0.05 (siehe import-price-tiers.ts)
+ *   stock=<n>      Bestandsführung einschalten und mit n Stück starten.
+ *                  Ohne die Option wird manage_inventory=false gesetzt,
+ *                  damit die Artikel sofort bestellbar sind und der Bestand
+ *                  später im Admin nachgepflegt werden kann.
+ *
+ * Was dieses Script NICHT liefert: Bilder, Beschreibungen und Gewichte. Die
+ * stehen nicht in den Preisregeln und gehören ohnehin ins Admin. Ohne Gewicht
+ * ist der Versand nicht betroffen — jibbit rechnet pauschal.
+ *
+ * Idempotent über den Handle: bereits vorhandene Produkte werden übersprungen,
+ * nicht überschrieben. Wer Preise aktualisieren will, nimmt danach
+ * import-price-tiers.ts.
+ */
+
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
+
+import { ExecArgs } from "@medusajs/framework/types"
+import {
+  ContainerRegistrationKeys,
+  Modules,
+  ProductStatus,
+} from "@medusajs/framework/utils"
+import {
+  createProductCategoriesWorkflow,
+  createProductsWorkflow,
+  createInventoryLevelsWorkflow,
+} from "@medusajs/medusa/core-flows"
+
+import { roundTo } from "./import-price-tiers"
+import { parseScriptArgs } from "./script-args"
+
+const CURRENCY = "chf"
+const OPTION_TITLE = "Verpackungseinheit"
+const ROUND_DEFAULT = 0.05
+
+type CatalogTier = {
+  min_quantity: number
+  max_quantity: number | null
+  price: number
+}
+
+type CatalogVariant = {
+  label: string
+  pack_type: "single" | "display" | "box"
+  units_per_pack: number
+  tiers: CatalogTier[]
+}
+
+type CatalogProduct = {
+  product: string
+  ref: string | null
+  variants: CatalogVariant[]
+}
+
+/**
+ * Kategorie aus dem Produktnamen ableiten.
+ *
+ * Reihenfolge ist entscheidend: "OCB Premium KSS Papers mit Filter" enthält
+ * beide Stichwörter und ist ein Blättchen, kein Filter. Deshalb greifen die
+ * Papers-Begriffe vor den Filter-Begriffen.
+ */
+function categoryFor(name: string): string {
+  if (/aschenbecher|ashtray/i.test(name)) {
+    return "Aschenbecher"
+  }
+  if (/\bpapers?\b|\brolls?\b|\bkurz\b|gizeh|heftchen|blättchen/i.test(name)) {
+    return "Papers"
+  }
+  if (/filter|aktivkohle|\btips?\b|purize|kailar|angel|zig\s*zag/i.test(name)) {
+    return "Filter"
+  }
+  return "Papers"
+}
+
+/** "PURIZE Aktivkohlefilter ø 9mm" -> "purize-aktivkohlefilter-o-9mm" */
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/ø/g, "o")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+/**
+ * Deterministische SKU aus Handle und Gebinde. Bewusst lesbar statt kurz —
+ * echte Lieferanten-Artikelnummern kennt dieses Script nicht, und eine SKU,
+ * die man beim Kommissionieren lesen kann, ist mehr wert als eine kryptische.
+ * Im Admin jederzeit überschreibbar.
+ */
+function skuFor(handle: string, variant: CatalogVariant): string {
+  const base = handle.toUpperCase().replace(/-/g, "-").slice(0, 28)
+  const suffix =
+    variant.pack_type === "single" ? "EA" : `${variant.pack_type === "box" ? "BX" : "D"}${variant.units_per_pack}`
+  return `${base}-${suffix}`
+}
+
+/** Ein fertig aufbereitetes Produkt, bereit für createProductsWorkflow. */
+type PreparedVariant = {
+  title: string
+  sku: string
+  manage_inventory: boolean
+  options: Record<string, string>
+  metadata: Record<string, string | number>
+  prices: {
+    amount: number
+    currency_code: string
+    min_quantity: number
+    max_quantity: number | null
+  }[]
+}
+
+type PreparedProduct = {
+  title: string
+  handle: string
+  category: string
+  category_ids: string[]
+  variants: PreparedVariant[]
+  options: { title: string; values: string[] }[]
+}
+
+export default async function importCatalog({ container, args }: ExecArgs) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT)
+  const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL)
+
+  const opts = parseScriptArgs(args)
+
+  const file = opts.file(".json")
+  if (!file) {
+    logger.error("Pfad zu catalog.json fehlt.")
+    return
+  }
+
+  const dryRun = opts.flag("dry-run")
+  const step = Number(opts.value("round") ?? String(ROUND_DEFAULT))
+  const stockRaw = opts.value("stock")
+  const manageInventory = stockRaw !== undefined
+  const initialStock = Number(stockRaw ?? "0")
+
+  const catalog: CatalogProduct[] = JSON.parse(readFileSync(resolve(file), "utf8"))
+
+  if (!catalog.length) {
+    logger.warn("catalog.json ist leer.")
+    return
+  }
+
+  // ─── Kategorien sicherstellen ─────────────────────────────────
+  const wanted = [...new Set(catalog.map((p) => categoryFor(p.product)))]
+
+  const { data: existingCategories } = await query.graph({
+    entity: "product_category",
+    fields: ["id", "name"],
+  })
+
+  const categories: { id: string; name: string }[] = existingCategories.map(
+    (c: { id: string; name: string }) => ({ id: c.id, name: c.name })
+  )
+
+  const missing = wanted.filter((w) => !categories.some((c) => c.name === w))
+
+  if (missing.length && !dryRun) {
+    const { result } = await createProductCategoriesWorkflow(container).run({
+      input: { product_categories: missing.map((name) => ({ name, is_active: true })) },
+    })
+    categories.push(...result.map((c) => ({ id: c.id, name: c.name })))
+    logger.info(`Kategorien angelegt: ${missing.join(", ")}`)
+  }
+
+  // ─── Vorhandene Produkte überspringen ─────────────────────────
+  const { data: allProducts } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+  })
+  const existingHandles = new Set(
+    allProducts.map((p: { handle: string }) => p.handle)
+  )
+
+  const [shippingProfile] = await fulfillmentModuleService.listShippingProfiles({
+    type: "default",
+  })
+  const [salesChannel] = await salesChannelModuleService.listSalesChannels({})
+
+  if (!dryRun && (!shippingProfile || !salesChannel)) {
+    logger.error(
+      "Shipping Profile oder Sales Channel fehlt — bitte zuerst seed.ts laufen lassen."
+    )
+    return
+  }
+
+  // ─── Produkte bauen ───────────────────────────────────────────
+  const skipped: string[] = []
+  const noBasePrice: string[] = []
+  const toCreate: PreparedProduct[] = []
+
+  for (const entry of catalog) {
+    const handle = slugify(entry.product)
+
+    if (existingHandles.has(handle)) {
+      skipped.push(entry.product)
+      continue
+    }
+
+    // Eine Variante ohne Preis für Menge 1 lässt den Warenkorb später
+    // abbrechen. Lieber hier auffallen als bei der ersten Bestellung.
+    const broken = entry.variants.filter((v) => v.tiers[0]?.min_quantity !== 1)
+    if (broken.length) {
+      noBasePrice.push(
+        `${entry.product} (${broken.map((b) => b.label).join(", ")})`
+      )
+      continue
+    }
+
+    const category = categoryFor(entry.product)
+    const categoryEntry = categories.find((c) => c.name === category)
+
+    toCreate.push({
+      title: entry.product,
+      handle,
+      category,
+      category_ids: categoryEntry ? [categoryEntry.id] : [],
+      variants: entry.variants.map((v) => ({
+        title: v.label,
+        sku: skuFor(handle, v),
+        manage_inventory: manageInventory,
+        options: { [OPTION_TITLE]: v.label },
+        metadata: {
+          // Für den Grundpreis "CHF 0.98 / Stk." auf der Produktseite.
+          units_per_pack: v.units_per_pack,
+          pack_type: v.pack_type,
+        },
+        prices: v.tiers.map((t) => ({
+          amount: roundTo(t.price, step),
+          currency_code: CURRENCY,
+          min_quantity: t.min_quantity,
+          max_quantity: t.max_quantity,
+        })),
+      })),
+      options: [
+        { title: OPTION_TITLE, values: entry.variants.map((v) => v.label) },
+      ],
+    })
+  }
+
+  // ─── Bericht ──────────────────────────────────────────────────
+  if (skipped.length) {
+    logger.info(`${skipped.length} Produkte existieren bereits — übersprungen.`)
+  }
+
+  if (noBasePrice.length) {
+    logger.warn(
+      `${noBasePrice.length} Produkte ohne Preis für Menge 1 — nicht angelegt:`
+    )
+    noBasePrice.forEach((n) => logger.warn(`  ${n}`))
+  }
+
+  if (!toCreate.length) {
+    logger.info("Nichts anzulegen.")
+    return
+  }
+
+  if (dryRun) {
+    logger.info("— Probelauf, es wird nichts geschrieben —")
+    for (const p of toCreate) {
+      logger.info(`  ${p.title}  [${p.category}]`)
+      for (const v of p.variants) {
+        const staffeln = v.prices
+          .map(
+            (pr) =>
+              `${pr.min_quantity}${pr.max_quantity ? `–${pr.max_quantity}` : "+"}:` +
+              pr.amount.toFixed(2)
+          )
+          .join("  ")
+        logger.info(`     ${v.sku.padEnd(34)} ${v.title.padEnd(20)} ${staffeln}`)
+      }
+    }
+    logger.info(
+      `Würde ${toCreate.length} Produkte mit ` +
+        `${toCreate.reduce((n, p) => n + p.variants.length, 0)} Varianten anlegen.`
+    )
+    return
+  }
+
+  await createProductsWorkflow(container).run({
+    input: {
+      products: toCreate.map((p) => ({
+        title: p.title,
+        handle: p.handle,
+        status: ProductStatus.PUBLISHED,
+        category_ids: p.category_ids,
+        shipping_profile_id: shippingProfile.id,
+        options: p.options,
+        variants: p.variants,
+        sales_channels: [{ id: salesChannel.id }],
+      })),
+    },
+  })
+
+  logger.info(
+    `${toCreate.length} Produkte angelegt ` +
+      `(${toCreate.reduce((n, p) => n + p.variants.length, 0)} Varianten).`
+  )
+
+  // ─── Bestand ──────────────────────────────────────────────────
+  if (manageInventory) {
+    const { data: stockLocations } = await query.graph({
+      entity: "stock_location",
+      fields: ["id"],
+    })
+    const { data: inventoryItems } = await query.graph({
+      entity: "inventory_item",
+      fields: ["id"],
+    })
+    const { data: levels } = await query.graph({
+      entity: "inventory_level",
+      fields: ["inventory_item_id", "location_id"],
+    })
+
+    if (!stockLocations.length) {
+      logger.warn("Kein Lager gefunden — Bestände wurden nicht gesetzt.")
+      return
+    }
+
+    const location = stockLocations[0].id
+    const have = new Set(
+      levels.map(
+        (l: { inventory_item_id: string; location_id: string }) =>
+          `${l.inventory_item_id}::${l.location_id}`
+      )
+    )
+
+    const missingLevels = inventoryItems
+      .filter((i: { id: string }) => !have.has(`${i.id}::${location}`))
+      .map((i: { id: string }) => ({
+        location_id: location,
+        stocked_quantity: initialStock,
+        inventory_item_id: i.id,
+      }))
+
+    if (missingLevels.length) {
+      await createInventoryLevelsWorkflow(container).run({
+        input: { inventory_levels: missingLevels },
+      })
+      logger.info(
+        `${missingLevels.length} Bestände auf ${initialStock} Stück gesetzt.`
+      )
+    }
+  } else {
+    logger.info(
+      "Bestandsführung aus (manage_inventory=false) — Artikel sind sofort " +
+        "bestellbar. Mit --stock <n> stattdessen Bestände führen."
+    )
+  }
+}

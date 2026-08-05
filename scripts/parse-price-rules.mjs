@@ -335,5 +335,10 @@ const tiersPath = isAbsolute(OUT_DIR)
   ? join(OUT_DIR, "tiers.json")
   : join("..", OUT_DIR, "tiers.json")
 
-console.log(`\nNächster Schritt: SKUs in ${join(OUT_DIR, "sku-map.csv")} eintragen,`)
-console.log(`dann  npx medusa exec ./src/scripts/import-price-tiers.ts ${tiersPath} --dry-run`)
+const catalogPath = tiersPath.replace(/tiers\.json$/, "catalog.json")
+
+console.log("\nNächster Schritt — Produkte anlegen (aus backend/):")
+console.log(`  npx medusa exec ./src/scripts/import-catalog.ts ${catalogPath} dry-run`)
+console.log("\nPreise später aktualisieren:")
+console.log(`  npx medusa exec ./src/scripts/import-price-tiers.ts ${tiersPath} dry-run`)
+console.log("\n(Argumente ohne '--' — medusa exec lehnt unbekannte Optionen ab.)")
