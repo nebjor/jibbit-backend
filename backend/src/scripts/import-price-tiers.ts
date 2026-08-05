@@ -4,15 +4,18 @@
  *   node scripts/odoo-export.mjs            # erzeugt odoo-export/tiers.json
  *   cd backend
  *   npx medusa exec ./src/scripts/import-price-tiers.ts \
- *       ../odoo-export/tiers.json --pricelist "Public Pricelist" --dry-run
+ *       ../odoo-export/tiers.json "pricelist=Public Pricelist" dry-run
+ *
+ * Argumente OHNE Bindestrich-Präfix — `medusa exec` lehnt unbekannte Optionen
+ * ab, siehe script-args.ts.
  *
  * Optionen:
- *   --pricelist <name>   nur diese Odoo-Preisliste importieren (sonst: alle,
- *                        was bei mehreren Listen zu Konflikten führt)
- *   --currency <code>    Zielwährung in Medusa, Default chf
- *   --round <schritt>    Rundungsschritt, Default 0.05 (Schweizer Preisoptik).
- *                        --round 0.01 für rappengenaue Preise.
- *   --dry-run            nur anzeigen, nichts schreiben
+ *   pricelist=<name>   nur diese Odoo-Preisliste importieren (sonst: alle,
+ *                      was bei mehreren Listen zu Konflikten führt)
+ *   currency=<code>    Zielwährung in Medusa, Default chf
+ *   round=<schritt>    Rundungsschritt, Default 0.05 (Schweizer Preisoptik).
+ *                      round=0.01 für rappengenaue Preise.
+ *   dry-run            nur anzeigen, nichts schreiben
  *
  * WICHTIG — Beträge sind Dezimalzahlen, nicht Rappen. CHF 27.00 === 27.
  * (Gleiche Konvention wie seed.ts.)
@@ -30,6 +33,8 @@ import { resolve } from "node:path"
 import { ExecArgs } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { updateProductVariantsWorkflow } from "@medusajs/medusa/core-flows"
+
+import { parseScriptArgs } from "./script-args"
 
 type ExportTier = {
   min_quantity: number
@@ -60,11 +65,6 @@ const BATCH = 50
  * CHF 0.05, Preise dazwischen wirken hier fremd.
  */
 const ROUND_DEFAULT = 0.05
-
-function flag(args: string[], name: string): string | undefined {
-  const i = args.indexOf(`--${name}`)
-  return i >= 0 ? args[i + 1] : undefined
-}
 
 /**
  * Auf `step` runden — und danach auf 2 Nachkommastellen festklopfen.
@@ -133,16 +133,18 @@ const chunk = <T>(arr: T[], n: number): T[][] =>
 export default async function importPriceTiers({ container, args }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const file = args.find((a) => !a.startsWith("--") && a.endsWith(".json"))
+  const opts = parseScriptArgs(args)
+
+  const file = opts.file(".json")
   if (!file) {
     logger.error("Pfad zu tiers.json fehlt.")
     return
   }
 
-  const pricelistFilter = flag(args, "pricelist")
-  const currency = (flag(args, "currency") ?? "chf").toLowerCase()
-  const step = Number(flag(args, "round") ?? String(ROUND_DEFAULT))
-  const dryRun = args.includes("--dry-run")
+  const pricelistFilter = opts.value("pricelist")
+  const currency = (opts.value("currency") ?? "chf").toLowerCase()
+  const step = Number(opts.value("round") ?? String(ROUND_DEFAULT))
+  const dryRun = opts.flag("dry-run")
 
   const raw: ExportEntry[] = JSON.parse(readFileSync(resolve(file), "utf8"))
 
@@ -157,7 +159,7 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
   if (!pricelistFilter && lists.length > 1) {
     logger.error(
       `Der Export enthält ${lists.length} Preislisten (${lists.join(", ")}). ` +
-        `Bitte mit --pricelist "<name>" eine auswählen, sonst überschreiben ` +
+        `Bitte mit "pricelist=<name>" eine auswählen, sonst überschreiben ` +
         `sie sich gegenseitig.`
     )
     return
