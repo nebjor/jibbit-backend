@@ -29,9 +29,23 @@ api.jibbit.ch {
 
 # Storefront (Next.js)
 jibbit.ch, www.jibbit.ch {
-	# In Produktion: reverse_proxy zum Next.js Container
-	# Für jetzt: Platzhalter
-	respond "jibbit.ch Storefront — coming soon" 200
+	# Beide Zweige als `handle` — Geschwister-handle-Blöcke werden in
+	# Schreibreihenfolge geprüft und der erste Treffer gewinnt. Ein blankes
+	# reverse_proxy neben einem handle-Block würde dagegen von Caddys
+	# Direktiven-Reihenfolge abhängen statt von der Lesereihenfolge.
+
+	# Der Health-Endpunkt ist für Docker, nicht fürs Internet.
+	handle /healthz {
+		respond 404
+	}
+
+	# Der Host-Header MUSS unverändert durchgereicht werden: die Storefront
+	# löst daraus den Tenant auf (proxy.ts). Caddy tut das bei reverse_proxy
+	# standardmässig — nicht auf `header_up Host {upstream_hostport}`
+	# umstellen, das liesse jede Anfrage in einen 404 laufen.
+	handle {
+		reverse_proxy storefront:3000
+	}
 
 	header {
 		X-Content-Type-Options "nosniff"
