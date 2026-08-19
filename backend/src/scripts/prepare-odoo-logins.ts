@@ -7,7 +7,12 @@ import {
 } from "@medusajs/medusa/core-flows"
 import { randomBytes } from "node:crypto"
 import { readFile } from "node:fs/promises"
-import { decideClaim, type ClaimDecision } from "../lib/odoo-login-claim"
+import {
+  decideClaim,
+  isOdooImport,
+  odooPartnerIdOf,
+  type ClaimDecision,
+} from "../lib/odoo-login-claim"
 import { parseScriptArgs } from "./script-args"
 
 /**
@@ -95,6 +100,10 @@ function toCustomerData(row: OdooCustomer) {
     phone: row.phone?.trim() || undefined,
     company_name: row.company_name?.trim() || undefined,
     metadata: {
+      // `source` ist der Schluessel, den scripts/import-customers.ts setzt;
+      // `imported_from` bleibt als zweiter Marker stehen, damit beide
+      // Importwege dieselben Filter treffen.
+      source: "odoo",
       imported_from: "odoo",
       ...(id ? { odoo_partner_id: id } : {}),
     },
@@ -131,13 +140,11 @@ export default async function prepareOdooLogins({ container, args }: ExecArgs) {
     // Kein File: die bereits importierten Kunden aus der Datenbank nehmen.
     const alle = await customerService.listCustomers({}, { take: 100000 })
     rows = alle
-      .filter(
-        (c) => (c.metadata as Record<string, unknown> | null)?.imported_from === "odoo",
-      )
+      .filter((c) => isOdooImport(c.metadata as Record<string, unknown> | null))
       .map((c) => ({
         email: c.email ?? undefined,
-        odoo_partner_id: (c.metadata as Record<string, unknown> | null)
-          ?.odoo_partner_id as string | undefined,
+        odoo_partner_id:
+          odooPartnerIdOf(c.metadata as Record<string, unknown> | null) ?? undefined,
       }))
     logger.info(`[odoo] ${rows.length} importierte Kunden in der Datenbank gefunden.`)
   }
@@ -184,7 +191,7 @@ export default async function prepareOdooLogins({ container, args }: ExecArgs) {
         (id
           ? byEmail.find(
               (c) =>
-                (c.metadata as Record<string, unknown> | null)?.odoo_partner_id === id,
+                odooPartnerIdOf(c.metadata as Record<string, unknown> | null) === id,
             )
           : undefined) ??
         byEmail.find((c) => !c.has_account) ??

@@ -26,6 +26,38 @@
  * diese Funktion.
  */
 
+/**
+ * Erkennt einen aus Odoo importierten Kunden an seinen Metadaten.
+ *
+ * Zwei Schlüssel, weil zwei Importwege existieren:
+ *   - `source: "odoo"` schreibt `scripts/import-customers.ts` (Odoo-Export).
+ *   - `imported_from: "odoo"` schreibt `prepare-odoo-logins.ts`, wenn es einen
+ *     Kunden selbst anlegen muss.
+ * Beide zählen. Auf einen der beiden zu prüfen hiesse, die Hälfte der
+ * importierten Kunden zu übersehen — und genau die stünden dann ohne
+ * Anmeldemöglichkeit da.
+ */
+export function isOdooImport(metadata: Record<string, unknown> | null | undefined): boolean {
+  return metadata?.source === "odoo" || metadata?.imported_from === "odoo"
+}
+
+/**
+ * Die Odoo-Partner-ID als Zeichenkette.
+ *
+ * ⚠️ `import-customers.ts` schreibt sie als ZAHL, dieses Modul als String.
+ * Ein `===`-Vergleich zwischen beiden ist immer falsch, ohne dass irgendwo ein
+ * Fehler entsteht — der Abgleich fiele still auf die E-Mail-Adresse zurück und
+ * die Odoo-ID wäre wirkungslos. Deshalb geht jeder Vergleich durch diese
+ * Funktion.
+ */
+export function odooPartnerIdOf(
+  metadata: Record<string, unknown> | null | undefined,
+): string | null {
+  const raw = metadata?.odoo_partner_id
+  if (raw == null || raw === "") return null
+  return String(raw)
+}
+
 /** Was von einem vorhandenen Kundendatensatz gebraucht wird. */
 export interface MatchedCustomer {
   id: string

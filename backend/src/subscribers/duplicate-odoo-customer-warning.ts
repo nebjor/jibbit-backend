@@ -1,5 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework/subscribers"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { isOdooImport } from "../lib/odoo-login-claim"
 
 /**
  * Sicherheitsnetz für den Odoo-Umzug: meldet, wenn zu einer Adresse ZWEI
@@ -57,7 +58,7 @@ export default async function duplicateOdooCustomerWarning({
     const importiert = gleiche.find(
       (c) =>
         c.id !== customer.id &&
-        (c.metadata as Record<string, unknown> | null)?.imported_from === "odoo",
+        isOdooImport(c.metadata as Record<string, unknown> | null),
     )
     if (!importiert) return
 
