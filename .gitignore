@@ -18,3 +18,22 @@ backend/.medusa/
 
 # Backup (dev only)
 _backup/
+
+# ─── Odoo-Export ────────────────────────────────────────────────────────────
+# Enthält Personendaten (Namen, Anschriften, E-Mail-Adressen, Bestellhistorie)
+# und fällt damit unter das Schweizer DSG. Nichts davon gehört ins Repository —
+# ein einmal gepushter Commit ist über die Git-Historie nicht mehr löschbar,
+# ohne die Historie umzuschreiben.
+#
+# Ablage, Aufbewahrungsfrist und Löschung: docs/odoo-datenmigration.md
+#
+# Die Muster sind bewusst auf das Repository-Wurzelverzeichnis verankert.
+# Ein blosses `orders.json` würde JEDE gleichnamige Datei in jedem
+# Unterverzeichnis verschlucken — auch eine spätere Testfixture, und zwar
+# stillschweigend.
+/odoo-export/
+/odoo-export-*/
+/partners.json
+/partners-summary.json
+/orders.json
+/orders-summary.json
