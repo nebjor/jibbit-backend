@@ -46,6 +46,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        # Heap-Limit fuer den Build. Siehe Kommentar im Dockerfile: auf einer
+        # 2-GB-VPS reicht der V8-Default nicht, und Swap allein hilft nicht.
+        NODE_BUILD_MEMORY: ${NODE_BUILD_MEMORY:-3072}
     container_name: jibbit-medusa
     restart: unless-stopped
     depends_on:
@@ -101,6 +105,10 @@ services:
     build:
       context: ${STOREFRONT_CONTEXT:-../jibbit-frontend}
       dockerfile: Dockerfile
+      args:
+        # Siehe medusa oben. `next build` ist der speicherhungrigste Schritt
+        # im ganzen Stack.
+        NODE_BUILD_MEMORY: ${NODE_BUILD_MEMORY:-3072}
     container_name: jibbit-storefront
     restart: unless-stopped
     depends_on:
