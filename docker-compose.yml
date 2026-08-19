@@ -92,7 +92,10 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@jibbit.ch}
     ports:
-      - "9000:9000"
+      # NUR Loopback. Dockers veroeffentlichte Ports umgehen ufw komplett —
+      # "9000:9000" waere trotz Firewallregeln aus dem Internet erreichbar.
+      # Caddy und nginx erreichen den Dienst so oder so.
+      - "127.0.0.1:9000:9000"
     volumes:
       - medusa_data:/app/uploads
 
@@ -130,8 +133,13 @@ services:
       BASE_DOMAIN: ${BASE_DOMAIN:-jibbit.app}
       CONTROL_PLANE_URL: ${CONTROL_PLANE_URL:-}
       CONTROL_PLANE_TOKEN: ${CONTROL_PLANE_TOKEN:-}
-    # Kein `ports:` — erreichbar nur über Caddy. Ein Host-Port hier würde
-    # jeden Header und jedes Limit umgehen, das Caddy setzt.
+    # Loopback-Port, damit auch ein Reverse-Proxy AUSSERHALB des Compose
+    # drankommt (etwa ein bereits vorhandenes nginx, das 80/443 belegt).
+    # Bewusst an 127.0.0.1 gebunden: auf 0.0.0.0 waere die Storefront direkt
+    # aus dem Internet erreichbar und wuerde jeden Header und jedes Limit
+    # umgehen, das der Proxy setzt.
+    ports:
+      - "127.0.0.1:3000:3000"
     expose:
       - "3000"
 
@@ -142,6 +150,14 @@ services:
     image: caddy:2-alpine
     container_name: jibbit-caddy
     restart: unless-stopped
+    # Nur mit `--profile caddy` starten.
+    #
+    # Caddy will 80 und 443. Laeuft auf der Maschine bereits ein anderer
+    # Reverse-Proxy (etwa nginx vor einer bestehenden Odoo-Instanz), scheitert
+    # der Start an belegten Ports — und ein beilaeufiges `docker compose up -d`
+    # produziert dann einen verwirrenden Fehler statt eines laufenden Stacks.
+    # Wer Caddy als Frontproxy will:  docker compose --profile caddy up -d
+    profiles: ["caddy"]
     depends_on:
       - medusa
       - storefront
