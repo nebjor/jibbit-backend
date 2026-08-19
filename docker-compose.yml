@@ -105,7 +105,7 @@ services:
       # NUR Loopback. Dockers veroeffentlichte Ports umgehen ufw komplett —
       # "9000:9000" waere trotz Firewallregeln aus dem Internet erreichbar.
       # Caddy und nginx erreichen den Dienst so oder so.
-      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:${MEDUSA_HOST_PORT:-9000}:9000"
     volumes:
       - medusa_data:/app/uploads
 
