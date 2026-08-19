@@ -186,9 +186,14 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
     filters: { sku: skus },
   })
 
-  const variantBySku = new Map<string, string>(
-    variants.map((v: { id: string; sku: string }) => [v.sku, v.id])
-  )
+  // `sku` ist bei Medusa nullable. Die Annotation hier auf `string` zu
+  // zwingen laesst `medusa exec` durchgehen, aber `medusa build` scheitert
+  // (TS2345) — der Import-Pfad wird also erst beim Image-Bau geprueft.
+  // Varianten ohne SKU lassen sich ohnehin keiner Zeile im Export zuordnen.
+  const variantBySku = new Map<string, string>()
+  for (const variant of variants) {
+    if (variant.sku) variantBySku.set(variant.sku, variant.id)
+  }
 
   const unmatched = entries.filter((e) => !variantBySku.has(e.sku as string))
   if (unmatched.length) {
