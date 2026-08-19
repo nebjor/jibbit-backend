@@ -17,7 +17,16 @@ services:
       POSTGRES_USER: medusa
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medusa_dev_password}
     ports:
-      - "5432:5432"
+      # Nur Loopback, und der Host-Port ist verschiebbar.
+      #
+      # Auf einer Maschine, auf der schon eine andere Postgres-Instanz laeuft
+      # (z.B. hinter einer bestehenden Odoo-Installation), scheitert der Start
+      # sonst mit "address already in use". In der .env dann:
+      #   POSTGRES_HOST_PORT=5433
+      #
+      # medusa erreicht die Datenbank ohnehin ueber das Compose-Netz, nicht
+      # ueber diesen Port — er ist nur fuer Werkzeuge auf dem Host da.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,7 +41,8 @@ services:
     container_name: jibbit-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      # Siehe postgres. Bei Konflikt in der .env:  REDIS_HOST_PORT=6380
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
