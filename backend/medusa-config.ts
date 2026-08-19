@@ -14,6 +14,26 @@ const enabledPsps = (process.env.PAYREXX_ENABLED_PSPS || '')
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+
+    // Medusa erzwingt bei NODE_ENV=production eine SSL-Verbindung zur
+    // Datenbank. Laeuft Postgres im selben Docker-Netz — also ohne TLS —
+    // scheitert damit JEDE Migration:
+    //
+    //   Error: The server does not support SSL connections
+    //   Some migrations failed to run: (25x)
+    //
+    // Zurueck bleibt eine Datenbank mit genau einer Tabelle,
+    // mikro_orm_migrations. Der Server startet danach nicht mehr und meldet
+    // "relation tax_provider does not exist" — ein Symptom, das weit weg von
+    // der Ursache liegt und leicht als Datenbankproblem missverstanden wird.
+    //
+    // Im Compose-Betrieb ist unverschluesselt richtig: die Verbindung
+    // verlaesst das Docker-Netz nicht. Bei einer verwalteten Datenbank
+    // DATABASE_SSL=true setzen.
+    databaseDriverOptions:
+      process.env.DATABASE_SSL === "true"
+        ? { connection: { ssl: { rejectUnauthorized: false } } }
+        : { connection: { ssl: false } },
     ...(process.env.REDIS_URL ? { redisUrl: process.env.REDIS_URL } : {}),
     http: {
       storeCors: process.env.STORE_CORS!,
