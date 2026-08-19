@@ -13,10 +13,52 @@
  * Beides erzeugt keinen Fehler und keinen Logeintrag. Deshalb hier.
  */
 
-import { decideClaim } from "../lib/odoo-login-claim"
+import { decideClaim, isOdooImport, odooPartnerIdOf } from "../lib/odoo-login-claim"
 
 const IMPORTIERT = { id: "cus_import", hasAccount: false }
 const REGISTRIERT = { id: "cus_selbst", hasAccount: true }
+
+describe("isOdooImport", () => {
+  it("erkennt beide Marker — die zwei Importwege setzen unterschiedliche", () => {
+    // scripts/import-customers.ts (Odoo-Export) schreibt `source`,
+    // prepare-odoo-logins.ts schreibt zusaetzlich `imported_from`.
+    expect(isOdooImport({ source: "odoo" })).toBe(true)
+    expect(isOdooImport({ imported_from: "odoo" })).toBe(true)
+    expect(isOdooImport({ source: "odoo", imported_from: "odoo" })).toBe(true)
+  })
+
+  it("erkennt alles andere nicht als Import", () => {
+    expect(isOdooImport({ source: "shopify" })).toBe(false)
+    expect(isOdooImport({})).toBe(false)
+    expect(isOdooImport(null)).toBe(false)
+    expect(isOdooImport(undefined)).toBe(false)
+  })
+})
+
+describe("odooPartnerIdOf", () => {
+  it("macht aus Zahl und Zeichenkette denselben Vergleichswert", () => {
+    // Der eigentliche Grund fuer diese Funktion: import-customers.ts legt die
+    // ID als ZAHL ab, dieses Modul als String. Ein direkter ===-Vergleich
+    // waere immer falsch — ohne Fehler, ohne Logeintrag, der Abgleich fiele
+    // still auf die E-Mail zurueck.
+    expect(odooPartnerIdOf({ odoo_partner_id: 4711 })).toBe("4711")
+    expect(odooPartnerIdOf({ odoo_partner_id: "4711" })).toBe("4711")
+    expect(odooPartnerIdOf({ odoo_partner_id: 4711 })).toBe(
+      odooPartnerIdOf({ odoo_partner_id: "4711" }),
+    )
+  })
+
+  it("gibt null, wo keine ID steht", () => {
+    expect(odooPartnerIdOf({ odoo_partner_id: null })).toBeNull()
+    expect(odooPartnerIdOf({ odoo_partner_id: "" })).toBeNull()
+    expect(odooPartnerIdOf({})).toBeNull()
+    expect(odooPartnerIdOf(null)).toBeNull()
+  })
+
+  it("behandelt 0 als gueltige ID — Odoo-IDs beginnen zwar bei 1, aber raten wollen wir nicht", () => {
+    expect(odooPartnerIdOf({ odoo_partner_id: 0 })).toBe("0")
+  })
+})
 
 describe("decideClaim", () => {
   it("legt neu an, wenn es zur Adresse noch gar nichts gibt", () => {
