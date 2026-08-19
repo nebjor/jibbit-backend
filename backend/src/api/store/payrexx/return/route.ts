@@ -38,7 +38,7 @@ import {
   Modules,
 } from "@medusajs/framework/utils"
 import type { Logger, IPaymentModuleService } from "@medusajs/framework/types"
-import { processPaymentWorkflow } from "@medusajs/medusa/core-flows"
+import { completePayrexxPayment } from "../../../../modules/payrexx/complete-payment"
 import { extractGatewayTransaction } from "../../../../modules/payrexx/client"
 import { mapPayrexxStatus } from "../../../../modules/payrexx/service"
 import {
@@ -134,9 +134,7 @@ export async function handlePayrexxReturn(
     const { action } = evaluation.action
     if (ACTIONABLE.has(action) && evaluation.action.data?.session_id) {
       try {
-        await processPaymentWorkflow(req.scope).run({
-          input: evaluation.action,
-        })
+        await completePayrexxPayment(req.scope, evaluation.action)
       } catch (err) {
         if (evaluation.idempotencyKey) {
           await runtime.processor.release(evaluation.idempotencyKey)

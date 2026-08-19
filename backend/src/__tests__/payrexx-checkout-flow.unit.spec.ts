@@ -338,6 +338,47 @@ describe("Webhook-Route — Wiederholungen von Payrexx", () => {
     expect(retry.payload).toEqual({ status: "authorized" })
     expect(workflowRun).toHaveBeenCalledTimes(2)
   })
+
+  it("treats a step error that did NOT fail the flow as a failure too", async () => {
+    // completeCartAfterPaymentStep ist in Medusas processPaymentWorkflow als
+    // `continueOnPermanentFailure: true` markiert — und ist bei einer
+    // cart-gebundenen Session der EINZIGE Schritt, der die Bestellung
+    // erzeugt. Scheitert er, laeuft der Flow trotzdem erfolgreich zu Ende
+    // und `run()` wirft NICHT; der Fehler steht nur in `errors`.
+    //
+    // Ohne die Auswertung von `errors` waere die Folge: 200 an Payrexx,
+    // Idempotenz-Key verbraucht, keine Wiederholung — bezahlt, aber nie
+    // bestellt. Genau der Verlust, gegen den release() gebaut ist.
+    const h = harness()
+    const { rawBody, signature } = signedBody(CONFIRMED)
+
+    workflowRun.mockResolvedValueOnce({
+      result: {},
+      errors: [{ error: new Error("cart completion failed") }],
+    })
+
+    const failed = makeRes()
+    await handlePayrexxWebhook(
+      webhookRequest(rawBody, signature),
+      failed,
+      h.webhookRuntime,
+      h.logger
+    )
+
+    expect(failed.statusCode).toBe(500)
+
+    // Und der Retry von Payrexx muss wieder greifen koennen.
+    const retry = makeRes()
+    await handlePayrexxWebhook(
+      webhookRequest(rawBody, signature),
+      retry,
+      h.webhookRuntime,
+      h.logger
+    )
+
+    expect(retry.statusCode).toBe(200)
+    expect(workflowRun).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe("Webhook-Route — nicht verarbeitbare Ereignisse", () => {

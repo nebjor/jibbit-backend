@@ -41,7 +41,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import type { Logger } from "@medusajs/framework/types"
-import { processPaymentWorkflow } from "@medusajs/medusa/core-flows"
+import { completePayrexxPayment } from "../../../../modules/payrexx/complete-payment"
 import {
   getPayrexxRuntime,
   type PayrexxRuntime,
@@ -101,7 +101,7 @@ export async function handlePayrexxWebhook(
   }
 
   try {
-    await processPaymentWorkflow(req.scope).run({ input: evaluation.action })
+    await completePayrexxPayment(req.scope, evaluation.action)
   } catch (err) {
     // Der häufigste Grund ist ein Rennen: Payrexx meldet die Zahlung, bevor
     // Medusa die Payment Session / den Cart geschrieben hat. Deshalb die
