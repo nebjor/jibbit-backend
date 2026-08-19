@@ -30,6 +30,24 @@ async function validateAddress(
 export default defineMiddlewares({
   routes: [
     {
+      /**
+       * Payrexx signiert den ROHEN Request-Body. Ein aus `req.body`
+       * neu serialisiertes JSON hat eine andere Byte-Folge (Reihenfolge der
+       * Schlüssel, Whitespace) und produziert deshalb IMMER eine ungültige
+       * Signatur. `preserveRawBody` legt den Originalkörper als
+       * `req.rawBody` ab — ohne diesen Eintrag wäre jeder echte Payrexx-
+       * Webhook ein 401.
+       *
+       * Medusas eingebaute Route /hooks/payment/:provider bringt dieselbe
+       * Einstellung mit; unsere statische Route braucht ihre eigene, weil
+       * der Body-Parser-Router den passendsten Eintrag pro Pfad wählt und
+       * statische Pfade vor Parameter-Pfaden einsortiert werden.
+       */
+      matcher: "/hooks/payment/payrexx",
+      method: "POST",
+      bodyParser: { preserveRawBody: true },
+    },
+    {
       matcher: "/admin/customers/:id/addresses",
       method: "POST",
       middlewares: [validateAddress],
