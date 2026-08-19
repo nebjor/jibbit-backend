@@ -53,7 +53,7 @@ ENV NODE_ENV=production
 #    legt Verzeichnisse innerhalb der Modulpakete an; ohne Schreibrecht
 #    scheitert `db:migrate` mit
 #      EACCES: permission denied, mkdir '/app/node_modules/@medusajs/file/dist/migrations'
-#    Es genuegt also NICHT, nur /app/uploads zu uebereignen.
+#    Es genuegt also NICHT, nur /app/static zu uebereignen.
 #
 # 2. Ein nachgelagertes `chown -R node:node /app` erledigt das zwar, kostet
 #    aber auf einer 1-vCPU-VPS ueber 18 Minuten und schreibt jede beruehrte
@@ -62,7 +62,11 @@ ENV NODE_ENV=production
 # Loesung: frueh auf USER node wechseln. Dann entstehen COPY-Ergebnis und
 # npm-Installation direkt mit den richtigen Rechten — kein zusaetzlicher
 # Durchlauf, keine doppelte Schicht.
-RUN mkdir -p /app/uploads && chown node:node /app /app/uploads
+# /app/static ist der Ablage- UND Auslieferungsort fuer Produktbilder (siehe
+# medusa-config.ts). Es muss VOR dem Volume-Mount existieren und `node`
+# gehoeren: Docker legt ein fehlendes Mount-Ziel sonst als root an, und der
+# Upload scheitert mit EACCES.
+RUN mkdir -p /app/static && chown node:node /app /app/static
 USER node
 
 # nur das Build-Ergebnis übernehmen
