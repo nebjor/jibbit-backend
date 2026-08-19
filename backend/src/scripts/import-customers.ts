@@ -188,13 +188,25 @@ export default async function importCustomers({ container, args }: ExecArgs) {
   if (s.skipped_no_email || s.skipped_unusable_email) {
     // IDs statt Namen: damit der Betreiber die Fälle in Odoo nachschlagen kann,
     // ohne dass Personendaten im Log landen.
-    const ids = plan.skipped
-      .filter((x) => x.reason === "ohne-email" || x.reason === "email-unbrauchbar")
-      .map((x) => x.odoo_partner_id)
-    logger.warn(
-      `Ohne E-Mail lässt sich in Medusa kein Kunde anlegen. Betroffene ` +
-        `Odoo-Partner-IDs: ${formatIds(ids)}`
+    const mailless = plan.skipped.filter(
+      (x) => x.reason === "ohne-email" || x.reason === "email-unbrauchbar"
     )
+    const verloren = mailless.filter((x) => x.represented_by === undefined)
+    const gerettet = mailless.filter((x) => x.represented_by !== undefined)
+
+    if (verloren.length) {
+      logger.warn(
+        `Ohne E-Mail lässt sich in Medusa kein Kunde anlegen. Betroffene ` +
+          `Odoo-Partner-IDs: ${formatIds(verloren.map((x) => x.odoo_partner_id))}`
+      )
+    }
+    if (gerettet.length) {
+      logger.info(
+        `${gerettet.length} Partner ohne eigene E-Mail sind über ihre ` +
+          `Ansprechperson abgedeckt — ihre Adressen sind mit importiert. ` +
+          `Odoo-Partner-IDs: ${formatIds(gerettet.map((x) => x.odoo_partner_id))}`
+      )
+    }
   }
 
   let toCreate: PlannedCustomer[] = plan.create

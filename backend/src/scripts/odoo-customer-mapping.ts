@@ -150,6 +150,14 @@ export type SkippedPartner = {
   reason: SkipReason
   /** Nur IDs, nie Namen oder E-Mail-Adressen — DSG. */
   parent_id?: number | null
+  /**
+   * Gesetzt, wenn der Partner zwar selbst kein Kunde wird, seine Adressen aber
+   * an eine Ansprechperson übergegangen sind. Ohne diese Unterscheidung meldet
+   * der Import eine Firma als „nicht anlegbar", obwohl ihre Daten sehr wohl
+   * angekommen sind — und der Betreiber sucht in Odoo nach einem Problem, das
+   * keines ist.
+   */
+  represented_by?: number
 }
 
 export type PlanOptions = {
@@ -503,6 +511,13 @@ export function planCustomerImport(
     const rep = (childrenOf.get(p.id) ?? []).find((c) => candidateIds.has(c.id))
     if (rep) {
       representativeOf.set(p.id, rep.id)
+    }
+  }
+
+  for (const entry of skipped) {
+    const rep = representativeOf.get(entry.odoo_partner_id)
+    if (rep !== undefined) {
+      entry.represented_by = rep
     }
   }
 

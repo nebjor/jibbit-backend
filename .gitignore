@@ -26,9 +26,14 @@ _backup/
 # ohne die Historie umzuschreiben.
 #
 # Ablage, Aufbewahrungsfrist und Löschung: docs/odoo-datenmigration.md
-odoo-export/
-odoo-export-*/
-partners.json
-partners-summary.json
-orders.json
-orders-summary.json
+#
+# Die Muster sind bewusst auf das Repository-Wurzelverzeichnis verankert.
+# Ein blosses `orders.json` würde JEDE gleichnamige Datei in jedem
+# Unterverzeichnis verschlucken — auch eine spätere Testfixture, und zwar
+# stillschweigend.
+/odoo-export/
+/odoo-export-*/
+/partners.json
+/partners-summary.json
+/orders.json
+/orders-summary.json
