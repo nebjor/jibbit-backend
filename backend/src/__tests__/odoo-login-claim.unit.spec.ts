@@ -90,6 +90,23 @@ describe("decideClaim", () => {
     ).toEqual({ action: "conflict", reason: "doppelter-kunde" })
   })
 
+  it("meldet die Dublette AUCH DANN, wenn die Anmeldung längst funktioniert", () => {
+    // Der reale Ablauf, gegen ein lokales Medusa nachgestellt: Import ohne
+    // Vorbereitung, danach registriert sich derselbe Mensch selbst. Die
+    // Identität zeigt sauber auf den neuen Datensatz, die Anmeldung geht —
+    // und daneben liegt die zweite Zeile mit der ganzen Bestellhistorie.
+    //
+    // Eine Erfolgsprüfung vor der Dublettenprüfung meldete hier "alles in
+    // Ordnung". Genau das ist der Fehler, den dieses Script finden soll.
+    expect(
+      decideClaim({
+        imported: IMPORTIERT,
+        registered: REGISTRIERT,
+        identity: { authIdentityId: "au_1", customerId: REGISTRIERT.id },
+      }),
+    ).toEqual({ action: "conflict", reason: "doppelter-kunde" })
+  })
+
   it("meldet keinen Konflikt, wenn beide Treffer derselbe Datensatz sind", () => {
     const selbe = { id: "cus_1", hasAccount: true }
     expect(

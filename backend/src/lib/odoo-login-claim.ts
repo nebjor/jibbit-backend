@@ -80,17 +80,24 @@ export type ClaimDecision =
 export function decideClaim(input: ClaimInput): ClaimDecision {
   const { imported, registered, identity } = input
 
-  // 1. Schon fertig. Häufigster Fall beim zweiten Lauf desselben Scripts —
+  // 1. Zwei Zeilen zur selben Adresse — der Zustand aus (2) oben. Melden,
+  //    nicht selbst auflösen.
+  //
+  //    Diese Prüfung steht VOR der Erfolgsprüfung, und das ist der Punkt: der
+  //    Normalfall ist, dass die Anmeldung längst funktioniert (die Identität
+  //    zeigt auf den neu registrierten Datensatz) und trotzdem eine zweite
+  //    Zeile mit der ganzen Bestellhistorie danebenliegt. Stünde die
+  //    Erfolgsprüfung zuerst, meldete das Script "alles in Ordnung" und die
+  //    Dublette bliebe unentdeckt — genau der Fehler, den es finden soll.
+  if (imported && registered && imported.id !== registered.id) {
+    return { action: "conflict", reason: "doppelter-kunde" }
+  }
+
+  // 2. Schon fertig. Häufigster Fall beim zweiten Lauf desselben Scripts —
   //    das Script muss wiederholbar sein, sonst traut sich niemand, es am
   //    Umzugstag ein zweites Mal zu starten.
   if (identity?.customerId) {
     return { action: "skip", reason: "bereits-anmeldefaehig" }
-  }
-
-  // 2. Zwei Zeilen zur selben Adresse. Das ist genau der Zustand, den (2) oben
-  //    beschreibt. Melden, nicht selbst auflösen.
-  if (imported && registered && imported.id !== registered.id) {
-    return { action: "conflict", reason: "doppelter-kunde" }
   }
 
   const target = registered ?? imported

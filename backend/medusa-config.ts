@@ -105,6 +105,9 @@ module.exports = defineConfig({
               user: process.env.SMTP_USER,
               pass: process.env.SMTP_PASS,
               from: process.env.SMTP_FROM,
+              // Nur für einen lokalen Mailfänger. Bei NODE_ENV=production
+              // ignoriert der Provider den Schalter hart.
+              allowInsecure: process.env.SMTP_ALLOW_INSECURE === 'true',
             },
           },
         ],
