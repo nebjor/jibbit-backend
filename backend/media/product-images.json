@@ -1,0 +1,96 @@
+{
+  "_hinweis": "Zuordnung Produktfoto -> Produkt. Der Produktname muss exakt dem 'product'-Feld in catalog.json entsprechen. Das erste Bild je Produkt ist das Vorschaubild (thumbnail).",
+  "_quellverzeichnis": "/mnt/c/Users/jnebe/kDrive/jibbit/Media/Produktfotos",
+  "_stand": "2026-08-20",
+  "produkte": [
+    {
+      "product": "dubi Aktivkohlefilter ø7mm",
+      "bilder": [
+        "Dubi-42.jpg"
+      ]
+    },
+    {
+      "product": "Elements BLUE Rolls SW",
+      "bilder": [
+        "elements-sw-rolls.jpg",
+        "elements-sw-rolls-box.jpg"
+      ]
+    },
+    {
+      "product": "Elements King Slim Size Ultra Thin",
+      "bilder": [
+        "elements-kss-front.jpg",
+        "elements-kss-box.jpg",
+        "elements-kss-open.jpg"
+      ]
+    },
+    {
+      "product": "Gizeh DW Extra Fine",
+      "bilder": [
+        "gizeh-dw.png"
+      ]
+    },
+    {
+      "product": "PURIZE Aktivkohlefilter ø 9mm",
+      "bilder": [
+        "purize-9mm-pack.jpg",
+        "purize-9mm-close.jpg"
+      ]
+    },
+    {
+      "product": "PURIZE XTRA Slim XMAS ø 6mm",
+      "bilder": [
+        "purize-xtra-slim-xmas.jpg",
+        "purize-xtra-slim-xmas-close.jpg"
+      ]
+    },
+    {
+      "product": "RAW Kristallglas Aschenbecher Darkside",
+      "bilder": [
+        "raw-ashtray-darkside.jpg"
+      ]
+    },
+    {
+      "product": "RAW Kristallglas Aschenbecher Rainbow",
+      "bilder": [
+        "raw-ashtray-rainbow.jpg",
+        "raw-ashtray-rainbow-case.jpg"
+      ]
+    },
+    {
+      "product": "RAW Kristallglas Aschenbecher Ruby",
+      "bilder": [
+        "raw-ashtray-ruby.jpg"
+      ]
+    }
+  ],
+  "nicht_zugeordnet": [
+    {
+      "datei": "dubi_porch_davis_auswertung_durchfluss.jpg",
+      "grund": "Kein Produktfoto, sondern ein Diagramm zum Zugwiderstand gaengiger Aktivkohlefilter. Nennt Konkurrenzmarken (Purize, ActiTube, OCB), und dubi schneidet darin am schlechtesten ab. Gehoert nicht in den Shop."
+    },
+    {
+      "datei": "silikondose-hellgrün.jpg",
+      "grund": "Zeigt Silikondosen. Kein passendes Produkt im Sortiment der 25 importierten Artikel."
+    }
+  ],
+  "ohne_bild": [
+    "Angel Slim Filters 6mm 120stk",
+    "Greengo Unbleached Slim Rolls",
+    "Kailar Filter 5.9mm 65stk pink",
+    "Kailar Filter 5.9mm 65stk schwarz",
+    "Kailar Filter 5.9mm 65stk weiss",
+    "Kailar Filter 9mm BIG 100 stk schwarz",
+    "OCB Bio Slim Organic Hemp Rolls",
+    "OCB Premium KSS Papers mit Filter",
+    "OCB Premium kurz",
+    "OCB Premium Rolls Slim",
+    "OCB Slim Filter Bio (120 Tips)",
+    "Purize SUPER SLIM White ø5mm",
+    "Purize Xtra SLIM White, 50er Pack, 5.9mm",
+    "RAW Black KSS Papers",
+    "RAW Classic Rolls Slim",
+    "Smoking Brown kurz (double window)",
+    "Zig Zag Slim Filter 6mm 120stk"
+  ]
+}

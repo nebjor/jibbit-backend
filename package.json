@@ -11,9 +11,13 @@
     "build": "npm run build --workspace=backend",
     "start": "npm run start --workspace=backend",
     "seed": "npm run seed --workspace=backend",
-    "db:migrate": "cd backend && npx medusa db:migrate"
+    "db:migrate": "cd backend && npx medusa db:migrate",
+    "prepare-images": "node scripts/prepare-product-images.mjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }
