@@ -169,6 +169,19 @@ prepare_env() {
     echo "JWT_SECRET=$(openssl rand -hex 32)"
     echo "COOKIE_SECRET=$(openssl rand -hex 32)"
     echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
+    echo ""
+    # Platzhalter, damit ueberhaupt gebaut werden kann.
+    #
+    # STATIC_TENANTS ist in docker-compose.yml als ${VAR:?...} deklariert, und
+    # Compose interpoliert die GANZE Datei bei jedem Unterbefehl — auch bei
+    # `docker compose build`. Ohne einen Wert bricht schon der erste Build ab,
+    # mit einem Variablenfehler statt einer Bauausgabe.
+    #
+    # Der echte Wert braucht den Publishable Key, den es erst nach dem ersten
+    # Medusa-Start gibt. Ein leeres Array loest das: parseStaticTenants()
+    # liefert dafuer eine leere Tabelle, wirft nicht, und jeder Host laeuft in
+    # 404 — die sichere Richtung. Vor dem Start der Storefront ersetzen.
+    echo "STATIC_TENANTS=[]"
   } >> "$env_file"
 
   chmod 600 "$env_file"
@@ -207,10 +220,11 @@ Noch von Hand, in dieser Reihenfolge:
       STORE_URL        https://jibbit.ch
       NODE_ENV         production
 
- 3. STATIC_TENANTS setzen — OHNE diesen Eintrag antwortet die Storefront
-    auf JEDEN Host mit 404, weil der Dev-Fallback in Produktion hart aus ist.
-    Der Publishable Key kommt aus dem Medusa-Admin, existiert also erst nach
-    Schritt 5. Erst danach die Storefront starten:
+ 3. STATIC_TENANTS steht als Platzhalter "[]" in der .env — nur damit
+    `docker compose build` ueberhaupt durchlaeuft. Solange er dort steht,
+    antwortet die Storefront auf JEDEN Host mit 404. Vor ihrem Start durch
+    den echten Wert ersetzen; der Publishable Key kommt aus dem Medusa-Admin
+    und existiert erst nach Schritt 5:
 
       STATIC_TENANTS='[{"id":"jibbit","host":"jibbit.ch","aliases":["www.jibbit.ch"],"backendUrl":"http://medusa:9000","publishableKey":"pk_...","theme":{"storeName":"jibbit","domain":"jibbit.ch","themeColor":"#F6F5F3"}}]'
 
