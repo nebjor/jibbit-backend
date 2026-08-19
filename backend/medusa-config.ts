@@ -58,5 +58,30 @@ module.exports = defineConfig({
         ],
       },
     },
+    {
+      resolve: '@medusajs/medusa/notification',
+      options: {
+        providers: [
+          {
+            // Ohne SMTP_HOST wird nur ins Log geschrieben statt versendet —
+            // so laufen lokale Tests und CI ohne Mailserver durch.
+            resolve: process.env.SMTP_HOST
+              ? './src/modules/smtp'
+              : '@medusajs/notification-local',
+            id: process.env.SMTP_HOST ? 'smtp' : 'local',
+            options: {
+              channels: ['email'],
+              host: process.env.SMTP_HOST,
+              port: process.env.SMTP_PORT
+                ? Number(process.env.SMTP_PORT)
+                : undefined,
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+              from: process.env.SMTP_FROM,
+            },
+          },
+        ],
+      },
+    },
   ],
 })

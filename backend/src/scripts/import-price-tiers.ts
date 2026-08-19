@@ -186,9 +186,14 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
     filters: { sku: skus },
   })
 
-  const variantBySku = new Map<string, string>(
-    variants.map((v: { id: string; sku: string }) => [v.sku, v.id])
-  )
+  // Varianten ohne SKU überspringen statt sie unter dem Schlüssel null
+  // abzulegen — nachgeschlagen wird ohnehin nur über die SKU.
+  const variantBySku = new Map<string, string>()
+  for (const v of variants) {
+    if (v.sku) {
+      variantBySku.set(v.sku, v.id)
+    }
+  }
 
   const unmatched = entries.filter((e) => !variantBySku.has(e.sku as string))
   if (unmatched.length) {
