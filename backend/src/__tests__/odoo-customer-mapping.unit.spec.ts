@@ -210,6 +210,19 @@ describe("Adresszuordnung", () => {
     // Firmenadresse (1) plus beide Unteradressen (2, 3) landen bei ihr.
     expect(anna.addresses.map((a) => a.odoo_partner_id).sort()).toEqual([1, 2, 3])
     expect(plan.stats.addresses_orphaned).toBe(0)
+
+    // Die Firma taucht als übersprungen auf — aber mit dem Hinweis, dass ihre
+    // Daten über die Ansprechperson angekommen sind. Ohne diese Unterscheidung
+    // würde der Import sie als Verlust melden.
+    const firmaSkip = plan.skipped.find((x) => x.odoo_partner_id === 1)!
+    expect(firmaSkip.reason).toBe("ohne-email")
+    expect(firmaSkip.represented_by).toBe(5)
+  })
+
+  it("markiert Partner ohne Vertretung nicht als vertreten", () => {
+    const einsam = partner({ id: 8, name: "Nora Frei", email: null })
+    const skip = planCustomerImport([einsam]).skipped[0]
+    expect(skip.represented_by).toBeUndefined()
   })
 
   it("meldet Adressen, für die es keinen Kunden gibt", () => {

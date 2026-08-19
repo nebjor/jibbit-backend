@@ -51,9 +51,10 @@ Ein Verzeichnis mit Datum im Namen macht später sichtbar, welcher Stand
 gelöscht werden muss. `chmod 700` sorgt dafür, dass nur der eigene Benutzer
 hineinsehen kann; die Dateien selbst schreiben die Scripte mit `0600`.
 
-Falls doch im Repository-Verzeichnis exportiert wird: `odoo-export/`,
-`partners.json` und `orders.json` stehen in `.gitignore`. Das ist ein
-Sicherheitsnetz, kein Freibrief.
+Falls doch im Repository-Verzeichnis exportiert wird: `/odoo-export/`,
+`/partners.json` und `/orders.json` stehen in `.gitignore` — verankert auf das
+Wurzelverzeichnis. Das ist ein Sicherheitsnetz, kein Freibrief: in einem
+Unterverzeichnis abgelegt greift es nicht.
 
 ## 3. Export ausführen
 
@@ -368,8 +369,8 @@ Zusätzlich prüfen:
 - Der API-Schlüssel gehört nach dem Umzug in Odoo zurückgezogen
   (Profil → Konto-Sicherheit → Entwickler-API-Schlüssel).
 
-**Nie ins Repository.** `odoo-export/`, `partners.json` und `orders.json` stehen
-in `.gitignore`. Ein einmal gepushter Commit lässt sich nicht mehr sauber
+**Nie ins Repository.** `/odoo-export/`, `/partners.json` und `/orders.json`
+stehen in `.gitignore`. Ein einmal gepushter Commit lässt sich nicht mehr sauber
 entfernen, ohne die Historie umzuschreiben. Testdaten in diesem Repository
 verwenden ausschliesslich erfundene Namen.
 
