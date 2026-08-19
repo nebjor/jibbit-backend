@@ -72,6 +72,47 @@ https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" \
   fi
 }
 
+# ─── Swap ────────────────────────────────────────────────────────────────────
+
+# Auf kleinen VPS (2 GB) reicht der Speicher fuer `next build` und
+# `medusa build` nicht: beide Builds laufen hier auf der Kiste, und der
+# OOM-Killer trifft sie mitten im Bundling. Ein Swapfile faengt das ab.
+#
+# Es ersetzt kein RAM — der Build wird auf einem Kern spuerbar langsamer.
+# Aber er laeuft durch, statt nach zehn Minuten abzubrechen.
+ensure_swap() {
+  local total_mb swap_mb
+  total_mb=$(free -m | awk '/^Mem:/{print $2}')
+  swap_mb=$(free -m | awk '/^Swap:/{print $2}')
+
+  if [ "$swap_mb" -gt 0 ]; then
+    log "Swap vorhanden (${swap_mb} MB) — nicht angefasst"
+    return
+  fi
+
+  if [ "$total_mb" -ge 3500 ]; then
+    log "${total_mb} MB RAM, kein Swap noetig"
+    return
+  fi
+
+  log "Nur ${total_mb} MB RAM und kein Swap — 4 GB Swapfile anlegen"
+
+  if [ ! -f /swapfile ]; then
+    fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096 status=none
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null
+  fi
+  swapon /swapfile
+  grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+  # Erst auslagern, wenn es wirklich eng wird. Der Default (60) wuerde auf
+  # einer Datenbank-Kiste unnoetig viel in den Swap schieben.
+  sysctl -q vm.swappiness=10
+  grep -q '^vm.swappiness' /etc/sysctl.conf || echo 'vm.swappiness=10' >> /etc/sysctl.conf
+
+  free -h | sed 's/^/  /'
+}
+
 # ─── Firewall ────────────────────────────────────────────────────────────────
 
 configure_firewall() {
@@ -137,6 +178,7 @@ prepare_env() {
 # ─── Hauptlauf ───────────────────────────────────────────────────────────────
 
 require_root
+ensure_swap
 install_docker
 configure_firewall
 clone_repos
