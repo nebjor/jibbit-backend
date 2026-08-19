@@ -1,31 +1,27 @@
 /**
  * Payrexx Payment Provider für MedusaJS v2
- * Unterstützt TWINT und Powerpay (Rechnungskauf) via Payrexx Gateway API.
+ * Unterstützt TWINT, Karten und Powerpay (Rechnungskauf) via Payrexx Gateway API.
  *
  * Flow:
- * 1. initiatePayment → Payrexx Gateway erstellen → Redirect-URL in data
- * 2. Kunde bezahlt auf Payrexx-Seite (TWINT/Powerpay)
- * 3. Webhook → getWebhookActionAndData → authorize/capture
+ * 1. initiatePayment → Payrexx Gateway erstellen → Redirect-URL in data.link
+ * 2. Kunde bezahlt auf der Payrexx-Seite (bleibt ausserhalb unseres PCI-Scopes)
+ * 3. ENTWEDER Webhook (src/api/hooks/payment/payrexx) ODER Rückkehr-Abgleich
+ *    (src/api/store/payrexx/return) — beide gehen durch denselben
+ *    PayrexxWebhookProcessor und teilen sich denselben Idempotency-Key.
+ *    Wer zuerst kommt, gewinnt; der andere ist ein No-Op. Erreicht der Kunde
+ *    die Rückkehrseite nie, entsteht die Bestellung trotzdem.
  * 4. Admin → capturePayment / refundPayment
  *
- * Security (Ist-Zustand, nicht Wunschzustand):
+ * Security (Ist-Zustand):
  * - HMAC-SHA256 Webhook-Signatur-Validierung (Header: X-Webhook-Signature)
- * - Plausibilitätsprüfung der Beträge (> 0, endlich) beim Gateway-Erstellen
- *   und beim Webhook-Eingang
- * - Idempotency via Redis (`SET key val NX EX ttl`, atomar). Der Key ist
- *   pro Payrexx-Instance (= Tenant) genamespaced, siehe idempotency-store.ts
- *   und den Kommentar bei WEBHOOK_IDEMPOTENCY_TTL_SECONDS unten. Ohne
- *   REDIS_URL fällt der Store auf eine in-memory Variante zurück (nur für
- *   lokale Entwicklung geeignet — service.ts loggt das als Warnung).
- *
- * NICHT implementiert (bewusst dokumentiert):
- * - Ein echter "Price Manipulation Guard", der den Webhook-Betrag gegen den
- *   Cart-/Payment-Session-Betrag abgleicht. getWebhookActionAndData() hat
- *   keinen Zugriff auf die Payment Session; Medusa selbst prüft den Betrag
- *   beim Autorisieren nicht gegen den Provider-Report. Siehe SECURITY-NOTES.md.
+ * - Idempotenz via Redis, atomar, pro Payrexx-Instance (= Tenant) genamespact
+ * - Betrags-Abgleich gegen den zuletzt für die Session erzeugten Gateway
+ *   (session-store.ts) — schliesst die in SECURITY-NOTES.md beschriebene
+ *   Stale-Gateway-Lücke
+ * - Alle Beträge ausschliesslich über amounts.ts (Rappen ↔ Dezimal-CHF)
  */
 
-import { AbstractPaymentProvider, BigNumber } from "@medusajs/framework/utils"
+import { AbstractPaymentProvider } from "@medusajs/framework/utils"
 import { Logger } from "@medusajs/framework/types"
 import type {
   InitiatePaymentInput,
@@ -46,15 +42,23 @@ import type {
   GetPaymentStatusOutput,
   UpdatePaymentInput,
   UpdatePaymentOutput,
+  PaymentSessionStatus,
   ProviderWebhookPayload,
   WebhookActionResult,
 } from "@medusajs/framework/types"
-import { PayrexxClient } from "./client"
+import { PayrexxClient, extractGatewayTransaction } from "./client"
+import { toRappen } from "./amounts"
 import {
   IdempotencyStore,
   InMemoryIdempotencyStore,
   RedisIdempotencyStore,
 } from "./idempotency-store"
+import {
+  SessionStateStore,
+  InMemorySessionStateStore,
+  RedisSessionStateStore,
+} from "./session-store"
+import { PayrexxWebhookProcessor } from "./webhook"
 
 export interface PayrexxProviderOptions {
   instance: string
@@ -66,13 +70,54 @@ export interface PayrexxProviderOptions {
 type InjectedDependencies = {
   logger: Logger
   /**
-   * Optional — nur zum Injizieren in Tests (z.B. InMemoryIdempotencyStore),
-   * damit kein Test einen echten Redis-Server braucht. Medusa's DI-Container
-   * registriert diesen Key normalerweise nicht; der Constructor baut in dem
-   * Fall selbst einen RedisIdempotencyStore aus REDIS_URL.
+   * Optional — nur zum Injizieren in Tests, damit kein Test einen echten
+   * Redis-Server braucht. Medusas DI-Container registriert diese Keys
+   * normalerweise nicht; der Constructor baut sie dann selbst aus REDIS_URL.
    */
   idempotencyStore?: IdempotencyStore
+  sessionStateStore?: SessionStateStore
 }
+
+/**
+ * Payrexx-Status → Medusa-PaymentSessionStatus.
+ *
+ * Dieselbe Tabelle, die webhook.ts für die Webhook-Aktionen benutzt — nur in
+ * die Session-Status-Domäne übersetzt. Die beiden MÜSSEN übereinstimmen: vor
+ * dieser Änderung meldete der Webhook für `waiting` (Powerpay) "authorized",
+ * während getPaymentStatus() und authorizePayment() für denselben Zustand
+ * "pending" lieferten. Eine per Webhook autorisierte Powerpay-Bestellung
+ * blieb dadurch beim Abschluss des Warenkorbs hängen.
+ */
+export function mapPayrexxStatus(status: string | undefined): PaymentSessionStatus {
+  switch (status) {
+    case "confirmed":
+    case "authorized":
+    case "reserved":
+    case "waiting":
+      return "authorized"
+    case "refunded":
+    case "partially-refunded":
+    case "refundpending":
+      // Geld ist geflossen — aus Medusas Sicht war die Zahlung erfasst.
+      return "captured"
+    case "cancelled":
+    case "canceled":
+    case "declined":
+    case "expired":
+    case "error":
+    case "chargeback":
+      return "canceled"
+    default:
+      return "pending"
+  }
+}
+
+/** Payrexx-Status, nach denen eine Transaktion bereits verbucht ist. */
+const SETTLED_STATUSES = new Set([
+  "confirmed",
+  "refunded",
+  "partially-refunded",
+])
 
 class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProviderOptions> {
   static identifier = "payrexx"
@@ -80,27 +125,7 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
   protected logger_: Logger
   protected options_: PayrexxProviderOptions
   protected client: PayrexxClient
-
-  /**
-   * Idempotency-Store: Verhindert doppelte Buchungen bei Webhook-Retries.
-   * Redis-backed in Produktion (siehe idempotency-store.ts), atomares
-   * check-and-set, per Tenant genamespaced.
-   */
-  private idempotencyStore_: IdempotencyStore
-
-  /**
-   * TTL für Idempotency-Keys. Payrexx' genaues Retry-Fenster für Webhooks
-   * ist uns nicht öffentlich dokumentiert bekannt — 48h ist eine grosszügige
-   * Annahme mit Sicherheitsmarge, KEIN verifizierter Wert. Vor
-   * Produktivbetrieb mit Payrexx-Support abgleichen.
-   *
-   * Akzeptierter Trade-off: nach Ablauf der TTL würde ein erneut
-   * zugestelltes "confirmed"-Event (extrem später Retry, oder Payrexx
-   * schickt es aus anderem Grund nochmal) als neu behandelt und ERNEUT
-   * verarbeitet. Eine unbegrenzte TTL ist keine Alternative — der Store
-   * würde nie leer und wüchse pro Tenant unbegrenzt.
-   */
-  private static readonly WEBHOOK_IDEMPOTENCY_TTL_SECONDS = 60 * 60 * 48 // 48h
+  protected processor_: PayrexxWebhookProcessor
 
   constructor(container: InjectedDependencies, options: PayrexxProviderOptions) {
     super(container, options)
@@ -110,34 +135,32 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       instance: options.instance,
       apiSecret: options.apiSecret,
     })
-    this.idempotencyStore_ =
-      container.idempotencyStore ?? this.createDefaultIdempotencyStore()
-  }
 
-  /**
-   * Baut den produktiven Idempotency-Store aus REDIS_URL (wie STORE_URL an
-   * anderer Stelle in diesem Modul auch direkt aus process.env gelesen wird
-   * — medusa-config.ts reicht REDIS_URL nur an projectConfig.redisUrl durch,
-   * nicht an die Provider-Options, siehe medusa-config.ts).
-   *
-   * Kein REDIS_URL konfiguriert → in-memory Fallback + laute Warnung. Das
-   * ist für lokale Entwicklung ok, in Produktion (mehrere Instanzen,
-   * Prozess-Restarts) NICHT sicher — exakt das Problem, das dieser Store
-   * ersetzt.
-   */
-  private createDefaultIdempotencyStore(): IdempotencyStore {
     const redisUrl = process.env.REDIS_URL
 
-    if (!redisUrl) {
+    if (!redisUrl && !container.idempotencyStore) {
       this.logger_.warn(
-        "Payrexx: REDIS_URL not set — falling back to an in-memory webhook " +
-          "idempotency store. This does NOT survive a process restart or a " +
-          "second instance and must not be used in production."
+        "Payrexx: REDIS_URL not set — falling back to in-memory webhook " +
+          "idempotency and session state. This survives neither a process " +
+          "restart nor a second instance and must not be used in production."
       )
-      return new InMemoryIdempotencyStore()
     }
 
-    return new RedisIdempotencyStore({ redisUrl, logger: this.logger_ })
+    this.processor_ = new PayrexxWebhookProcessor({
+      instance: options.instance,
+      webhookSecret: options.webhookSecret,
+      logger: this.logger_,
+      idempotencyStore:
+        container.idempotencyStore ??
+        (redisUrl
+          ? new RedisIdempotencyStore({ redisUrl, logger: this.logger_ })
+          : new InMemoryIdempotencyStore()),
+      sessionStore:
+        container.sessionStateStore ??
+        (redisUrl
+          ? new RedisSessionStateStore({ redisUrl, logger: this.logger_ })
+          : new InMemorySessionStateStore()),
+    })
   }
 
   static validateOptions(options: Record<string, unknown>): void {
@@ -171,12 +194,9 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
     // data.session_id — PaymentModuleService.createPaymentSession() setzt
     // `data: { ...input.data, session_id: paymentSession.id }` und zusätzlich
     // `context.idempotency_key = paymentSession.id`.
-    // (node_modules/@medusajs/payment/dist/services/payment-module.js)
     // Ohne diese ID kann der Webhook später keine Session zuordnen.
     const sessionId =
-      (data?.session_id as string | undefined) ??
-      context?.idempotency_key ??
-      ""
+      (data?.session_id as string | undefined) ?? context?.idempotency_key ?? ""
 
     if (!sessionId) {
       this.logger_.warn(
@@ -184,30 +204,40 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       )
     }
 
-    // Medusa v2 liefert Dezimalbeträge (CHF 27.00 === 27),
-    // die Payrexx-API erwartet Rappen. Umrechnung ist zwingend.
-    const amountInRappen = Math.round(Number(amount) * 100)
+    // Medusa v2 liefert Dezimalbeträge (CHF 27.00 === 27), die Payrexx-API
+    // erwartet Rappen. Die Umrechnung gehört ausschliesslich in amounts.ts —
+    // dort steht auch, warum der Faktor 100 ist und warum kein blankes
+    // Number(amount) genügt.
+    const amountInRappen = toRappen(amount)
 
-    if (!Number.isFinite(amountInRappen) || amountInRappen <= 0) {
+    if (amountInRappen <= 0) {
       throw new Error(
         `Payrexx: invalid payment amount (${String(amount)} ${currency_code}). Amount must be a positive number.`
       )
     }
 
+    const currency = currency_code.toUpperCase()
+
+    // Die session_id wandert in die Rückkehr-URLs, damit die Storefront beim
+    // Zurückkommen weiss, welche Payment Session sie abgleichen lassen muss
+    // (POST /store/payrexx/return). Payrexx hängt selbst keine für uns
+    // brauchbare Kennung an die Redirect-URL an.
+    const returnQuery = `payment_session_id=${encodeURIComponent(sessionId)}`
+
     const gateway = await this.client.createGateway({
       amount: amountInRappen,
-      currency: currency_code.toUpperCase(),
+      currency,
       purpose: `jibbit.ch Bestellung`,
       referenceId: sessionId,
-      successRedirectUrl: `${storeUrl}/checkout/success`,
-      failedRedirectUrl: `${storeUrl}/checkout/failed`,
-      cancelRedirectUrl: `${storeUrl}/checkout/cancel`,
+      successRedirectUrl: `${storeUrl}/checkout/success?${returnQuery}`,
+      failedRedirectUrl: `${storeUrl}/checkout/failed?${returnQuery}`,
+      cancelRedirectUrl: `${storeUrl}/checkout/cancel?${returnQuery}`,
       psp: this.options_.enabledPsps,
       fields: context?.customer
         ? {
-            forename: { value: (context.customer as any).first_name || "" },
-            surname: { value: (context.customer as any).last_name || "" },
-            email: { value: (context.customer as any).email || "" },
+            forename: { value: context.customer.first_name || "" },
+            surname: { value: context.customer.last_name || "" },
+            email: { value: context.customer.email || "" },
           }
         : undefined,
     })
@@ -217,8 +247,19 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       throw new Error("Payrexx Gateway creation failed: no data returned.")
     }
 
+    // Merken, welcher Gateway und welcher Betrag für diese Session gerade
+    // gültig sind. Der Webhook-Handler hat keinen Zugriff auf die Payment
+    // Session und kann den gemeldeten Betrag sonst gegen nichts prüfen.
+    if (sessionId) {
+      await this.processor_.rememberGateway(sessionId, {
+        gatewayId: gatewayData.id,
+        amountInRappen,
+        currency,
+      })
+    }
+
     this.logger_.info(
-      `Payrexx Gateway created: id=${gatewayData.id}, hash=${gatewayData.hash}`
+      `Payrexx Gateway created: id=${gatewayData.id}, session=${sessionId}, amount=${amountInRappen} Rappen`
     )
 
     return {
@@ -226,69 +267,116 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       data: {
         id: gatewayData.id,
         hash: gatewayData.hash,
-        link: gatewayData.link, // Redirect-URL für Storefront
+        link: gatewayData.link, // Redirect-URL für die Storefront
         status: gatewayData.status,
         referenceId: gatewayData.referenceId,
+        session_id: sessionId,
+        // Für updatePayment(): erlaubt den Vergleich "hat sich der Betrag
+        // überhaupt geändert?", ohne den Session-Store zu befragen.
+        amountInRappen,
+        currency,
       },
     }
   }
 
   /**
    * Zahlung autorisieren.
-   * Bei Payrexx passiert die Autorisierung über den Webhook.
-   * Diese Methode wird nach dem Webhook-Event aufgerufen.
+   *
+   * Wird von Medusa beim Abschluss des Warenkorbs aufgerufen (und vom
+   * processPaymentWorkflow). Fragt den echten Stand bei Payrexx ab —
+   * Statusquelle ist immer Payrexx, nie der Client.
    */
   async authorizePayment(
     input: AuthorizePaymentInput
   ): Promise<AuthorizePaymentOutput> {
-    const gatewayId = input.data?.id as number
+    const gatewayId = Number(input.data?.id)
+    const data = (input.data ?? {}) as Record<string, unknown>
 
-    // Gateway-Status von Payrexx abrufen
-    const gateway = await this.client.retrieveGateway(gatewayId)
-    const gatewayData = gateway.data?.[0]
-
-    if (!gatewayData) {
-      return { data: input.data as Record<string, unknown>, status: "error" }
+    if (!Number.isFinite(gatewayId) || gatewayId <= 0) {
+      this.logger_.error(
+        "Payrexx authorizePayment without a gateway id in payment session data."
+      )
+      return { data, status: "error" }
     }
 
-    // Transaktion aus dem Gateway extrahieren
-    const transaction = gatewayData.invoices?.[0]?.transactions?.[0]
-
-    if (transaction?.status === "confirmed") {
-      return {
-        data: {
-          ...input.data as Record<string, unknown>,
-          transactionId: transaction.id,
-          transactionStatus: transaction.status,
-        },
-        status: "authorized",
-      }
+    let transaction
+    try {
+      const gateway = await this.client.retrieveGateway(gatewayId)
+      transaction = extractGatewayTransaction(gateway.data?.[0])
+    } catch (err) {
+      // Bewusst "pending" statt "error": ein Netzwerkfehler gegen Payrexx
+      // heisst NICHT, dass die Zahlung gescheitert ist. "error" würde die
+      // Session als endgültig kaputt markieren und den Kunden aus einer
+      // möglicherweise längst bezahlten Bestellung werfen. "pending" lässt
+      // den Webhook bzw. den nächsten Rückkehr-Abgleich nachziehen.
+      this.logger_.error(
+        `Payrexx: could not retrieve gateway ${gatewayId} during authorize (${String(err)}) — reporting pending.`
+      )
+      return { data, status: "pending" }
     }
+
+    if (!transaction) {
+      return { data, status: "pending" }
+    }
+
+    const status = mapPayrexxStatus(transaction.status)
 
     return {
-      data: input.data as Record<string, unknown>,
-      status: "pending",
+      data: {
+        ...data,
+        transactionId: transaction.id,
+        transactionStatus: transaction.status,
+        transactionAmountInRappen: transaction.amount,
+      },
+      status,
     }
   }
 
   /**
-   * Zahlung capturen.
-   * Wird vom Admin ausgelöst, nachdem die Bestellung autorisiert wurde.
+   * Zahlung capturen. Wird vom Admin ausgelöst.
+   *
+   * Wichtig für Payrexx: Ein Gateway ohne Pre-Authorization ist bei
+   * `confirmed` bereits verbucht. Ein zweiter Capture-Aufruf auf eine solche
+   * Transaktion beantwortet Payrexx mit einem Fehler. Ohne die Prüfung unten
+   * wäre die Bestellung im Admin dauerhaft nicht abschliessbar: "Capture"
+   * scheitert, obwohl das Geld längst da ist.
    */
   async capturePayment(
     input: CapturePaymentInput
   ): Promise<CapturePaymentOutput> {
-    const transactionId = input.data?.transactionId as number
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const transactionId = await this.resolveTransactionId(data)
 
     if (!transactionId) {
-      throw new Error("No transactionId found in payment data for capture.")
+      throw new Error(
+        "Payrexx: no transaction found for this payment — nothing to capture. " +
+          "The customer may not have completed the payment on the Payrexx page."
+      )
+    }
+
+    const currentStatus = await this.fetchTransactionStatus(transactionId)
+
+    if (currentStatus && SETTLED_STATUSES.has(currentStatus)) {
+      this.logger_.info(
+        `Payrexx transaction ${transactionId} is already '${currentStatus}' — ` +
+          `recording the capture in Medusa without calling Payrexx again.`
+      )
+      return {
+        data: {
+          ...data,
+          transactionId,
+          capturedAt: new Date().toISOString(),
+          captureSkippedReason: `already ${currentStatus} at Payrexx`,
+        },
+      }
     }
 
     const result = await this.client.captureTransaction(transactionId)
 
     return {
       data: {
-        ...input.data as Record<string, unknown>,
+        ...data,
+        transactionId,
         capturedAt: new Date().toISOString(),
         captureResult: result.data?.[0],
       },
@@ -296,68 +384,83 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
   }
 
   /**
-   * Zahlung stornieren.
-   * Löscht den Payrexx Gateway (wenn noch nicht captured).
+   * Zahlung stornieren. Löscht den Payrexx Gateway (wenn noch nicht bezahlt).
    */
-  async cancelPayment(
-    input: CancelPaymentInput
-  ): Promise<CancelPaymentOutput> {
-    const gatewayId = input.data?.id as number
+  async cancelPayment(input: CancelPaymentInput): Promise<CancelPaymentOutput> {
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const gatewayId = Number(data.id)
 
-    if (gatewayId) {
+    if (Number.isFinite(gatewayId) && gatewayId > 0) {
       try {
         await this.client.deleteGateway(gatewayId)
       } catch (err) {
-        this.logger_.warn(`Failed to delete Payrexx gateway ${gatewayId}: ${err}`)
+        this.logger_.warn(
+          `Failed to delete Payrexx gateway ${gatewayId}: ${String(err)}`
+        )
       }
     }
 
-    return { data: input.data as Record<string, unknown> }
+    await this.forgetSessionState(data)
+
+    return { data }
   }
 
   /**
-   * Rückerstattung.
+   * Rückerstattung. `input.amount` ist ein Dezimalbetrag, Payrexx will Rappen.
    */
-  async refundPayment(
-    input: RefundPaymentInput
-  ): Promise<RefundPaymentOutput> {
-    const transactionId = input.data?.transactionId as number
+  async refundPayment(input: RefundPaymentInput): Promise<RefundPaymentOutput> {
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const transactionId = await this.resolveTransactionId(data)
 
     if (!transactionId) {
-      throw new Error("No transactionId found in payment data for refund.")
+      throw new Error("Payrexx: no transaction found for this payment — cannot refund.")
     }
 
-    const result = await this.client.refundTransaction(
-      transactionId,
-      Math.round(Number(input.amount) * 100) // Dezimalbetrag → Rappen
-    )
+    const amountInRappen = toRappen(input.amount)
+
+    if (amountInRappen <= 0) {
+      throw new Error(
+        `Payrexx: refuse to refund a non-positive amount (${String(input.amount)}).`
+      )
+    }
+
+    const result = await this.client.refundTransaction(transactionId, amountInRappen)
 
     return {
       data: {
-        ...input.data as Record<string, unknown>,
+        ...data,
+        transactionId,
         refundedAt: new Date().toISOString(),
+        refundedAmountInRappen: amountInRappen,
         refundResult: result.data?.[0],
       },
     }
   }
 
   /**
-   * Payment Session löschen (Kunde wechselt Zahlungsart).
+   * Payment Session löschen (Kunde wechselt die Zahlungsart).
    */
-  async deletePayment(
-    input: DeletePaymentInput
-  ): Promise<DeletePaymentOutput> {
-    const gatewayId = input.data?.id as number
+  async deletePayment(input: DeletePaymentInput): Promise<DeletePaymentOutput> {
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const gatewayId = Number(data.id)
 
-    if (gatewayId) {
+    if (Number.isFinite(gatewayId) && gatewayId > 0) {
       try {
         await this.client.deleteGateway(gatewayId)
-      } catch {
-        // Gateway existiert evtl. nicht mehr
+      } catch (err) {
+        // Gateway existiert evtl. nicht mehr — kein Grund, den Wechsel der
+        // Zahlungsart scheitern zu lassen. Aber loggen: ein Gateway, das
+        // sich nicht löschen lässt, bleibt zahlbar.
+        this.logger_.warn(
+          `Payrexx: gateway ${gatewayId} could not be deleted (${String(err)}). ` +
+            `It may still be payable at Payrexx.`
+        )
       }
     }
 
-    return { data: input.data as Record<string, unknown> }
+    await this.forgetSessionState(data)
+
+    return { data }
   }
 
   /**
@@ -366,14 +469,26 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
   async retrievePayment(
     input: RetrievePaymentInput
   ): Promise<RetrievePaymentOutput> {
-    const gatewayId = input.data?.id as number
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const gatewayId = Number(data.id)
 
-    if (!gatewayId) {
-      return input.data as Record<string, unknown>
+    if (!Number.isFinite(gatewayId) || gatewayId <= 0) {
+      return data
     }
 
-    const gateway = await this.client.retrieveGateway(gatewayId)
-    return gateway.data?.[0] as unknown as Record<string, unknown> || input.data as Record<string, unknown>
+    try {
+      const gateway = await this.client.retrieveGateway(gatewayId)
+      const gatewayData = gateway.data?.[0]
+      if (!gatewayData) {
+        return data
+      }
+      return { ...data, ...(gatewayData as unknown as Record<string, unknown>) }
+    } catch (err) {
+      this.logger_.warn(
+        `Payrexx: could not retrieve gateway ${gatewayId} (${String(err)}).`
+      )
+      return data
+    }
   }
 
   /**
@@ -382,247 +497,185 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
   async getPaymentStatus(
     input: GetPaymentStatusInput
   ): Promise<GetPaymentStatusOutput> {
-    const gatewayId = input.data?.id as number
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const gatewayId = Number(data.id)
 
-    if (!gatewayId) {
+    if (!Number.isFinite(gatewayId) || gatewayId <= 0) {
       return { status: "pending" }
     }
 
-    const gateway = await this.client.retrieveGateway(gatewayId)
-    const gatewayData = gateway.data?.[0]
-    const transaction = gatewayData?.invoices?.[0]?.transactions?.[0]
+    try {
+      const gateway = await this.client.retrieveGateway(gatewayId)
+      const transaction = extractGatewayTransaction(gateway.data?.[0])
 
-    if (!transaction) {
+      if (!transaction) {
+        return { status: "pending" }
+      }
+
+      return {
+        status: mapPayrexxStatus(transaction.status),
+        data: {
+          ...data,
+          transactionId: transaction.id,
+          transactionStatus: transaction.status,
+        },
+      }
+    } catch (err) {
+      // Wie bei authorizePayment: ein API-Fehler ist kein Zahlungsfehler.
+      this.logger_.warn(
+        `Payrexx: could not read status for gateway ${gatewayId} (${String(err)}) — reporting pending.`
+      )
       return { status: "pending" }
-    }
-
-    // Payrexx Status → Medusa Status Mapping
-    switch (transaction.status) {
-      case "confirmed":
-        return { status: "authorized" }
-      case "refunded":
-      case "partially-refunded":
-        return { status: "captured" } // Already captured if refunded
-      case "cancelled":
-      case "declined":
-      case "error":
-        return { status: "canceled" }
-      case "waiting":
-        return { status: "pending" }
-      default:
-        return { status: "pending" }
     }
   }
 
   /**
-   * Payment aktualisieren (z.B. Betrag ändert sich im Cart).
+   * Payment aktualisieren (z.B. der Betrag ändert sich im Cart).
+   *
+   * Payrexx-Gateways sind unveränderlich, also: alten löschen, neuen anlegen.
+   * Zwei Härtungen gegenüber der Erstimplementierung:
+   *
+   * 1. Ist der Betrag UNVERÄNDERT, passiert gar nichts. Medusa ruft
+   *    updatePayment() auch dann auf, wenn sich am Warenkorb nichts
+   *    Zahlungsrelevantes geändert hat. Jedes unnötige Löschen+Neuanlegen
+   *    entwertet den Link, den der Kunde eventuell schon offen hat, und
+   *    erzeugt genau die Stale-Gateway-Situation aus SECURITY-NOTES.md.
+   * 2. Scheitert das Löschen, wird das jetzt LAUT geloggt statt still
+   *    verschluckt. Payrexx verweigert das Löschen, sobald eine Transaktion
+   *    am Gateway hängt — dann existiert ein zweiter zahlbarer Gateway mit
+   *    dem alten Betrag. Der Betragsabgleich im Webhook (webhook.ts) fängt
+   *    die Folge ab; der Log-Eintrag macht die Ursache auffindbar.
    */
-  async updatePayment(
-    input: UpdatePaymentInput
-  ): Promise<UpdatePaymentOutput> {
-    // Payrexx Gateways sind immutable → alten löschen + neuen erstellen
-    const gatewayId = input.data?.id as number
+  async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const gatewayId = Number(data.id)
+    const newAmountInRappen = toRappen(input.amount)
+    const previousAmountInRappen = Number(data.amountInRappen)
+    const previousCurrency = String(data.currency ?? "")
 
-    if (gatewayId) {
+    const unchanged =
+      Number.isFinite(gatewayId) &&
+      gatewayId > 0 &&
+      Number.isFinite(previousAmountInRappen) &&
+      previousAmountInRappen === newAmountInRappen &&
+      previousCurrency === input.currency_code.toUpperCase()
+
+    if (unchanged) {
+      return { data }
+    }
+
+    if (Number.isFinite(gatewayId) && gatewayId > 0) {
       try {
         await this.client.deleteGateway(gatewayId)
-      } catch {
-        // Ignore
+      } catch (err) {
+        this.logger_.error(
+          `Payrexx: gateway ${gatewayId} could NOT be deleted while updating the ` +
+            `amount from ${previousAmountInRappen} to ${newAmountInRappen} Rappen ` +
+            `(${String(err)}). The old gateway may still be payable — a webhook ` +
+            `for it will be rejected by the amount cross-check and needs manual review.`
+        )
       }
     }
 
-    // Neuen Gateway mit aktualisierten Daten erstellen.
     // `data` muss durchgereicht werden, sonst geht die session_id verloren
     // und der Webhook kann die Session nicht mehr zuordnen.
     return this.initiatePayment({
       amount: input.amount,
       currency_code: input.currency_code,
       context: input.context,
-      data: input.data,
+      data,
     })
   }
 
   /**
-   * Webhook-Verarbeitung.
-   * Validiert HMAC-Signatur und gibt die entsprechende Aktion zurück.
+   * Webhook-Verarbeitung für Medusas eingebaute Route
+   * `POST /hooks/payment/payrexx_payrexx`.
    *
-   * Security:
-   * - HMAC-SHA256 Signatur-Validierung (Webhook Forgery Protection)
-   * - Idempotency Check (keine doppelten Buchungen)
-   * - Betrags-Plausibilität (> 0). KEIN Abgleich gegen den Cart-Betrag —
-   *   dafür fehlt hier der Zugriff auf die Payment Session.
+   * Die bei Payrexx zu hinterlegende URL ist `/hooks/payment/payrexx`
+   * (src/api/hooks/payment/payrexx/route.ts) — die verarbeitet synchron und
+   * kann Payrexx sinnvolle HTTP-Codes zurückgeben. Diese Methode bleibt
+   * bestehen, damit auch der Standardweg funktioniert; beide teilen sich
+   * denselben Processor und damit dieselbe Entscheidung und denselben
+   * Idempotency-Key.
    */
   async getWebhookActionAndData(
     payload: ProviderWebhookPayload["payload"]
   ): Promise<WebhookActionResult> {
-    const { data, rawData, headers } = payload
+    const evaluation = await this.processor_.evaluateRaw(
+      payload.rawData,
+      (payload.headers ?? {}) as Record<string, unknown>
+    )
 
-    // 1. HMAC-SHA256 Signatur validieren (Webhook Forgery Protection)
-    // Payrexx liefert die Signatur in "X-Webhook-Signature" (lowercase hex).
-    // Node/Express normalisiert Header-Namen auf lowercase.
-    const headerBag = (headers ?? {}) as Record<string, string | string[]>
-    const rawSignature =
-      headerBag[PayrexxClient.WEBHOOK_SIGNATURE_HEADER] ??
-      headerBag["X-Webhook-Signature"] ??
-      // Legacy-Fallback: so hiess der Header in der ersten Implementierung.
-      headerBag["payrexx-signature"] ??
-      ""
-    const signature = Array.isArray(rawSignature) ? rawSignature[0] : rawSignature
-    const rawBody =
-      typeof rawData === "string"
-        ? rawData
-        : Buffer.isBuffer(rawData)
-          ? rawData.toString("utf8")
-          : JSON.stringify(rawData)
-
-    if (!PayrexxClient.verifyWebhookSignature(rawBody, signature, this.options_.webhookSecret)) {
-      this.logger_.error("Payrexx webhook signature verification failed!")
-      return { action: "not_supported" }
+    if (evaluation.status === "evaluated") {
+      return evaluation.action
     }
 
-    // 2. Idempotency Check — verhindert doppelte Buchungen bei Retries.
-    //
-    // Namespacing: Der Key enthält options_.instance, die Payrexx-Merchant-
-    // Instance — faktisch der Tenant in der Multi-Tenant-Architektur (siehe
-    // docs/multi-tenancy-architecture.md, §8: pro Tenant ein eigener
-    // Payrexx-Account). Selbst wenn sich mehrere Tenants ein Redis teilen
-    // (§6.3 des Dokuments erwägt genau das als Alternative zu Redis pro
-    // Tenant), können sich Transaktions-IDs zweier Tenants hier NIE
-    // überschneiden — eine blanke Transaktions-ID als Key wäre sonst ein
-    // Cross-Tenant-Hazard: Tenant A könnte (unabsichtlich per ID-Kollision
-    // oder absichtlich) einen Webhook von Tenant B als "schon verarbeitet"
-    // maskieren oder umgekehrt fälschlich blockieren.
-    const webhookTransaction = (data as any)?.transaction
-    const transactionId = webhookTransaction?.id
-    const idempotencyKey = `payrexx:webhook:${this.options_.instance}:${transactionId}-${webhookTransaction?.status}`
+    if (evaluation.status === "malformed") {
+      this.logger_.warn(`Payrexx webhook ignored: ${evaluation.reason}`)
+    }
 
-    let isNewWebhook: boolean
+    return { action: "not_supported" }
+  }
+
+  /** Nur für die Routen/Tests: derselbe Processor, den der Provider benutzt. */
+  get webhookProcessor(): PayrexxWebhookProcessor {
+    return this.processor_
+  }
+
+  // ─── Interne Helfer ──────────────────────────────────────────────────────
+
+  /**
+   * Transaktions-ID ermitteln.
+   *
+   * Sie steht normalerweise in `data.transactionId` (von authorizePayment
+   * gesetzt). Kam die Autorisierung aber allein über den Webhook zustande und
+   * ist authorizePayment nie gelaufen, fehlt sie — dann wird sie beim Gateway
+   * nachgeschlagen, statt Capture/Refund an einer fehlenden ID scheitern zu
+   * lassen.
+   */
+  private async resolveTransactionId(
+    data: Record<string, unknown>
+  ): Promise<number | undefined> {
+    const known = Number(data.transactionId)
+    if (Number.isFinite(known) && known > 0) {
+      return known
+    }
+
+    const gatewayId = Number(data.id)
+    if (!Number.isFinite(gatewayId) || gatewayId <= 0) {
+      return undefined
+    }
+
     try {
-      isNewWebhook = await this.idempotencyStore_.checkAndSet(
-        idempotencyKey,
-        PayrexxPaymentProviderService.WEBHOOK_IDEMPOTENCY_TTL_SECONDS
-      )
+      const gateway = await this.client.retrieveGateway(gatewayId)
+      return extractGatewayTransaction(gateway.data?.[0])?.id
     } catch (err) {
-      // Store nicht erreichbar (z.B. Redis down). Drei Optionen abgewogen:
-      //
-      // (a) FAIL-OPEN: trotzdem verarbeiten, ohne Dedup-Garantie.
-      // (b) FAIL-CLOSED via `not_supported`: wie einen "unbekannten Status"
-      //     behandeln. Das ist ein STILLER Drop — die Webhook-Route
-      //     antwortet Payrexx trotzdem mit 2xx (es wird kein Fehler
-      //     geworfen), Payrexx stoppt also seine Retries. Die Zahlung wäre
-      //     damit UNWIDERRUFLICH verloren, nicht nur verzögert. Nie richtig.
-      // (c) FAIL-CLOSED via throw: Route liefert 5xx, Payrexx retried
-      //     später erneut — würde Exactly-Once erhalten, ABER nur wenn
-      //     Payrexx lange genug retried, um einen Redis-Ausfall zu
-      //     überbrücken. Payrexx' Retry-Fenster ist uns nicht bekannt
-      //     (nicht öffentlich dokumentiert); ein kurzes Retry-Fenster plus
-      //     ein länger andauernder Redis-Ausfall würde die Zahlung dann
-      //     genauso verlieren wie (b), nur mit Umweg über mehrere 5xx.
-      //
-      // Gewählt: (a) FAIL-OPEN. Die Begründung ist modul-spezifisch, nicht
-      // generisch: capturePayment() wird in diesem Modul NIE vom Webhook
-      // ausgelöst, sondern ausschliesslich vom Admin (siehe
-      // capturePayment() oben). Ein doppelt verarbeiteter Webhook kann hier
-      // also nie doppelt Geld bewegen — im schlimmsten Fall wird ein
-      // bereits gesetzter "authorized"-Status ein zweites Mal gesetzt, was
-      // im Payrexx-Dashboard und in der Medusa-Order sichtbar und manuell
-      // korrigierbar ist. Ein verlorener Webhook (das Risiko bei (b)/(c) im
-      // Fehlerfall) ist dagegen eine bezahlte, nie erfasste Bestellung —
-      // für niemanden sichtbar bis zur Kundenreklamation.
-      //
-      // Wichtig: fail-open gilt NUR für einen geworfenen Fehler des Stores.
-      // Eine regulär beantwortete `false` (= "schon gesehen") überspringt
-      // IMMER — dieser catch-Block fängt ausschliesslich Store-Ausfälle.
-      this.logger_.error(
-        `Payrexx idempotency store unavailable (${String(err)}); processing ` +
-          `webhook ${idempotencyKey} without duplicate-detection guarantee ` +
-          `(fail-open, see comment in getWebhookActionAndData).`
+      this.logger_.warn(
+        `Payrexx: could not resolve a transaction id from gateway ${gatewayId} (${String(err)}).`
       )
-      isNewWebhook = true
+      return undefined
     }
+  }
 
-    if (!isNewWebhook) {
-      this.logger_.info(`Duplicate webhook ignored: ${idempotencyKey}`)
-      return { action: "not_supported" }
-    }
-
-    // 3. Status-basierte Aktion
-    const status = webhookTransaction?.status
-    const sessionId = webhookTransaction?.referenceId || (data as any)?.referenceId
-
-    if (!sessionId) {
-      this.logger_.warn("Webhook without referenceId (session_id) received.")
-      return { action: "not_supported" }
-    }
-
-    // 4. Betrag: Payrexx meldet Rappen, Medusa erwartet Dezimalbeträge.
-    // Plausibilitätsprüfung — ein Betrag <= 0 oder NaN ist nie legitim.
-    const amountInRappen = Number(webhookTransaction?.amount)
-    const amountDecimal = amountInRappen / 100
-
-    const requiresAmount = [
-      "confirmed",
-      "waiting",
-      "refunded",
-      "partially-refunded",
-    ].includes(status)
-
-    if (requiresAmount && (!Number.isFinite(amountInRappen) || amountInRappen <= 0)) {
-      this.logger_.error(
-        `Payrexx webhook with implausible amount rejected: ${String(webhookTransaction?.amount)} (session ${sessionId})`
+  private async fetchTransactionStatus(
+    transactionId: number
+  ): Promise<string | undefined> {
+    try {
+      const result = await this.client.retrieveTransaction(transactionId)
+      return result.data?.[0]?.status
+    } catch (err) {
+      // Nicht fatal: im Zweifel wird der Capture regulär versucht.
+      this.logger_.warn(
+        `Payrexx: could not read transaction ${transactionId} before capture (${String(err)}).`
       )
-      return {
-        action: "failed",
-        data: { session_id: sessionId, amount: new BigNumber(0) },
-      }
+      return undefined
     }
+  }
 
-    switch (status) {
-      case "confirmed":
-        return {
-          action: "authorized",
-          data: {
-            session_id: sessionId,
-            amount: new BigNumber(amountDecimal),
-          },
-        }
-
-      case "waiting":
-        // Powerpay: Zahlung ist pending (Rechnungskauf)
-        return {
-          action: "authorized",
-          data: {
-            session_id: sessionId,
-            amount: new BigNumber(amountDecimal),
-          },
-        }
-
-      case "refunded":
-      case "partially-refunded":
-        return {
-          action: "captured",
-          data: {
-            session_id: sessionId,
-            amount: new BigNumber(amountDecimal),
-          },
-        }
-
-      case "cancelled":
-      case "declined":
-      case "error":
-        return {
-          action: "failed",
-          data: {
-            session_id: sessionId,
-            amount: new BigNumber(
-              Number.isFinite(amountDecimal) ? amountDecimal : 0
-            ),
-          },
-        }
-
-      default:
-        this.logger_.warn(`Unknown Payrexx webhook status: ${status}`)
-        return { action: "not_supported" }
+  private async forgetSessionState(data: Record<string, unknown>): Promise<void> {
+    const sessionId = data.session_id ?? data.referenceId
+    if (typeof sessionId === "string" && sessionId) {
+      await this.processor_.forgetGateway(sessionId)
     }
   }
 }
