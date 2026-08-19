@@ -133,16 +133,61 @@ configure_firewall() {
 
 # ─── Repositories ────────────────────────────────────────────────────────────
 
+# Als aufrufender Benutzer ausfuehren, nicht als root.
+#
+# `gh auth login` legt Token und Credential-Helper unter dem HOME des
+# Benutzers ab. Dieses Script laeuft aber unter sudo, und root sieht davon
+# nichts. `git clone` faellt dann auf die Passwortabfrage zurueck, die GitHub
+# seit 2021 nicht mehr akzeptiert ("Password authentication is not supported
+# for Git operations") — bei privaten Repositories bricht der Bootstrap genau
+# hier ab.
+#
+# GIT_TERMINAL_PROMPT=0: lieber sofort mit klarer Meldung scheitern als in
+# einer Abfrage haengen, die ohnehin nicht funktionieren kann.
+as_user() {
+  if [ "$RUN_USER" = "root" ] || ! command -v sudo >/dev/null 2>&1; then
+    env GIT_TERMINAL_PROMPT=0 "$@"
+  else
+    sudo -u "$RUN_USER" -H env GIT_TERMINAL_PROMPT=0 "$@"
+  fi
+}
+
 clone_repos() {
   log "Repositories nach $TARGET_DIR"
   mkdir -p "$TARGET_DIR"
+  # vor dem Klonen, damit der Benutzer ueberhaupt hineinschreiben darf
+  chown "$RUN_USER":"$RUN_USER" "$TARGET_DIR"
 
   for repo in medusa-ecom jibbit-frontend; do
     if [ -d "$TARGET_DIR/$repo/.git" ]; then
       echo "  $repo existiert bereits — übersprungen"
-    else
-      git clone --depth 1 "https://github.com/${REPO_OWNER}/${repo}.git" \
-        "$TARGET_DIR/$repo"
+      continue
+    fi
+
+    # gh zuerst: nutzt das Token des Benutzers direkt, ganz ohne
+    # konfigurierten Credential-Helper.
+    if command -v gh >/dev/null 2>&1 && as_user gh auth status >/dev/null 2>&1; then
+      if as_user gh repo clone "${REPO_OWNER}/${repo}" "$TARGET_DIR/$repo" -- --depth 1; then
+        continue
+      fi
+    fi
+
+    if ! as_user git clone --depth 1 \
+        "https://github.com/${REPO_OWNER}/${repo}.git" "$TARGET_DIR/$repo"; then
+      cat >&2 <<MSG
+
+Klonen von ${REPO_OWNER}/${repo} fehlgeschlagen.
+
+Beide Repositories sind privat. Melde dich EINMAL als '$RUN_USER' an —
+nicht als root, nicht mit sudo:
+
+    gh auth login
+    gh auth setup-git
+
+Danach dieses Script erneut starten. Es ist idempotent, bereits erledigte
+Schritte werden uebersprungen.
+MSG
+      exit 1
     fi
   done
 
