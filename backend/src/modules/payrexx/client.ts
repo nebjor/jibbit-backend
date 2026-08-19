@@ -43,7 +43,11 @@ export interface PayrexxGatewayResponse {
       transactions?: Array<{
         id: number
         status: string
+        /** In Rappen — siehe amounts.ts. */
         amount: number
+        /** = Medusa payment session id (wir setzen sie beim Erstellen). */
+        referenceId?: string
+        psp?: string
       }>
     }>
   }>
@@ -54,11 +58,34 @@ export interface PayrexxTransactionResponse {
   data: Array<{
     id: number
     status: string
+    /** In Rappen — siehe amounts.ts. */
     amount: number
-    referenceId: string
-    time: string
-    psp: string
+    referenceId?: string
+    time?: string
+    psp?: string
   }>
+}
+
+/**
+ * Zieht die (einzige) Transaktion aus einer Gateway-Antwort.
+ *
+ * Payrexx hängt Transaktionen unter `invoices[].transactions[]`. Ein Gateway
+ * ohne Transaktion ist der Normalfall, solange der Kunde noch nicht bezahlt
+ * hat — deshalb `undefined` statt eines Fehlers.
+ *
+ * Bewusst die LETZTE statt der ersten Transaktion: Payrexx hängt bei einem
+ * Fehlversuch mit anschliessend erfolgreichem zweitem Anlauf beide an
+ * dasselbe Gateway, und massgeblich ist der jüngste Stand.
+ */
+export function extractGatewayTransaction(
+  gateway: PayrexxGatewayResponse["data"][number] | undefined
+):
+  | { id: number; status: string; amount: number; referenceId?: string; psp?: string }
+  | undefined {
+  const transactions = (gateway?.invoices ?? []).flatMap(
+    (invoice) => invoice.transactions ?? []
+  )
+  return transactions.length ? transactions[transactions.length - 1] : undefined
 }
 
 export interface PayrexxClientOptions {

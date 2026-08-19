@@ -154,30 +154,43 @@ describe("Payrexx webhook idempotency", () => {
 
   it("treats a different status for the same transaction id as a distinct event, not a duplicate", async () => {
     // Der Idempotency-Key enthält Transaktions-ID UND Status
-    // (`${transactionId}-${status}`). Ohne den Status-Anteil würde ein
-    // "refunded"-Webhook für dieselbe Transaktion nach einem "confirmed"
-    // fälschlich als Duplikat verschluckt — ein echtes Refund-Event würde
-    // Medusa nie erreichen.
+    // (`${transactionId}-${status}`). Ohne den Status-Anteil würde der
+    // Statuswechsel derselben Transaktion fälschlich als Duplikat
+    // verschluckt — bei Powerpay ist genau das die Regel: erst "waiting"
+    // (Rechnung zugesagt), später "confirmed" (bezahlt).
     const sharedStore = new InMemoryIdempotencyStore()
     const tenantA = makeService("tenant-a-instance", sharedStore)
 
+    const waiting = await tenantA.service.getWebhookActionAndData(
+      signedWebhookPayload({ ...CONFIRMED_TRANSACTION, status: "waiting" })
+    )
     const confirmed = await tenantA.service.getWebhookActionAndData(
       signedWebhookPayload(CONFIRMED_TRANSACTION)
     )
+
+    expect(waiting.action).toBe("authorized")
+    expect(confirmed.action).toBe("authorized") // NICHT "not_supported"
+  })
+
+  it("does not report a Payrexx-side refund as a capture", async () => {
+    // Frühere Fassung: "refunded" → action "captured". Das ist die falsche
+    // Ereignisform (ein Refund als Capture) und hätte Medusa dazu gebracht,
+    // Geld in die Gegenrichtung zu bewegen. Siehe SECURITY-NOTES.md.
+    const sharedStore = new InMemoryIdempotencyStore()
+    const tenantA = makeService("tenant-a-instance", sharedStore)
+
     const refunded = await tenantA.service.getWebhookActionAndData(
-      signedWebhookPayload({
-        ...CONFIRMED_TRANSACTION,
-        status: "refunded",
-      })
+      signedWebhookPayload({ ...CONFIRMED_TRANSACTION, status: "refunded" })
     )
 
-    expect(confirmed.action).toBe("authorized")
-    expect(refunded.action).toBe("captured") // NICHT "not_supported"
+    expect(refunded.action).not.toBe("captured")
+    expect(refunded.action).toBe("not_supported")
   })
 
   it("fails OPEN (processes the webhook) when the idempotency store is unavailable", async () => {
     const brokenStore: IdempotencyStore = {
       checkAndSet: jest.fn().mockRejectedValue(new Error("ECONNREFUSED")),
+      release: jest.fn().mockResolvedValue(undefined),
     }
     const { service, logger } = makeService("tenant-a", brokenStore)
 
@@ -199,6 +212,7 @@ describe("Payrexx webhook idempotency", () => {
     // ausschliesslich für den catch-Zweig.
     const alwaysDuplicateStore: IdempotencyStore = {
       checkAndSet: jest.fn().mockResolvedValue(false),
+      release: jest.fn().mockResolvedValue(undefined),
     }
     const { service } = makeService("tenant-a", alwaysDuplicateStore)
 

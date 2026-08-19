@@ -29,6 +29,22 @@ export interface IdempotencyStore {
    * AUFRUFER, nicht dem Store. Siehe service.ts, getWebhookActionAndData().
    */
   checkAndSet(key: string, ttlSeconds: number): Promise<boolean>
+
+  /**
+   * Gibt eine zuvor mit `checkAndSet` gesetzte Reservierung wieder frei.
+   *
+   * Gebraucht wird das, weil `checkAndSet` den Key schon VOR der eigentlichen
+   * Verarbeitung belegt (anders ginge es nicht — sonst gäbe es wieder das
+   * Read-Then-Write-Race). Scheitert die Verarbeitung danach, wäre der Key
+   * ohne `release()` für die volle TTL belegt: Payrexx' Retry würde als
+   * Duplikat verworfen, und die Zahlung wäre still verloren statt nur
+   * verzögert. `release()` macht den Retry wieder wirksam.
+   *
+   * Ein Fehler beim Freigeben ist NICHT fatal — der Aufrufer hat den Webhook
+   * ohnehin schon als fehlgeschlagen markiert. Implementierungen dürfen
+   * werfen; Aufrufer müssen den Fehler abfangen und loggen.
+   */
+  release(key: string): Promise<void>
 }
 
 /**
@@ -52,6 +68,10 @@ export class InMemoryIdempotencyStore implements IdempotencyStore {
 
     this.seen.set(key, now + ttlSeconds * 1000)
     return true
+  }
+
+  async release(key: string): Promise<void> {
+    this.seen.delete(key)
   }
 }
 
@@ -99,6 +119,10 @@ export class RedisIdempotencyStore implements IdempotencyStore {
     // "OK" = Key wurde neu gesetzt (NX griff). null = Key existierte schon.
     const result = await this.client.set(key, "1", "EX", ttlSeconds, "NX")
     return result === "OK"
+  }
+
+  async release(key: string): Promise<void> {
+    await this.client.del(key)
   }
 
   /** Nur für Tests / sauberen Shutdown — kein Teil des IdempotencyStore-Interface. */

@@ -187,23 +187,33 @@ The integration is **already largely done**. `backend/src/modules/payrexx/` impl
 - ✅ Gateway creation → hosted payment page redirect (keeps us out of PCI scope)
 - ✅ `psp[]` parameter wired for **TWINT and Powerpay** selection
 - ✅ HMAC-SHA256 webhook signature validation, timing-safe, with format/length guards
-- ✅ Idempotency on webhook retries; amount plausibility checks
+- ✅ Redis-backed idempotency on webhook retries; amount plausibility checks
 - ✅ capture / refund / cancel / update (immutable gateways → delete + recreate)
+- ✅ Hardened webhook endpoint `POST /hooks/payment/payrexx` (401 on a forged
+  signature, 500 so Payrexx retries) plus a return-reconciliation endpoint
+  `POST /store/payrexx/return`. Both converge on the same decision and the
+  same idempotency key, so a customer who never reaches the return page still
+  gets a correctly paid order.
+- ✅ Amount cross-check against the gateway currently registered for the session
 - ✅ Swiss shipping module (CHF 9 flat, free ≥ CHF 100), unit tests for both modules
 
 ### Open items before go-live
+
+> Betreiber-Anleitung (Zugangsdaten, Webhook-URL, PSP-IDs, Prüfschritte):
+> **[`payrexx-go-live.md`](./payrexx-go-live.md)**.
 
 | # | Item | Where | Severity |
 |---|---|---|---|
 | 1 | **`PAYREXX_ENABLED_PSPS` is empty** — fill with real TWINT/Powerpay PSP IDs from [Retrieve all payment providers](https://developers.payrexx.com/reference/retrieve-all-payment-providers) once the account exists. Empty = no PSP restriction sent. | `backend/.env` | blocker (needs account) |
 | 2 | **`STORE_URL=http://localhost:8000`** — must become the real domain, or redirects and webhooks break in production. | `backend/.env` | blocker |
 | 3 | **Live Payrexx credentials** (`PAYREXX_INSTANCE`, `PAYREXX_API_SECRET`, `PAYREXX_WEBHOOK_SECRET`) | `backend/.env` | blocker (needs account) |
-| 4 | **Idempotency store is in-memory** (`processedWebhooks: Set`) — documented in the code as needing Redis. Survives neither a restart nor a second instance, so a retried webhook could double-book. `REDIS_URL` is already configured. | `modules/payrexx/service.ts:72` | fix before launch |
-| 5 | **Webhook amount isn't compared to the session amount** — deliberately documented as not implemented. Acceptable given the hosted payment page, but worth a second look before handling real money. | `modules/payrexx/service.ts:396` | review |
-| 6 | **Powerpay `waiting` → `authorized`** — we'd treat an unsettled invoice as authorized and ship the goods. That's likely correct *if* MF Group assumes the del credere risk on approval; **confirm against the merchant contract** before enabling Powerpay. | `modules/payrexx/service.ts:477` | confirm at contract |
-| 7 | Uncommitted change in `modules/payrexx/client.ts` | working tree | housekeeping |
+| 4 | Idempotency store is in-memory — **erledigt.** Redis-backed, atomares `SET NX EX`, pro Tenant genamespact, mit `release()`, damit ein gescheiterter Folgeschritt Payrexx' Retry nicht verschluckt. | `modules/payrexx/idempotency-store.ts` | done |
+| 5 | Webhook amount isn't compared to the session amount — **erledigt.** Der Gateway-Betrag wird pro Session festgehalten (`session-store.ts`) und bei jedem Webhook abgeglichen. Eine Abweichung wird nie automatisch abgeschlossen, sondern als `PAYREXX AMOUNT MISMATCH — MANUAL REVIEW REQUIRED` geloggt. | `modules/payrexx/webhook.ts` | done |
+| 6 | **Powerpay `waiting` → `authorized`** — we'd treat an unsettled invoice as authorized and ship the goods. That's likely correct *if* MF Group assumes the del credere risk on approval; **confirm against the merchant contract** before enabling Powerpay. | `modules/payrexx/webhook.ts` | confirm at contract |
+| 7 | **Payrexx' Webhook-Retry-Fenster ist unbekannt** — die Idempotenz-TTL von 48 h ist eine grosszügige Annahme, kein bestätigter Wert. Bei Payrexx-Support erfragen. | `modules/payrexx/webhook.ts` | ask provider |
+| 8 | **Event-Bus und Workflow-Engine laufen in-memory** — die Payrexx-Webhook-Route ist davon bewusst unabhängig (sie verarbeitet synchron), alles andere Asynchrone überlebt aber keinen Neustart. `@medusajs/event-bus-redis` + `@medusajs/workflow-engine-redis` erwägen. | `medusa-config.ts` | fix before launch |
 
-Items 4 and 7 are independent of the compliance answer and can be done now. Items 1–3 need the account. Item 6 only matters if we pursue Powerpay at all.
+Items 1–3 need the account. Item 6 only matters if we pursue Powerpay at all.
 
 ---
 
