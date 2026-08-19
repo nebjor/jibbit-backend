@@ -25,89 +25,33 @@
  *   node scripts/odoo-export.mjs [ausgabe-verzeichnis]
  *
  * Der API-Key kommt aus Odoo unter: Profil → Konto-Sicherheit → Neuer API-Schlüssel.
+ *
+ * Kunden und Bestellungen liegen bewusst in eigenen Scripten:
+ * odoo-export-customers.mjs und odoo-export-orders.mjs. Sie enthalten
+ * Personendaten und sollen nicht bei jedem Preislauf mitgezogen werden.
  */
 
-import { writeFile, mkdir } from "node:fs/promises"
-import { join } from "node:path"
+import {
+  odooConfigFromEnv,
+  createClient,
+  nameOf,
+  chunk,
+  toCsv,
+  writeOut,
+} from "./lib/odoo-rpc.mjs"
 
-const URL_BASE = (process.env.ODOO_URL ?? "").replace(/\/+$/, "")
-const DB = process.env.ODOO_DB
-const USER = process.env.ODOO_USER
-const KEY = process.env.ODOO_API_KEY ?? process.env.ODOO_PASSWORD
 const OUT_DIR = process.argv[2] ?? "odoo-export"
 
-if (!URL_BASE || !DB || !USER || !KEY) {
-  console.error(
-    "Fehlende Konfiguration. Benötigt: ODOO_URL, ODOO_DB, ODOO_USER, ODOO_API_KEY"
-  )
+let CONFIG
+try {
+  CONFIG = odooConfigFromEnv()
+} catch (e) {
+  console.error(e.message)
   process.exit(1)
 }
 
-// ─── JSON-RPC ────────────────────────────────────────────────────────────────
-// Odoo stellt unter /jsonrpc dieselben Dienste bereit wie über XML-RPC,
-// nur als reines JSON — damit brauchen wir keine XML-Bibliothek.
-
-let rpcId = 0
-
-async function rpc(service, method, args) {
-  const res = await fetch(`${URL_BASE}/jsonrpc`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method: "call",
-      params: { service, method, args },
-      id: ++rpcId,
-    }),
-  })
-
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} ${res.statusText} von ${URL_BASE}/jsonrpc`)
-  }
-
-  const body = await res.json()
-
-  if (body.error) {
-    const d = body.error.data ?? {}
-    throw new Error(`Odoo: ${d.message ?? body.error.message} (${d.name ?? "?"})`)
-  }
-
-  return body.result
-}
-
-let UID = null
-
-async function login() {
-  UID = await rpc("common", "login", [DB, USER, KEY])
-  if (!UID) {
-    throw new Error(
-      "Login abgelehnt. Bei Odoo Online muss ein API-Schlüssel statt des Passworts verwendet werden."
-    )
-  }
-  return UID
-}
-
-function kw(model, method, args = [], kwargs = {}) {
-  return rpc("object", "execute_kw", [DB, UID, KEY, model, method, args, kwargs])
-}
-
-/** Nur Felder anfragen, die es in dieser Odoo-Version wirklich gibt. */
-async function existingFields(model, wanted) {
-  const all = await kw(model, "fields_get", [[], ["type"]])
-  const have = new Set(Object.keys(all))
-  const missing = wanted.filter((f) => !have.has(f))
-  if (missing.length) {
-    console.warn(`  ! ${model}: Felder nicht vorhanden, übersprungen: ${missing.join(", ")}`)
-  }
-  return wanted.filter((f) => have.has(f))
-}
-
-/** Odoo liefert many2one als [id, "Anzeigename"] — wir wollen meist nur die id. */
-const id_of = (v) => (Array.isArray(v) ? v[0] : v || null)
-const name_of = (v) => (Array.isArray(v) ? v[1] : null)
-
-const chunk = (arr, n) =>
-  Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n))
+const client = createClient(CONFIG)
+const { login, kw, existingFields } = client
 
 // ─── Export ──────────────────────────────────────────────────────────────────
 
@@ -130,9 +74,9 @@ const PRODUCT_FIELDS = [
 ]
 
 async function main() {
-  console.log(`Verbinde mit ${URL_BASE} (DB ${DB}) …`)
+  console.log(`Verbinde mit ${CONFIG.url} (DB ${CONFIG.db}) …`)
   await login()
-  console.log(`  angemeldet als uid=${UID}`)
+  console.log(`  angemeldet als uid=${client.uid}`)
 
   // 1) Preislisten
   const plFields = await existingFields("product.pricelist", PRICELIST_FIELDS)
@@ -210,7 +154,7 @@ async function main() {
   const tiers = []
   if (!probeFailed) {
     for (const pl of pricelists) {
-      const currency = name_of(pl.currency_id) ?? "CHF"
+      const currency = nameOf(pl.currency_id) ?? "CHF"
       for (const p of products) {
         const steps = []
         for (const qty of breakpoints) {
@@ -250,13 +194,7 @@ async function main() {
   }
 
   // 7) Schreiben
-  await mkdir(OUT_DIR, { recursive: true })
-
-  const write = async (name, data) => {
-    const path = join(OUT_DIR, name)
-    await writeFile(path, typeof data === "string" ? data : JSON.stringify(data, null, 2))
-    console.log(`  → ${path}`)
-  }
+  const write = (name, data) => writeOut(OUT_DIR, name, data)
 
   await write("pricelists.json", pricelists)
   await write("pricelist-items.json", items)
@@ -276,18 +214,6 @@ async function main() {
       `(default_code) und lassen sich nicht gegen Medusa-SKUs abgleichen.`
     )
   }
-}
-
-function toCsv(rows, fields) {
-  const esc = (v) => {
-    if (v === null || v === undefined || v === false) return ""
-    const s = Array.isArray(v) ? `${v[0]}: ${v[1]}` : String(v)
-    return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-  }
-  return [
-    fields.join(";"),
-    ...rows.map((r) => fields.map((f) => esc(r[f])).join(";")),
-  ].join("\n")
 }
 
 main().catch((e) => {
