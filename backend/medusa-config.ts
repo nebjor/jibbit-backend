@@ -67,7 +67,7 @@ module.exports = defineConfig({
             // so laufen lokale Tests und CI ohne Mailserver durch.
             resolve: process.env.SMTP_HOST
               ? './src/modules/smtp'
-              : '@medusajs/notification-local',
+              : '@medusajs/medusa/notification-local',
             id: process.env.SMTP_HOST ? 'smtp' : 'local',
             options: {
               channels: ['email'],
