@@ -105,6 +105,9 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@jibbit.ch}
+      # Nur fuer einen lokalen Mailfaenger. Bei NODE_ENV=production ignoriert
+      # der SMTP-Provider den Schalter hart.
+      SMTP_ALLOW_INSECURE: ${SMTP_ALLOW_INSECURE:-}
     ports:
       # NUR Loopback. Dockers veroeffentlichte Ports umgehen ufw komplett —
       # "9000:9000" waere trotz Firewallregeln aus dem Internet erreichbar.

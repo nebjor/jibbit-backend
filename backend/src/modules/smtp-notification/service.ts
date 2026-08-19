@@ -31,6 +31,21 @@ export interface SmtpOptions {
   from?: string
   /** Implizites TLS (Port 465). Bei 587 bleibt es aus, dort greift STARTTLS. */
   secure?: boolean
+  /**
+   * Unverschlüsselt senden zulassen.
+   *
+   * Nur für einen lokalen Mailfänger (mailpit, mailhog, ein Sink-Script) —
+   * die sprechen kein STARTTLS, und ohne diesen Schalter verweigert
+   * nodemailer den Versand, womit sich der Ablauf lokal gar nicht durchspielen
+   * liesse.
+   *
+   * Doppelt abgesichert, nach demselben Muster wie
+   * `lib/tenant/local-fallback.ts` in der Storefront: der Schalter muss
+   * ausdrücklich gesetzt sein UND wird bei `NODE_ENV=production` hart
+   * ignoriert. Eine versehentlich in die Produktion gerutschte Variable darf
+   * nicht dazu führen, dass Reset-Links im Klartext übers Netz gehen.
+   */
+  allowInsecure?: boolean
 }
 
 type InjectedDependencies = { logger: Logger }
@@ -71,15 +86,28 @@ class SmtpNotificationProviderService extends AbstractNotificationProviderServic
     }
 
     const resolvedPort = port ?? 587
+    const implicitTls = secure ?? resolvedPort === 465
+    // Der Klartext-Modus gilt nur ausserhalb der Produktion — siehe
+    // `allowInsecure` in den Optionen.
+    const allowInsecure =
+      this.options_.allowInsecure === true && process.env.NODE_ENV !== "production"
+
+    if (this.options_.allowInsecure === true && process.env.NODE_ENV === "production") {
+      this.logger_.warn(
+        "[smtp] allowInsecure ist gesetzt, wird bei NODE_ENV=production aber ignoriert.",
+      )
+    }
+
     this.transporter_ = nodemailer.createTransport({
       host,
       port: resolvedPort,
       // Port 465 spricht von der ersten Sekunde an TLS, 587 startet im Klartext
       // und schaltet per STARTTLS um. `requireTLS` erzwingt, dass diese
       // Umschaltung auch wirklich passiert — ohne das würde nodemailer bei
-      // einem Server ohne STARTTLS still unverschlüsselt weitersenden.
-      secure: secure ?? resolvedPort === 465,
-      requireTLS: !(secure ?? resolvedPort === 465),
+      // einem Server ohne STARTTLS still unverschlüsselt weitersenden, und
+      // ein Reset-Link ginge im Klartext übers Netz.
+      secure: implicitTls,
+      requireTLS: !implicitTls && !allowInsecure,
       auth: user ? { user, pass } : undefined,
     })
     return this.transporter_

@@ -272,15 +272,25 @@ export default async function prepareOdooLogins({ container, args }: ExecArgs) {
           // deshalb im try: das Flag ist Kosmetik für Admin und Unique-Index,
           // anmeldefähig ist das Konto auch ohne. Ein Fehler hier darf den
           // Umzug nicht anhalten.
+          //
+          // Der Aufruf bleibt eine Methodenausführung am Service. Die Methode
+          // in eine Variable zu ziehen und dann aufzurufen scheitert zur
+          // Laufzeit mit "Cannot read properties of undefined (reading
+          // 'baseRepository_')" — MedusaService braucht sein `this`.
           try {
-            const update = customerService.updateCustomers as unknown as (
-              id: string,
-              data: Record<string, unknown>,
-            ) => Promise<unknown>
-            await update(decision.customerId, { has_account: true })
-          } catch {
+            await (
+              customerService as unknown as {
+                updateCustomers(
+                  id: string,
+                  data: Record<string, unknown>,
+                ): Promise<unknown>
+              }
+            ).updateCustomers(decision.customerId, { has_account: true })
+          } catch (err) {
             logger.warn(
-              "[odoo] has_account liess sich nicht setzen — das Konto funktioniert trotzdem.",
+              `[odoo] has_account liess sich nicht setzen (${
+                err instanceof Error ? err.message.slice(0, 200) : "unbekannt"
+              }) — das Konto funktioniert trotzdem.`,
             )
           }
         }
