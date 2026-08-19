@@ -92,8 +92,12 @@ services:
       PAYREXX_WEBHOOK_SECRET: ${PAYREXX_WEBHOOK_SECRET}
       PAYREXX_ENABLED_PSPS: ${PAYREXX_ENABLED_PSPS:-}
 
-      # Store URL für Redirects
+      # Store URL für Redirects — und Basis des Links in der
+      # Passwort-zurücksetzen-E-Mail. Der Link wird bewusst NICHT aus dem
+      # Host-Header gebaut: sonst liesse sich per gefälschtem Host eine echte
+      # E-Mail von uns mit fremdem Ziel-Link auslösen.
       STORE_URL: ${STORE_URL:-http://localhost:8000}
+      STORE_NAME: ${STORE_NAME:-jibbit}
 
       # SMTP (Infomaniak oder Resend)
       SMTP_HOST: ${SMTP_HOST:-}
