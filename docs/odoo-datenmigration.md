@@ -16,6 +16,7 @@ darauf auf.
 | Kunden aus Odoo holen | `scripts/odoo-export-customers.mjs` | `partners.json` |
 | Bestellungen aus Odoo holen | `scripts/odoo-export-orders.mjs` | `orders.json` |
 | Kunden nach Medusa spielen | `backend/src/scripts/import-customers.ts` | Kunden + Adressen in Medusa |
+| Anmeldung vorbereiten (Pflicht) | `backend/src/scripts/prepare-odoo-logins.ts` | Identitäten, damit „Passwort vergessen" greift |
 | Bestellungen nach Medusa spielen | — | **entfällt mit Absicht**, siehe [unten](#warum-bestellungen-nicht-importiert-werden) |
 
 Die Export-Scripte brauchen kein npm-Paket, nur Node 20 oder neuer.
@@ -193,6 +194,19 @@ npx medusa exec ./src/scripts/import-customers.ts "$OUT/partners.json" country=c
 
 # 4) Kunden — echt
 npx medusa exec ./src/scripts/import-customers.ts "$OUT/partners.json" country=ch
+
+# 5) Anmeldung vorbereiten — PFLICHT, und zwar VOR der DNS-Umstellung.
+#    Ohne diesen Schritt kommt kein importierter Kunde je wieder in sein
+#    Konto: "Passwort vergessen" antwortet mit 201 und verschickt nichts.
+#    Siehe Abschnitt 7.
+npx medusa exec ./src/scripts/prepare-odoo-logins.ts dry-run
+#    -> Zusammenfassung lesen, besonders die Zeile "Konflikte".
+#       Konflikte zuerst im Admin zusammenfuehren.
+npx medusa exec ./src/scripts/prepare-odoo-logins.ts
+
+# 6) Optional: alle einladen, ihr Passwort zu setzen. Ohne das fuehrt der
+#    Weg ueber "Passwort vergessen" auf der Anmeldeseite — auch gut.
+npx medusa exec ./src/scripts/prepare-odoo-logins.ts invite
 ```
 
 **Argumente ohne führende Bindestriche** — `medusa exec` lehnt unbekannte
@@ -268,8 +282,10 @@ Importierte Kunden bekommen deshalb:
 
 ### Was das für den Login bedeutet
 
-> **Annahme, die ein anderer Agent umsetzt.** Dieses Script baut den Ablauf
-> nicht selbst — es dokumentiert nur, was er leisten muss.
+> **Gelöst durch `backend/src/scripts/prepare-odoo-logins.ts`** (siehe Schritt 5
+> oben). Der Import selbst legt bewusst keine Identitäten an; das ist ein
+> eigener Schritt, damit er wiederholbar und prüfbar bleibt. **Er ist nicht
+> optional.**
 
 Der Standardablauf von Medusa reicht **nicht**. `POST
 /auth/customer/emailpass/reset-password` ruft
@@ -279,9 +295,19 @@ Route fängt den Fehler ab (`throwOnError: false`) und antwortet trotzdem mit
 `201`, damit sie keine Konten verrät. Für einen importierten Kunden passiert
 also: **nichts**, ohne sichtbaren Fehler.
 
-Der „Passwort vergessen"-Ablauf muss deshalb erkennen, dass es zu einer
-E-Mail-Adresse zwar einen Kunden, aber keine `provider_identity` gibt, und in
-diesem Fall die Identität anlegen, bevor er den Token ausstellt.
+`prepare-odoo-logins.ts` legt deshalb zu jeder importierten Adresse eine
+echte `emailpass`-Identität mit einem zufälligen 32-Byte-Passwort an — eines,
+das niemand kennt und das nirgends gespeichert wird. Damit gilt danach:
+
+- Anmeldung schlägt fehl wie bei jedem falschen Passwort, ununterscheidbar.
+- „Passwort vergessen" findet eine Identität und verschickt die E-Mail.
+- Nach dem Zurücksetzen ist das Konto normal nutzbar.
+
+Die Identität wird über `app_metadata.customer_id` mit dem **bestehenden**
+Kundendatensatz verknüpft — nicht mit einem neuen. Das ist zugleich der Wert,
+aus dem das Anmelde-Token seine `actor_id` zieht: fehlt er, gelingt die
+Anmeldung zwar, führt aber auf kein Konto, und `/store/customers/me` antwortet
+mit 401.
 
 ### Die Falle mit der zweiten Kundenzeile
 
@@ -292,11 +318,16 @@ importierten Adressen und die Bestellhistorie hängen an der ersten.
 
 Deshalb:
 
-- Der „Passwort vergessen"-Ablauf muss **vor** dem Livegang stehen.
-- Kunden vor dem Umzug anschreiben: neues Konto, Passwort einmal neu setzen,
-  **nicht** neu registrieren.
-- Falls doch Doppelzeilen entstehen: über `metadata.odoo_partner_id`
-  zusammenführbar.
+- **`prepare-odoo-logins.ts` läuft vor der DNS-Umstellung.** Danach kann keine
+  Dublette mehr entstehen: eine Registrierung mit einer importierten Adresse
+  scheitert an Medusas eigenem „Identity with email already exists".
+- Kunden vor dem Umzug anschreiben: Konto ist da, Passwort einmal neu setzen,
+  **nicht** neu registrieren. `prepare-odoo-logins.ts invite` erledigt das.
+- Falls doch Doppelzeilen entstehen: `prepare-odoo-logins.ts` zählt sie als
+  „Konflikte" und nennt die `odoo_partner_id`; zusätzlich warnt ein Subscriber
+  auf `customer.created` im Log. Zusammengeführt wird **von Hand** im Admin —
+  welcher Datensatz gilt, hängt an Bestellungen und Adressen und ist eine
+  kaufmännische Entscheidung.
 
 ---
 
