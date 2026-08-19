@@ -1,6 +1,18 @@
-# ─── Produktion: jibbit.ch ────────────────────────────────────
+# ─── jibbit.ch ────────────────────────────────────────────────
 # Caddy generiert automatisch Let's Encrypt Zertifikate.
-# Für lokales Testing: ersetze Domain durch :80
+#
+# ACHTUNG — die Domains stehen hier NICHT mehr fest, und das ist Absicht.
+#
+# Caddy holt fuer jede hier genannte Domain sofort beim Start ein
+# Zertifikat. Steht eine Domain drin, deren DNS noch woanders zeigt (etwa
+# auf die alte Odoo-Instanz), schlaegt die ACME-Pruefung fehl — und zwar
+# wiederholt. Let's Encrypt sperrt daraufhin genau diesen Hostnamen fuer
+# Stunden. Man verliert also ausgerechnet in dem Moment die Faehigkeit,
+# ein Zertifikat zu bekommen, in dem man umziehen will.
+#
+# Deshalb kommen die Domains aus der Umgebung (docker-compose.yml ->
+# caddy.environment, gespeist aus .env). Im Testbetrieb setzt man dort
+# Testdomains; erst beim echten Umzug die produktiven.
 
 {
 	# Email für Let's Encrypt ACME
@@ -8,7 +20,7 @@
 }
 
 # API Backend
-api.jibbit.ch {
+{$API_DOMAIN} {
 	reverse_proxy medusa:9000
 
 	# Security Headers
@@ -28,7 +40,7 @@ api.jibbit.ch {
 }
 
 # Storefront (Next.js)
-jibbit.ch, www.jibbit.ch {
+{$SHOP_DOMAINS} {
 	# Beide Zweige als `handle` — Geschwister-handle-Blöcke werden in
 	# Schreibreihenfolge geprüft und der erste Treffer gewinnt. Ein blankes
 	# reverse_proxy neben einem handle-Block würde dagegen von Caddys
