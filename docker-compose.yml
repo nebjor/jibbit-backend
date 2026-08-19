@@ -145,6 +145,16 @@ services:
     depends_on:
       - medusa
       - storefront
+    environment:
+      # Fuer welche Domains Caddy Zertifikate holt. Der Default ist der
+      # produktive Zustand; im Testbetrieb in .env auf Testdomains setzen,
+      # deren DNS bereits auf diese VPS zeigt.
+      #
+      # Eine Domain, deren DNS noch woanders zeigt, darf hier NICHT stehen:
+      # Caddy versucht sofort ein Zertifikat, die ACME-Pruefung scheitert
+      # wiederholt, und Let's Encrypt sperrt den Hostnamen fuer Stunden.
+      SHOP_DOMAINS: ${SHOP_DOMAINS:-jibbit.ch, www.jibbit.ch}
+      API_DOMAIN: ${API_DOMAIN:-api.jibbit.ch}
     ports:
       - "80:80"
       - "443:443"
