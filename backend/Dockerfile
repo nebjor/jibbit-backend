@@ -47,15 +47,30 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+# ACHTUNG — Reihenfolge ist hier entscheidend, in zwei Richtungen.
+#
+# 1. `node` BRAUCHT Schreibrechte auf node_modules. Medusas Migrationslauf
+#    legt Verzeichnisse innerhalb der Modulpakete an; ohne Schreibrecht
+#    scheitert `db:migrate` mit
+#      EACCES: permission denied, mkdir '/app/node_modules/@medusajs/file/dist/migrations'
+#    Es genuegt also NICHT, nur /app/uploads zu uebereignen.
+#
+# 2. Ein nachgelagertes `chown -R node:node /app` erledigt das zwar, kostet
+#    aber auf einer 1-vCPU-VPS ueber 18 Minuten und schreibt jede beruehrte
+#    Datei ein zweites Mal ins Image.
+#
+# Loesung: frueh auf USER node wechseln. Dann entstehen COPY-Ergebnis und
+# npm-Installation direkt mit den richtigen Rechten — kein zusaetzlicher
+# Durchlauf, keine doppelte Schicht.
+RUN mkdir -p /app/uploads && chown node:node /app /app/uploads
+USER node
+
 # nur das Build-Ergebnis übernehmen
-COPY --from=builder /app/.medusa/server ./
+COPY --from=builder --chown=node:node /app/.medusa/server ./
 
 # das generierte package.json bringt keine Lockfile mit → install statt ci
 RUN npm install --omit=dev --maxsockets=8 --fetch-timeout=120000 \
   && npm cache clean --force
-
-RUN mkdir -p /app/uploads && chown -R node:node /app
-USER node
 
 EXPOSE 9000
 
