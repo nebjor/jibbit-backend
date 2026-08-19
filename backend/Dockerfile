@@ -28,6 +28,16 @@ RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
 RUN npm ci --maxsockets=8 --fetch-timeout=120000 --fetch-retries=5
 
+# ACHTUNG — kleine VPS.
+# V8 leitet sein Old-Space-Limit aus dem PHYSISCHEN RAM ab, nicht aus dem
+# verfuegbaren Speicher inklusive Swap. Auf einer 2-GB-Kiste landet der
+# Default bei rund 1 GB, und der Build stirbt mit "JavaScript heap out of
+# memory" — auch dann, wenn reichlich Swap da ist, weil V8 ihn nie anfasst.
+#
+# Der Wert DARF das physische RAM ueberschreiten, solange Swap existiert.
+# Ueber docker-compose.yml (build.args) oder --build-arg anpassbar.
+ARG NODE_BUILD_MEMORY=3072
+ENV NODE_OPTIONS="--max-old-space-size=${NODE_BUILD_MEMORY}"
 COPY . .
 RUN npm run build
 
