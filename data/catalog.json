@@ -1,0 +1,884 @@
+[
+  {
+    "product": "Angel Slim Filters 6mm 120stk",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.4
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 33,
+            "price": 1.3
+          },
+          {
+            "min_quantity": 34,
+            "max_quantity": null,
+            "price": 1.2
+          }
+        ]
+      },
+      {
+        "label": "Display (34 Stk.)",
+        "pack_type": "display",
+        "units_per_pack": 34,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 1,
+            "price": 40.8
+          },
+          {
+            "min_quantity": 2,
+            "max_quantity": null,
+            "price": 38
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "dubi Aktivkohlefilter ø7mm",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 3,
+            "price": 7.5
+          },
+          {
+            "min_quantity": 4,
+            "max_quantity": 7,
+            "price": 7.4
+          },
+          {
+            "min_quantity": 8,
+            "max_quantity": 15,
+            "price": 7.3
+          },
+          {
+            "min_quantity": 16,
+            "max_quantity": null,
+            "price": 7.2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Elements BLUE Rolls SW",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 23,
+            "price": 1.7
+          },
+          {
+            "min_quantity": 24,
+            "max_quantity": 47,
+            "price": 1.5
+          },
+          {
+            "min_quantity": 48,
+            "max_quantity": null,
+            "price": 1.3
+          }
+        ]
+      },
+      {
+        "label": "Box (24 Stk.)",
+        "pack_type": "box",
+        "units_per_pack": 24,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 1,
+            "price": 33.6
+          },
+          {
+            "min_quantity": 2,
+            "max_quantity": null,
+            "price": 31.2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Elements King Slim Size Ultra Thin",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 49,
+            "price": 0.85
+          },
+          {
+            "min_quantity": 50,
+            "max_quantity": null,
+            "price": 0.76
+          }
+        ]
+      },
+      {
+        "label": "Box (50 Stk.)",
+        "pack_type": "box",
+        "units_per_pack": 50,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 1,
+            "price": 38
+          },
+          {
+            "min_quantity": 2,
+            "max_quantity": null,
+            "price": 36
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Gizeh DW Extra Fine",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.7
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 19,
+            "price": 1.6
+          },
+          {
+            "min_quantity": 20,
+            "max_quantity": 39,
+            "price": 1.4
+          },
+          {
+            "min_quantity": 40,
+            "max_quantity": 119,
+            "price": 1.35
+          },
+          {
+            "min_quantity": 120,
+            "max_quantity": null,
+            "price": 1.25
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Greengo Unbleached Slim Rolls",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.95
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 23,
+            "price": 1.85
+          },
+          {
+            "min_quantity": 24,
+            "max_quantity": 47,
+            "price": 1.4
+          },
+          {
+            "min_quantity": 48,
+            "max_quantity": 119,
+            "price": 1.35
+          },
+          {
+            "min_quantity": 120,
+            "max_quantity": null,
+            "price": 1.3
+          }
+        ]
+      },
+      {
+        "label": "Display (24 Stk.)",
+        "pack_type": "display",
+        "units_per_pack": 24,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 1,
+            "price": 33.6
+          },
+          {
+            "min_quantity": 2,
+            "max_quantity": 4,
+            "price": 32.4
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": null,
+            "price": 31.2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Kailar Filter 5.9mm 65stk pink",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 4,
+            "price": 8.5
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": 9,
+            "price": 8.3
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": null,
+            "price": 8.1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Kailar Filter 5.9mm 65stk schwarz",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 4,
+            "price": 8.5
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": 9,
+            "price": 8.3
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": null,
+            "price": 8.1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Kailar Filter 5.9mm 65stk weiss",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 4,
+            "price": 8.5
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": 9,
+            "price": 8.2
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": null,
+            "price": 8.1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Kailar Filter 9mm BIG 100 stk schwarz",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 4,
+            "price": 15.9
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": 9,
+            "price": 13.9
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": null,
+            "price": 11.9
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "OCB Bio Slim Organic Hemp Rolls",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 24,
+            "max_quantity": null,
+            "price": 1.6
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "OCB Premium KSS Papers mit Filter",
+    "ref": "3",
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.95
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 31,
+            "price": 1.85
+          },
+          {
+            "min_quantity": 32,
+            "max_quantity": 63,
+            "price": 1.65
+          },
+          {
+            "min_quantity": 64,
+            "max_quantity": 159,
+            "price": 1.55
+          },
+          {
+            "min_quantity": 160,
+            "max_quantity": null,
+            "price": 1.45
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "OCB Premium kurz",
+    "ref": "5",
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.79
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 24,
+            "price": 1.59
+          },
+          {
+            "min_quantity": 25,
+            "max_quantity": 49,
+            "price": 1.49
+          },
+          {
+            "min_quantity": 50,
+            "max_quantity": 99,
+            "price": 1
+          },
+          {
+            "min_quantity": 100,
+            "max_quantity": null,
+            "price": 0.95
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "OCB Premium Rolls Slim",
+    "ref": "7",
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.95
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 23,
+            "price": 1.75
+          },
+          {
+            "min_quantity": 24,
+            "max_quantity": 47,
+            "price": 1.55
+          },
+          {
+            "min_quantity": 48,
+            "max_quantity": 119,
+            "price": 1.45
+          },
+          {
+            "min_quantity": 120,
+            "max_quantity": null,
+            "price": 1.3
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "OCB Slim Filter Bio (120 Tips)",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.8
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 19,
+            "price": 1.6
+          },
+          {
+            "min_quantity": 20,
+            "max_quantity": null,
+            "price": 1.5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "PURIZE Aktivkohlefilter ø 9mm",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 7.4
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 49,
+            "price": 7.2
+          },
+          {
+            "min_quantity": 50,
+            "max_quantity": null,
+            "price": 6.7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Purize SUPER SLIM White ø5mm",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 4,
+            "price": 7.8
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": 9,
+            "price": 7.6
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": null,
+            "price": 7.4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Purize Xtra SLIM White, 50er Pack, 5.9mm",
+    "ref": "6",
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 4,
+            "price": 7.8
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": 9,
+            "price": 7.6
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": null,
+            "price": 7.4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "PURIZE XTRA Slim XMAS ø 6mm",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 4,
+            "price": 7.8
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": 9,
+            "price": 7.6
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": null,
+            "price": 7.4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "RAW Black KSS Papers",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.89
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": null,
+            "price": 1.79
+          }
+        ]
+      },
+      {
+        "label": "Display (50 Stk.)",
+        "pack_type": "display",
+        "units_per_pack": 50,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 1,
+            "price": 50
+          },
+          {
+            "min_quantity": 2,
+            "max_quantity": 4,
+            "price": 45
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": null,
+            "price": 42.5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "RAW Classic Rolls Slim",
+    "ref": "4",
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.95
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 23,
+            "price": 1.85
+          },
+          {
+            "min_quantity": 24,
+            "max_quantity": 47,
+            "price": 1.55
+          },
+          {
+            "min_quantity": 48,
+            "max_quantity": 119,
+            "price": 1.5
+          },
+          {
+            "min_quantity": 120,
+            "max_quantity": null,
+            "price": 1.4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "RAW Kristallglas Aschenbecher Darkside",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": null,
+            "price": 27
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "RAW Kristallglas Aschenbecher Rainbow",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": null,
+            "price": 27
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "RAW Kristallglas Aschenbecher Ruby",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": null,
+            "price": 27
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Smoking Brown kurz (double window)",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.9
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 24,
+            "price": 1.5
+          },
+          {
+            "min_quantity": 25,
+            "max_quantity": null,
+            "price": 0.95
+          }
+        ]
+      },
+      {
+        "label": "Display (25 Stk.)",
+        "pack_type": "display",
+        "units_per_pack": 25,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 1,
+            "price": 24
+          },
+          {
+            "min_quantity": 2,
+            "max_quantity": 4,
+            "price": 23
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": null,
+            "price": 22
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "product": "Zig Zag Slim Filter 6mm 120stk",
+    "ref": null,
+    "variants": [
+      {
+        "label": "Einzeln",
+        "pack_type": "single",
+        "units_per_pack": 1,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 9,
+            "price": 1.6
+          },
+          {
+            "min_quantity": 10,
+            "max_quantity": 33,
+            "price": 1.5
+          },
+          {
+            "min_quantity": 34,
+            "max_quantity": null,
+            "price": 1.15
+          }
+        ]
+      },
+      {
+        "label": "Display (34 Stk.)",
+        "pack_type": "display",
+        "units_per_pack": 34,
+        "tiers": [
+          {
+            "min_quantity": 1,
+            "max_quantity": 1,
+            "price": 39.1
+          },
+          {
+            "min_quantity": 2,
+            "max_quantity": 4,
+            "price": 38.2
+          },
+          {
+            "min_quantity": 5,
+            "max_quantity": null,
+            "price": 35.7
+          }
+        ]
+      }
+    ]
+  }
+]
