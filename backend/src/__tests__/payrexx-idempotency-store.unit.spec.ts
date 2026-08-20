@@ -39,18 +39,35 @@ describe("InMemoryIdempotencyStore", () => {
     expect(await store.checkAndSet("payrexx:webhook:tenant-a:1-confirmed", 60)).toBe(true)
     expect(await store.checkAndSet("payrexx:webhook:tenant-b:1-confirmed", 60)).toBe(true)
   })
+
+  it("makes a released key processable again", async () => {
+    // Wird gebraucht, wenn die Verarbeitung NACH der Reservierung scheitert:
+    // ohne release() würde Payrexx' Retry als Duplikat verworfen und die
+    // bezahlte Bestellung wäre still verloren.
+    const store = new InMemoryIdempotencyStore()
+
+    expect(await store.checkAndSet("k", 60)).toBe(true)
+    expect(await store.checkAndSet("k", 60)).toBe(false)
+
+    await store.release("k")
+
+    expect(await store.checkAndSet("k", 60)).toBe(true)
+  })
 })
 
 describe("RedisIdempotencyStore", () => {
   let setMock: jest.Mock
+  let delMock: jest.Mock
   let onMock: jest.Mock
 
   beforeEach(() => {
     RedisMock.mockReset()
     setMock = jest.fn()
+    delMock = jest.fn().mockResolvedValue(1)
     onMock = jest.fn()
     RedisMock.mockImplementation(() => ({
       set: setMock,
+      del: delMock,
       on: onMock,
       disconnect: jest.fn(),
     }))
@@ -94,6 +111,13 @@ describe("RedisIdempotencyStore", () => {
     // Aufgabe des Aufrufers (siehe service.ts). Der Store muss den Fehler
     // deshalb einfach durchreichen.
     await expect(store.checkAndSet("k", 100)).rejects.toThrow("ECONNREFUSED")
+  })
+
+  it("releases a reservation with DEL", async () => {
+    const store = new RedisIdempotencyStore({ redisUrl: "redis://localhost:6379" })
+    await store.release("payrexx:webhook:tenant-a:1-confirmed")
+
+    expect(delMock).toHaveBeenCalledWith("payrexx:webhook:tenant-a:1-confirmed")
   })
 
   it("registers an error listener so a flaky connection cannot crash the process", () => {

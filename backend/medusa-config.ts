@@ -143,5 +143,40 @@ module.exports = defineConfig({
         ],
       },
     },
+    {
+      // Ohne Notification-Modul kommt die Passwort-zurücksetzen-E-Mail
+      // nirgends an: `generateResetPasswordTokenWorkflow` feuert nur das
+      // Ereignis `auth.password_reset`, den Versand muss das Projekt selbst
+      // stellen. Bis hierher war gar kein Modul konfiguriert.
+      //
+      // WARUM NICHT `@medusajs/notification-local`: der schreibt
+      // `JSON.stringify(notification.data)` ins Log. Bei dieser einen Vorlage
+      // stünde damit ein 15 Minuten lang gültiges Reset-Token in der
+      // Logdatei — ein Zugang zum Kundenkonto, den niemand mehr löscht.
+      resolve: '@medusajs/medusa/notification',
+      options: {
+        providers: [
+          {
+            resolve: './src/modules/smtp-notification',
+            id: 'smtp',
+            options: {
+              // Ein Provider muss die Kanäle nennen, die er bedient. Ohne
+              // `channels` findet das Modul beim Versand keinen zuständigen
+              // Provider und die Notification schlägt mit
+              // "Could not find a notification provider for channel: email" fehl.
+              channels: ['email'],
+              host: process.env.SMTP_HOST,
+              port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+              from: process.env.SMTP_FROM,
+              // Nur für einen lokalen Mailfänger. Bei NODE_ENV=production
+              // ignoriert der Provider den Schalter hart.
+              allowInsecure: process.env.SMTP_ALLOW_INSECURE === 'true',
+            },
+          },
+        ],
+      },
+    },
   ],
 })

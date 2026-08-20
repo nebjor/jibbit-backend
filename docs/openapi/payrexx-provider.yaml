@@ -21,16 +21,25 @@ paths:
       operationId: handlePayrexxWebhook
       summary: Payrexx Webhook Endpoint
       description: |
-        Empfängt Webhook-Events von Payrexx bei Statusänderungen.
-        Validiert HMAC-SHA256 Signatur und verarbeitet das Event idempotent.
+        Empfängt Webhook-Events von Payrexx bei Statusänderungen. Das ist die
+        URL, die im Payrexx-Backend zu hinterlegen ist.
+
+        Validiert die HMAC-SHA256-Signatur SYNCHRON und verarbeitet das Event
+        idempotent. Anders als Medusas eingebaute Route
+        `/hooks/payment/{provider}` (die hier `/hooks/payment/payrexx_payrexx`
+        hiesse) antwortet dieser Endpunkt mit aussagekräftigen Statuscodes:
+        ein 500 heisst ausdrücklich "bitte wiederholen".
       security: []
       parameters:
-        - name: payrexx-signature
+        - name: X-Webhook-Signature
           in: header
           required: true
           schema:
             type: string
-          description: HMAC-SHA256 Signatur des Request Body
+          description: |
+            HMAC-SHA256 des ROHEN Request-Body, lowercase hex-kodiert, mit dem
+            Webhook-Secret als Schlüssel. Gross-/Kleinschreibung des Hex wird
+            akzeptiert.
       requestBody:
         required: true
         content:
@@ -39,26 +48,92 @@ paths:
               $ref: "#/components/schemas/PayrexxWebhookEvent"
       responses:
         "200":
-          description: Webhook erfolgreich verarbeitet
+          description: |
+            Verarbeitet, Duplikat, oder bewusst ignoriert. Payrexx soll nicht
+            wiederholen.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
+                  status:
+                    type: string
+                    enum: [authorized, failed, not_supported, duplicate]
         "400":
-          description: Ungültige Signatur oder Payload
+          description: Body unbrauchbar (kein JSON, kein transaction-Objekt)
+        "401":
+          description: Signatur ungültig — nicht wiederholen
+        "500":
+          description: |
+            Vorübergehend gescheitert (typisch: der Webhook war schneller als
+            die geschriebene Payment Session). Die Idempotenz-Reservierung
+            wurde freigegeben; Payrexx SOLL wiederholen.
+        "503":
+          description: Payrexx-Zugangsdaten fehlen in der Umgebung
+
+  /store/payrexx/return:
+    post:
+      operationId: reconcilePayrexxReturn
+      summary: Rückkehr von der Payrexx-Bezahlseite abgleichen
+      description: |
+        Ruft die Storefront auf, sobald der Kunde von Payrexx zurückkommt.
+        `initiatePayment()` hängt `?payment_session_id=...` an alle drei
+        Rückkehr-URLs (success/failed/cancel).
+
+        Der Endpunkt fragt den Stand AKTIV bei Payrexx ab und schliesst die
+        Bestellung ab, falls das nicht schon der Webhook getan hat. Beide Wege
+        teilen sich denselben Idempotenz-Schlüssel — die Arbeit passiert genau
+        einmal. Der gemeldete Status stammt immer aus einer frischen
+        Payrexx-Abfrage, nie aus dem, was der Browser behauptet.
+      parameters:
+        - name: x-publishable-api-key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_session_id]
+              properties:
+                payment_session_id:
+                  type: string
+                  example: payses_01JABCDEF
+      responses:
+        "200":
+          description: Aktueller Stand der Zahlung
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrexxReturnStatus"
+        "400":
+          description: payment_session_id fehlt oder gehört nicht zu Payrexx
+        "404":
+          description: Payment Session unbekannt
         "409":
-          description: Duplicate Webhook (Idempotency)
+          description: Payment Session hat kein Payrexx-Gateway
+        "500":
+          description: |
+            Bei Payrexx bestätigt, aber der Abschluss scheiterte. Der Webhook
+            zieht nach; die Storefront darf das NICHT als Misserfolg anzeigen.
+        "502":
+          description: |
+            Payrexx nicht erreichbar. Erneut versuchen — NICHT als Misserfolg
+            anzeigen.
+        "503":
+          description: Payrexx-Zugangsdaten fehlen in der Umgebung
 
   /store/payment-collections/{id}/payment-sessions:
     post:
       operationId: initiatePayrexxPayment
       summary: Payment Session (Payrexx Gateway) erstellen
       description: |
-        Erstellt einen Payrexx Gateway mit TWINT/Powerpay.
-        Gibt eine Redirect-URL zurück.
+        Erstellt einen Payrexx Gateway mit den in PAYREXX_ENABLED_PSPS
+        freigegebenen Methoden (TWINT, Powerpay, Karten).
+        Gibt in `data.link` die Redirect-URL zurück.
       parameters:
         - name: id
           in: path
@@ -112,10 +187,15 @@ components:
               enum:
                 - waiting
                 - confirmed
+                - authorized
+                - reserved
                 - cancelled
                 - declined
+                - expired
                 - refunded
                 - partially-refunded
+                - refundpending
+                - chargeback
                 - error
             amount:
               type: integer
@@ -129,6 +209,24 @@ components:
             time:
               type: string
               format: date-time
+
+    PayrexxReturnStatus:
+      type: object
+      properties:
+        payment_session_id:
+          type: string
+        status:
+          type: string
+          description: |
+            Medusa-Sicht auf die Zahlung.
+            `authorized`/`captured` → Bestellung ist da, Danke-Seite zeigen.
+            `pending` → noch nicht bezahlt, kurz warten und erneut abfragen.
+            `canceled` → abgelehnt oder abgebrochen.
+          enum: [pending, authorized, captured, canceled]
+        transaction_status:
+          type: string
+          nullable: true
+          description: Roher Payrexx-Status, für Logs und Support.
 
     CustomerContext:
       type: object
@@ -168,6 +266,15 @@ components:
                   type: string
                 referenceId:
                   type: string
+                amountInRappen:
+                  type: integer
+                  description: |
+                    Der an Payrexx gesendete Betrag in Rappen. Dient
+                    updatePayment() als Vergleichswert, um ein unnötiges
+                    Löschen+Neuanlegen des Gateways zu vermeiden.
+                currency:
+                  type: string
+                  example: CHF
 
     ShippingRate:
       type: object
@@ -191,5 +298,9 @@ components:
     payrexxHmac:
       type: apiKey
       in: header
-      name: payrexx-signature
-      description: HMAC-SHA256 Signatur
+      name: X-Webhook-Signature
+      description: |
+        HMAC-SHA256 des rohen Request-Body, lowercase hex, Schlüssel =
+        PAYREXX_WEBHOOK_SECRET. (Der alte Header-Name `payrexx-signature`
+        wird als Fallback noch akzeptiert, ist aber nicht der von Payrexx
+        dokumentierte.)
