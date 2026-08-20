@@ -92,8 +92,12 @@ services:
       PAYREXX_WEBHOOK_SECRET: ${PAYREXX_WEBHOOK_SECRET}
       PAYREXX_ENABLED_PSPS: ${PAYREXX_ENABLED_PSPS:-}
 
-      # Store URL für Redirects
+      # Store URL für Redirects — und Basis des Links in der
+      # Passwort-zurücksetzen-E-Mail. Der Link wird bewusst NICHT aus dem
+      # Host-Header gebaut: sonst liesse sich per gefälschtem Host eine echte
+      # E-Mail von uns mit fremdem Ziel-Link auslösen.
       STORE_URL: ${STORE_URL:-http://localhost:8000}
+      STORE_NAME: ${STORE_NAME:-jibbit}
 
       # SMTP (Infomaniak oder Resend)
       SMTP_HOST: ${SMTP_HOST:-}
@@ -106,11 +110,15 @@ services:
       # uebereinstimmen — die ausfuehrliche Begruendung steht in
       # backend/medusa-config.ts.
       MEDUSA_UPLOAD_DIR: /app/static
+
+      # Nur fuer einen lokalen Mailfaenger. Bei NODE_ENV=production ignoriert
+      # der SMTP-Provider den Schalter hart.
+      SMTP_ALLOW_INSECURE: ${SMTP_ALLOW_INSECURE:-}
     ports:
       # NUR Loopback. Dockers veroeffentlichte Ports umgehen ufw komplett —
       # "9000:9000" waere trotz Firewallregeln aus dem Internet erreichbar.
       # Caddy und nginx erreichen den Dienst so oder so.
-      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:${MEDUSA_HOST_PORT:-9000}:9000"
     volumes:
       # /app/static, NICHT /app/uploads.
       #

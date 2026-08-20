@@ -1,7 +1,14 @@
-# Payrexx provider — security notes (assessment only, no fix applied)
+# Payrexx provider — security notes
 
-Status: 2026-08-01. Written as part of the Redis idempotency hardening pass.
-Scope: Task 3 only — **analysis, not a fix**. The module's header comment and
+> **Update 2026-08-20 (Branch `feat/payrexx-checkout`): beide unten
+> beschriebenen Befunde sind adressiert.** Das Dokument bleibt als
+> Herleitung stehen — die Analyse ist weiterhin korrekt und erklärt, warum
+> die Gegenmassnahmen so aussehen, wie sie aussehen. Was sich geändert hat,
+> steht am Ende unter „Was inzwischen gefixt wurde".
+
+Status der ursprünglichen Fassung: 2026-08-01, geschrieben im Rahmen der
+Redis-Idempotenz-Härtung.
+Scope damals: Task 3 only — **analysis, not a fix**. The module's header comment and
 `getWebhookActionAndData()` already document, deliberately, that webhook
 amounts are not cross-checked against the Medusa payment session / cart
 total:
@@ -131,7 +138,64 @@ amount question. This needs a real Payrexx sandbox test or a closer read of
 `https://developers.payrexx.com/reference/rest-api` before drawing a firm
 conclusion; flagging it here rather than guessing.
 
-## Not attempted (deliberately, per task scope)
+## Was inzwischen gefixt wurde (2026-08-20)
+
+### Befund 1 — stale gateway reuse: geschlossen durch einen Betragsabgleich
+
+Der Weg, den der Abschnitt „Not attempted" unten als teuersten beschrieb —
+„somewhere to persist 'current gateway id per session' that the webhook
+handler can read" —, ist jetzt gebaut: `session-store.ts` hält pro Medusa-
+Payment-Session `{ gatewayId, amountInRappen, currency }`, Redis-backed mit
+demselben Tenant-Namespacing wie der Idempotency-Store.
+
+- `initiatePayment()` und `updatePayment()` schreiben den Zustand.
+- `deletePayment()` / `cancelPayment()` löschen ihn.
+- `decideAction()` (`webhook.ts`) vergleicht den vom Webhook gemeldeten
+  Betrag mit dem hinterlegten. **Bei Abweichung passiert nichts
+  Automatisches**; es wird `not_supported` zurückgegeben und
+  `PAYREXX AMOUNT MISMATCH — MANUAL REVIEW REQUIRED` geloggt.
+
+Bewusst wird **nicht** die Gateway-ID selbst verglichen: Payrexx' Webhook-
+Body führt sie nicht zuverlässig mit. Der Betrag ist der Wert, auf den es
+ankommt — ein veralteter Gateway mit demselben Betrag ist harmlos, und genau
+der Fall mit abweichendem Betrag ist der schädliche, in beide Richtungen.
+
+Bewusst wird auch **nicht** `failed` zurückgegeben: das Geld IST bei Payrexx
+eingegangen; „failed" würde die Zahlung in Medusa als gescheitert markieren
+und die Diskrepanz verstecken statt sie zu melden.
+
+Fehlt der Eintrag (TTL abgelaufen, Redis weg), wird **nicht** abgeglichen,
+sondern verarbeitet — fail-open, dieselbe Begründung wie beim Idempotency-
+Store: ein verlorener Webhook ist eine bezahlte, nie erfasste Bestellung.
+
+Zusätzlich entschärft `updatePayment()` die Ursache selbst: bei
+unverändertem Betrag wird der Gateway gar nicht erst gelöscht und neu
+angelegt, und ein fehlgeschlagenes Löschen wird jetzt als `error` geloggt
+statt still verschluckt.
+
+Tests: `payrexx-webhook-decision.unit.spec.ts` (beide Richtungen der
+Abweichung, fail-open ohne Eintrag) und `payrexx-checkout-flow.unit.spec.ts`
+(„refuses to complete an order paid on a stale gateway").
+
+### Befund 2 — `partially-refunded`: nicht mehr als Capture gemeldet
+
+Die offene Frage war, ob Payrexx' `amount` bei `partially-refunded` den
+Gesamtbetrag oder den erstatteten Teil meint. Sie ist weiterhin unbeantwortet
+— aber sie muss nicht beantwortet werden, denn die Ereignisform war ohnehin
+falsch: Medusas Webhook-Aktionen kennen keine Rückerstattung, und `captured`
+zurückzugeben hätte einen CAPTURE ausgelöst, also Geld in die
+GEGENRICHTUNG bewegt.
+
+`refunded`, `partially-refunded` und `refundpending` liefern jetzt
+`not_supported` und eine Warnung, die den Betreiber auffordert, eine im
+Payrexx-Dashboard ausgelöste Rückerstattung im Medusa-Admin nachzutragen.
+Rückerstattungen laufen in diesem Modul über `refundPayment()` (Admin), und
+nur dort ist die Betragssemantik eindeutig, weil wir den Betrag selbst
+senden.
+
+---
+
+## Not attempted (Stand der ursprünglichen Fassung, 2026-08-01)
 
 - No fix for either finding. Fixing the stale-gateway issue needs a design
   decision: e.g., have `getWebhookActionAndData()` reject/ignore webhooks
