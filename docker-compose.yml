@@ -105,6 +105,12 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@jibbit.ch}
+
+      # Ablageort fuer hochgeladene Produktbilder. Muss mit dem Volume unten
+      # uebereinstimmen — die ausfuehrliche Begruendung steht in
+      # backend/medusa-config.ts.
+      MEDUSA_UPLOAD_DIR: /app/static
+
       # Nur fuer einen lokalen Mailfaenger. Bei NODE_ENV=production ignoriert
       # der SMTP-Provider den Schalter hart.
       SMTP_ALLOW_INSECURE: ${SMTP_ALLOW_INSECURE:-}
@@ -114,7 +120,14 @@ services:
       # Caddy und nginx erreichen den Dienst so oder so.
       - "127.0.0.1:${MEDUSA_HOST_PORT:-9000}:9000"
     volumes:
-      - medusa_data:/app/uploads
+      # /app/static, NICHT /app/uploads.
+      #
+      # Medusa serviert hochgeladene Dateien mit einer fest verdrahteten Zeile
+      # (`express.static(path.join(baseDir, "static"))`), und der local-Provider
+      # legt sie unter <cwd>/static ab. In /app/uploads schreibt niemand — das
+      # Volume war leer, und jedes hochgeladene Bild lag im
+      # Container-Dateisystem und war beim naechsten `docker compose up` weg.
+      - medusa_data:/app/static
 
   # ─── Storefront (Next.js 16) ───────────────────────────────────
   # Der Build-Context liegt im NACHBAR-Repository. Auf der VPS müssen
