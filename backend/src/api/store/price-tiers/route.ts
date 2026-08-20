@@ -1,6 +1,14 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 
+import {
+  Probe,
+  Tier,
+  collectQuantityBreakpoints,
+  restrictedPriceListIds,
+  tiersFromProbes,
+} from "./tiers"
+
 /**
  * GET /store/price-tiers?variant_id=…&variant_id=…&currency_code=chf
  *
@@ -12,6 +20,17 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
  * Mengenparameter. Für die Preistabelle auf der Produktseite brauchen wir aber
  * alle Stufen auf einmal, nicht eine Anfrage pro Stufe.
  *
+ * Wie die Stufen entstehen: Die rohen Preiszeilen (`listPrices`) nennen nur
+ * die KANDIDATEN-Mengen, an denen sich der Preis ändern kann — Standardpreise
+ * UND Preislisten-Zeilen, denn seit import-price-lists.ts liegen die
+ * Staffeln in der Preisliste „Aktionspreise jibbit.ch", nicht mehr im
+ * Basispreis. Den Betrag je Menge bestimmt dann `calculatePrices` — dieselbe
+ * Auswertung, mit der Medusa auch den Warenkorb abrechnet. Sie kennt
+ * Preislisten-Status, Start-/Enddatum und Kundengruppen-Regeln; da diese
+ * Route ohne Kundenkontext anfragt, sehen Gäste eingeschränkte Listen
+ * (z.B. künftige Händlerpreise) hier prinzipbedingt nicht. Details und
+ * warum dabei nichts durchsickern kann: ./tiers.ts.
+ *
  * Abgerechnet wird nach wie vor serverseitig im Warenkorb. Diese Route ist
  * reine Anzeige — sie darf nie Grundlage einer Preisberechnung im Client sein.
  */
@@ -19,22 +38,31 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 const MAX_VARIANTS = 50
 
 type PriceRow = {
-  id: string
-  amount: number | string
-  currency_code: string
   min_quantity?: number | string | null
   max_quantity?: number | string | null
   price_list_id?: string | null
-  price_set_id?: string
-  price_rules?: { attribute: string; operator: string; value: string }[]
 }
 
-type Tier = {
-  min_quantity: number
-  max_quantity: number | null
-  amount: number
-  currency_code: string
+type CalculatedPriceSet = {
+  id: string
+  calculated_amount?: number | string | null
+  original_amount?: number | string | null
+  currency_code?: string | null
+  calculated_price?: { price_list_id?: string | null } | null
+  original_price?: { price_list_id?: string | null } | null
 }
+
+/**
+ * Gast-Marker für Anfragen ohne region_id. Medusas Preisabfrage prüft
+ * Preislisten-Regeln nur, wenn der Kontext nach Abzug von `quantity` und
+ * `currency_code` noch Attribute enthält (hasComplexContext in
+ * @medusajs/pricing, repositories/pricing.js) — sonst rutscht jede aktive
+ * Liste durch, auch eine auf Kundengruppen eingeschränkte. Der Warenkorb
+ * sendet immer eine region_id und ist deshalb nie betroffen; diese Route
+ * erzwingt denselben Pfad, notfalls mit diesem Marker: "Gast, Mitglied
+ * keiner Kundengruppe". Er erfüllt nie eine echte Gruppenregel.
+ */
+const GUEST_CONTEXT = { "customer.groups.id": ["__guest__"] }
 
 function asArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -117,63 +145,117 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const pricingService = req.scope.resolve(Modules.PRICING)
+  const priceSetIds = [...priceSetToVariant.keys()]
 
-  const prices = (await pricingService.listPrices(
+  // 1) Rohzeilen holen — NUR für die Mengen-Sprungstellen. Beträge werden
+  //    hieraus nie übernommen; auch Zeilen aus Entwurfs- oder eingeschränkten
+  //    Preislisten steuern höchstens eine Menge bei, zu der gleich der
+  //    tatsächlich gültige Gast-Preis erfragt wird (siehe tiers.ts).
+  const priceRows = (await pricingService.listPrices(
     {
-      price_set_id: [...priceSetToVariant.keys()],
+      price_set_id: priceSetIds,
       currency_code: currencyCode,
     },
     {
-      select: [
-        "id",
-        "amount",
-        "currency_code",
-        "min_quantity",
-        "max_quantity",
-        "price_list_id",
-        "price_set_id",
-      ],
-      relations: ["price_rules"],
+      select: ["id", "min_quantity", "max_quantity", "price_list_id"],
       take: null,
     }
   )) as unknown as PriceRow[]
 
-  for (const price of prices) {
-    // Preislisten-Preise (Aktionen, B2B-Listen) gehören nicht in die
-    // Staffeltabelle — die berechnet Medusa im Warenkorb selbst.
-    if (price.price_list_id) {
-      continue
-    }
+  // Listen, deren Regeln dieser anonyme Request prinzipiell nicht erfüllen
+  // kann (z.B. Kundengruppen-Händlerpreise): deren Zeilen liefern weder
+  // Sprungstellen noch dürfen sie je als Gewinner durchgereicht werden.
+  const priceListIds = [
+    ...new Set(
+      priceRows
+        .map((row) => row.price_list_id)
+        .filter((id): id is string => typeof id === "string")
+    ),
+  ]
 
-    // Preiszeilen mit Regeln (z.B. regionsgebunden) nur übernehmen, wenn die
-    // Regel zum angefragten Kontext passt. Alles andere würde eine Staffel
-    // anzeigen, die dieser Kunde gar nicht bekommt.
-    const rules = price.price_rules ?? []
-    const rulesMatch = rules.every(
-      (r) => r.attribute === "region_id" && r.value === regionId
+  const priceLists = priceListIds.length
+    ? ((await pricingService.listPriceLists(
+        { id: priceListIds },
+        { relations: ["price_list_rules"], take: null }
+      )) as unknown as {
+        id: string
+        price_list_rules?: { attribute: string }[] | null
+      }[])
+    : []
+
+  const restrictedLists = restrictedPriceListIds(
+    priceLists,
+    regionId ? ["region_id"] : []
+  )
+
+  const breakpoints = collectQuantityBreakpoints(
+    priceRows.filter(
+      (row) => !row.price_list_id || !restrictedLists.has(row.price_list_id)
     )
-    if (!rulesMatch) {
-      continue
-    }
+  )
 
-    const variantId = priceSetToVariant.get(price.price_set_id ?? "")
-    if (!variantId) {
-      continue
-    }
-
-    tiers[variantId].push({
-      min_quantity: Number(price.min_quantity ?? 1),
-      max_quantity:
-        price.max_quantity === null || price.max_quantity === undefined
-          ? null
-          : Number(price.max_quantity),
-      amount: Number(price.amount),
-      currency_code: price.currency_code,
-    })
+  // 2) Jede Sprungstelle mit der Warenkorb-Auswertung bewerten. Bewusst OHNE
+  //    customer_id / Kundengruppen im Kontext: Die Route ist anonym, also
+  //    darf sie nur sehen, was jeder Gast bezahlt. Eine Abfrage je Menge,
+  //    gebündelt über alle angefragten Varianten. Der Kontext trägt immer
+  //    mindestens ein Attribut (region_id oder den Gast-Marker), damit
+  //    Medusa die Preislisten-Regeln wirklich auswertet — siehe GUEST_CONTEXT.
+  const baseContext: Record<string, unknown> = {
+    currency_code: currencyCode,
+  }
+  if (regionId) {
+    baseContext.region_id = regionId
+  } else {
+    Object.assign(baseContext, GUEST_CONTEXT)
   }
 
-  for (const variantId of Object.keys(tiers)) {
-    tiers[variantId].sort((a, b) => a.min_quantity - b.min_quantity)
+  const probesByQuantity = await Promise.all(
+    breakpoints.map(async (quantity) => {
+      const calculated = (await pricingService.calculatePrices(
+        { id: priceSetIds },
+        { context: { ...baseContext, quantity } as never }
+      )) as unknown as CalculatedPriceSet[]
+      return { quantity, calculated }
+    })
+  )
+
+  // 3) Punktwerte je Variante einsammeln und zu Stufen verschmelzen.
+  const probesByVariant = new Map<string, Probe[]>(
+    variantIds.map((id) => [id, []])
+  )
+
+  const toAmount = (value: number | string | null | undefined): number | null =>
+    value === null || value === undefined ? null : Number(value)
+
+  for (const { quantity, calculated } of probesByQuantity) {
+    const byPriceSet = new Map(calculated.map((c) => [c.id, c]))
+    for (const [priceSetId, variantId] of priceSetToVariant) {
+      const hit = byPriceSet.get(priceSetId)
+      let amount = toAmount(hit?.calculated_amount)
+
+      // Riegel: Gewinner aus einer Liste, die dieser Request nie erfüllen
+      // kann, werden verworfen — dann zählt der reguläre Preis (das
+      // original_amount), oder gar keiner. Greift nur, falls Medusas eigene
+      // Regelauswertung umgangen wurde; Details in tiers.ts.
+      const winnerList = hit?.calculated_price?.price_list_id ?? null
+      if (winnerList && restrictedLists.has(winnerList)) {
+        const originalList = hit?.original_price?.price_list_id ?? null
+        amount =
+          originalList && restrictedLists.has(originalList)
+            ? null
+            : toAmount(hit?.original_amount)
+      }
+
+      probesByVariant.get(variantId)?.push({
+        quantity,
+        amount,
+        currency_code: hit?.currency_code ?? null,
+      })
+    }
+  }
+
+  for (const [variantId, probes] of probesByVariant) {
+    tiers[variantId] = tiersFromProbes(probes, currencyCode)
   }
 
   res.json({ tiers })
