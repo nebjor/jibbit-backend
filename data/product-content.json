@@ -1,0 +1,282 @@
+[
+  {
+    "handle": "angel-slim-filters-6mm-120stk",
+    "odoo_id": 13,
+    "subtitle": "6mm Slim Filter",
+    "description": "Slim-Filter mit 6 mm Durchmesser, 120 Filter pro Packung.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "dubi-aktivkohlefilter-o7mm",
+    "odoo_id": 49,
+    "subtitle": "42 Stück im Beutel",
+    "description": "Von dubi: Keine Lösung konnte unseren hohen Qualitätsansprüchen gerecht werden und deshalb haben wir mehr als vier Jahre hart an einem Aktivkohlefilter gearbeitet, der gut zieht, toll schmeckt und nicht verstopft.\n\n100% mehr und konstanteren Durchzug, als alle anderen Aktivkohlefilter!",
+    "source": {
+      "subtitle": "odoo",
+      "description": "odoo"
+    }
+  },
+  {
+    "handle": "elements-blue-rolls-sw",
+    "odoo_id": 58,
+    "subtitle": "Ultra Thin Papers",
+    "description": "Ultra-dünne Paper-Rolls von Elements, 5 m pro Rolle.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "odoo (Box-Seite; die Einzelseite nennt fälschlich «32 Blatt pro Pack»)"
+    }
+  },
+  {
+    "handle": "elements-king-slim-size-ultra-thin",
+    "odoo_id": 56,
+    "subtitle": "Ultra Thin Papers",
+    "description": "King-Slim-Size-Papers, ultradünn. 32 Blatt pro Pack.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "odoo"
+    }
+  },
+  {
+    "handle": "gizeh-dw-extra-fine",
+    "odoo_id": 61,
+    "subtitle": "Double Window, extra fein",
+    "description": "Blättchen von Gizeh im Double-Window-Format, extra fein.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "greengo-unbleached-slim-rolls",
+    "odoo_id": 24,
+    "subtitle": "Ungebleichte Slim Rolls",
+    "description": "Ungebleichte Slim Rolls von Greengo.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "kailar-filter-5-9mm-65stk-pink",
+    "odoo_id": 27,
+    "subtitle": "Kailar Aktivkohlefilter",
+    "description": "Aktivkohlefilter von Kailar, ø 5,9 mm, 65 Stück pro Packung. Ausführung in Pink.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "kailar-filter-5-9mm-65stk-schwarz",
+    "odoo_id": 26,
+    "subtitle": "Kailar Aktivkohlefilter",
+    "description": "Aktivkohlefilter von Kailar, ø 5,9 mm, 65 Stück pro Packung. Ausführung in Schwarz.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "kailar-filter-5-9mm-65stk-weiss",
+    "odoo_id": 11,
+    "subtitle": "Kailar Aktivkohlefilter",
+    "description": "Aktivkohlefilter von Kailar, ø 5,9 mm, 65 Stück pro Packung. Ausführung in Weiss.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "kailar-filter-9mm-big-100-stk-schwarz",
+    "odoo_id": 29,
+    "subtitle": "Kailar Aktivkohlefilter BIG",
+    "description": "Aktivkohlefilter von Kailar, ø 9 mm (BIG), 100 Stück pro Packung. Ausführung in Schwarz.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "ocb-bio-slim-organic-hemp-rolls",
+    "odoo_id": 40,
+    "subtitle": "Organic Hemp Rolls",
+    "description": "Slim Rolls aus Bio-Hanfpapier von OCB.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "ocb-premium-kss-papers-mit-filter",
+    "odoo_id": 7,
+    "subtitle": "Papers + Filters",
+    "description": "King Size Slim Papers von OCB Premium, mit passenden Filtertips im selben Heftchen.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "ocb-premium-kurz",
+    "odoo_id": 9,
+    "subtitle": "Ziggi Papers im Double Window Format, schwarz",
+    "description": "Kurze Blättchen von OCB Premium im Double-Window-Format.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "ocb-premium-rolls-slim",
+    "odoo_id": 3,
+    "subtitle": "4 Meter Rolls, gebleicht",
+    "description": "Slim Rolls von OCB Premium, 4 m pro Rolle, gebleicht.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "ocb-slim-filter-bio-120-tips",
+    "odoo_id": 41,
+    "subtitle": "120 Bio-Tips",
+    "description": "Slim-Filter von OCB in Bio-Qualität, 120 Tips pro Packung.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "purize-aktivkohlefilter-o-9mm",
+    "odoo_id": 60,
+    "subtitle": "Aktivkohlefilter ø 9 mm",
+    "description": "Aktivkohlefilter von PURIZE mit 9 mm Durchmesser.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "purize-super-slim-white-o5mm",
+    "odoo_id": 48,
+    "subtitle": "Aktivkohle Filter Super Slim",
+    "description": "Aktivkohlefilter von PURIZE, Super Slim (ø 5 mm), 50 Stück pro Pack, weiss.",
+    "source": {
+      "subtitle": "odoo (dort «Xtra Slim» — vermutlich Kopierfehler, Produkt ist Super Slim)",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "purize-xtra-slim-white-50er-pack-5-9mm",
+    "odoo_id": 10,
+    "subtitle": "Aktivkohle Filter Xtra Slim",
+    "description": "Aktivkohlefilter von PURIZE, Xtra Slim (ø 5,9 mm), 50 Stück pro Pack, weiss.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "purize-xtra-slim-xmas-o-6mm",
+    "odoo_id": 54,
+    "subtitle": "Aktivkohle Filter Xtra Slim",
+    "description": "Aktivkohlefilter von PURIZE in der XMAS-Edition, Xtra Slim. Der Katalog nennt ø 6 mm, die Odoo-Seite ø 5,9 mm.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "raw-black-kss-papers",
+    "odoo_id": 2,
+    "subtitle": "King Size Slim Papers Extra Fine",
+    "description": "Extra feine King Size Slim Papers aus der RAW-Black-Serie.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "raw-classic-rolls-slim",
+    "odoo_id": 8,
+    "subtitle": "5 Meter Rolls, ungebleicht",
+    "description": "Slim Rolls von RAW Classic, 5 m pro Rolle, ungebleicht.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "raw-kristallglas-aschenbecher-darkside",
+    "odoo_id": 52,
+    "subtitle": "Kristallglas, Darkside",
+    "description": "Massiver Kristallglas-Aschenbecher von RAW in der Darkside-Ausführung.\nVerschiedene Ablagen für jibbits, Zigaretten oder Cones.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "odoo (vom Ruby-Text übertragen)"
+    }
+  },
+  {
+    "handle": "raw-kristallglas-aschenbecher-rainbow",
+    "odoo_id": 50,
+    "subtitle": "Kristallglas, Rainbow",
+    "description": "Massiver Kristallglas-Aschenbecher von RAW mit Rainbow-Finish.\nVerschiedene Ablagen für jibbits, Zigaretten oder Cones.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "odoo (vom Ruby-Text übertragen)"
+    }
+  },
+  {
+    "handle": "raw-kristallglas-aschenbecher-ruby",
+    "odoo_id": 51,
+    "subtitle": "Limited Edition",
+    "description": "Massiver Kristallglas Aschenbecher von RAW in Ruby Rot.\nVerschiedene Ablagen für jibbits, Zigaretten oder Cones.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "odoo"
+    }
+  },
+  {
+    "handle": "smoking-brown-kurz-double-window",
+    "odoo_id": 28,
+    "subtitle": "Brown kurz, Double Window",
+    "description": "Ungebleichte kurze Blättchen von Smoking im Double-Window-Format.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "zig-zag-slim-filter-6mm-120stk",
+    "odoo_id": 32,
+    "subtitle": "6mm Slim Filter, 120 Stk.",
+    "description": "Slim-Filter von Zig-Zag mit 6 mm Durchmesser, 120 Stück pro Packung.",
+    "source": {
+      "subtitle": "generiert",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "black-leaf-el-humeros-konische-huelsen-ks-100x",
+    "odoo_id": 47,
+    "subtitle": "100 Kingsize Hülsen",
+    "description": "Konische, vorgerollte Hülsen «El Humeros» von Black Leaf in King Size, 100 Stück pro Box.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "generiert"
+    }
+  },
+  {
+    "handle": "silikon-dose-o-22mm-hellgruen",
+    "odoo_id": 55,
+    "subtitle": "hellgrün",
+    "description": "Silikondose mit 22 mm Durchmesser. Perfekt zum Transportieren von Extrakten wie Kief, Rosin oder Static.",
+    "source": {
+      "subtitle": "odoo",
+      "description": "odoo"
+    }
+  }
+]

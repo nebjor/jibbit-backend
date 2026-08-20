@@ -22,8 +22,8 @@
  * ist der Versand nicht betroffen — jibbit rechnet pauschal.
  *
  * Idempotent über den Handle: bereits vorhandene Produkte werden übersprungen,
- * nicht überschrieben. Wer Preise aktualisieren will, nimmt danach
- * import-price-tiers.ts.
+ * nicht überschrieben. Wer vorhandene Produkte nachziehen will (Beschreibung,
+ * Preise, Bestand), nimmt update-catalog.ts.
  */
 
 import { readFileSync } from "node:fs"
@@ -48,20 +48,20 @@ const CURRENCY = "chf"
 const OPTION_TITLE = "Verpackungseinheit"
 const ROUND_DEFAULT = 0.05
 
-type CatalogTier = {
+export type CatalogTier = {
   min_quantity: number
   max_quantity: number | null
   price: number
 }
 
-type CatalogVariant = {
+export type CatalogVariant = {
   label: string
   pack_type: "single" | "display" | "box"
   units_per_pack: number
   tiers: CatalogTier[]
 }
 
-type CatalogProduct = {
+export type CatalogProduct = {
   product: string
   ref: string | null
   variants: CatalogVariant[]
@@ -74,11 +74,21 @@ type CatalogProduct = {
  * beide Stichwörter und ist ein Blättchen, kein Filter. Deshalb greifen die
  * Papers-Begriffe vor den Filter-Begriffen.
  */
-function categoryFor(name: string): string {
+export function categoryFor(name: string): string {
   if (/aschenbecher|ashtray/i.test(name)) {
     return "Aschenbecher"
   }
-  if (/\bpapers?\b|\brolls?\b|\bkurz\b|gizeh|heftchen|blättchen/i.test(name)) {
+  // Behälter und Werkzeug — vor den Papers-Begriffen, damit z.B. eine
+  // "Dose für Rolls" nicht als Papers durchginge.
+  if (/\bdose\b|silikon|grinder/i.test(name)) {
+    return "Zubehör"
+  }
+  // Hülsen/Cones sind vorgerollte Papers, keine Filter.
+  if (
+    /\bpapers?\b|\brolls?\b|\bkurz\b|gizeh|heftchen|blättchen|hülsen|huelsen|cones?\b/i.test(
+      name
+    )
+  ) {
     return "Papers"
   }
   if (/filter|aktivkohle|\btips?\b|purize|kailar|angel|zig\s*zag/i.test(name)) {
