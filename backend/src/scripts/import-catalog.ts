@@ -97,7 +97,12 @@ export function categoryFor(name: string): string {
   return "Papers"
 }
 
-/** "PURIZE Aktivkohlefilter ø 9mm" -> "purize-aktivkohlefilter-o-9mm" */
+/**
+ * "PURIZE Aktivkohlefilter ø 9mm" -> "purize-aktivkohlefilter-o-9mm"
+ *
+ * Exportiert, weil import-price-lists.ts denselben Handle ableiten muss,
+ * um die hier angelegten Produkte wiederzufinden.
+ */
 export function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -125,8 +130,14 @@ export function slugify(name: string): string {
  *
  * Echte Lieferanten-Artikelnummern kennt dieses Script nicht — im Admin
  * jederzeit überschreibbar.
+ *
+ * Exportiert, weil import-price-lists.ts die Varianten über genau diese
+ * SKU wiederfinden muss.
  */
-export function skuFor(name: string, variant: CatalogVariant): string {
+export function skuFor(
+  name: string,
+  variant: Pick<CatalogVariant, "pack_type" | "units_per_pack">
+): string {
   const base = name
     .toUpperCase()
     .replace(/Ä/g, "AE")
