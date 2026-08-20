@@ -3,6 +3,11 @@
 `catalog.json` ist der Produktstamm von jibbit.ch: 26 Produkte mit Varianten
 und Mengenstaffeln, aus Odoo gezogen.
 
+`price-lists.json` sind die **regulären** Preise (und zur Kreuzprüfung die
+Aktionspreise) vom öffentlichen Shop, erhoben mit
+`scripts/jibbit-shop-prices.mjs`. Import und Zuordnung: siehe
+`docs/preislisten.md`.
+
 ## Warum die Datei hier liegt
 
 Sie wurde vorher von Hand auf die VPS übertragen. Das ist zweimal
