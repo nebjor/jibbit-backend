@@ -1,0 +1,315 @@
+{
+  "kommentar": "Zuordnung alte Odoo-URL -> neue Storefront-URL. Odoo akzeptiert für /shop/<slug>-<id> JEDEN Slug, solange die ID am Ende stimmt — die Weiterleitung sollte deshalb über die ID am Pfadende matchen (Regex ^/shop/.*-(\\d+)$), nicht über den exakten Slug. old_paths listet die beiden bekannten Slugs (Sitemap + kanonisch). variant_sku gesetzt = Odoo führte die Display/Box-Packung als eigenes Produkt; in Medusa ist sie eine Variante des Zielprodukts.",
+  "redirects": [
+    {
+      "odoo_id": 2,
+      "odoo_name": "RAW Black KSS Papers",
+      "old_paths": [
+        "/shop/raw-black-kss-papers-2"
+      ],
+      "new_path": "/products/raw-black-kss-papers",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 3,
+      "odoo_name": "OCB Premium Rolls Slim",
+      "old_paths": [
+        "/shop/7-ocb-premium-rolls-slim-3"
+      ],
+      "new_path": "/products/ocb-premium-rolls-slim",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 7,
+      "odoo_name": "OCB Premium KSS Papers mit Filter",
+      "old_paths": [
+        "/shop/3-ocb-premium-kss-papers-mit-filter-7"
+      ],
+      "new_path": "/products/ocb-premium-kss-papers-mit-filter",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 8,
+      "odoo_name": "RAW Classic Rolls Slim",
+      "old_paths": [
+        "/shop/4-raw-classic-rolls-slim-8"
+      ],
+      "new_path": "/products/raw-classic-rolls-slim",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 9,
+      "odoo_name": "OCB Premium kurz",
+      "old_paths": [
+        "/shop/5-ocb-premium-kurz-9"
+      ],
+      "new_path": "/products/ocb-premium-kurz",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 10,
+      "odoo_name": "PURIZE White, 50er Pack",
+      "old_paths": [
+        "/shop/6-purize-xtra-slim-white-50er-pack-5-9mm-10",
+        "/shop/6-purize-white-50er-pack-10"
+      ],
+      "new_path": "/products/purize-xtra-slim-white-50er-pack-5-9mm",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 11,
+      "odoo_name": "(COMING SOON)",
+      "old_paths": [
+        "/shop/kailar-filter-5-9mm-65stk-weiss-11",
+        "/shop/coming-soon-11"
+      ],
+      "new_path": "/products/kailar-filter-5-9mm-65stk-weiss",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 13,
+      "odoo_name": "Angel Slim Filters",
+      "old_paths": [
+        "/shop/angel-slim-filters-6mm-120stk-13",
+        "/shop/angel-slim-filters-13"
+      ],
+      "new_path": "/products/angel-slim-filters-6mm-120stk",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 24,
+      "odoo_name": "Greengo Unbleached Slim Rolls",
+      "old_paths": [
+        "/shop/greengo-unbleached-slim-rolls-24"
+      ],
+      "new_path": "/products/greengo-unbleached-slim-rolls",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 26,
+      "odoo_name": "Kailar Filer 5.9mm 65stk schwarz",
+      "old_paths": [
+        "/shop/kailar-filter-5-9mm-65stk-schwarz-26",
+        "/shop/kailar-filer-5-9mm-65stk-schwarz-26"
+      ],
+      "new_path": "/products/kailar-filter-5-9mm-65stk-schwarz",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 27,
+      "odoo_name": "Kailar Filter 5.9mm 65stk pink",
+      "old_paths": [
+        "/shop/kailar-filter-5-9mm-65stk-pink-27"
+      ],
+      "new_path": "/products/kailar-filter-5-9mm-65stk-pink",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 28,
+      "odoo_name": "Smoking Brown Double Window",
+      "old_paths": [
+        "/shop/smoking-brown-kurz-double-window-28",
+        "/shop/smoking-brown-double-window-28"
+      ],
+      "new_path": "/products/smoking-brown-kurz-double-window",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 29,
+      "odoo_name": "Kailar Filter 9mm BIG  100 stk schwarz",
+      "old_paths": [
+        "/shop/kailar-filter-9mm-big-100-stk-schwarz-29"
+      ],
+      "new_path": "/products/kailar-filter-9mm-big-100-stk-schwarz",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 31,
+      "odoo_name": "Display: 24x Greengo Unbleached Slim Rolls",
+      "old_paths": [
+        "/shop/display-24x-greengo-unbleached-slim-rolls-31"
+      ],
+      "new_path": "/products/greengo-unbleached-slim-rolls",
+      "variant_sku": "GRE-UNB-SLI-ROL-D24"
+    },
+    {
+      "odoo_id": 32,
+      "odoo_name": "Zig Zag Slim Filter 6mm 120stk",
+      "old_paths": [
+        "/shop/zig-zag-slim-filter-6mm-120stk-32"
+      ],
+      "new_path": "/products/zig-zag-slim-filter-6mm-120stk",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 33,
+      "odoo_name": "Display: 34x Zig Zag Slim Filter 6mm 120stk",
+      "old_paths": [
+        "/shop/display-34x-zig-zag-slim-filter-6mm-120stk-33"
+      ],
+      "new_path": "/products/zig-zag-slim-filter-6mm-120stk",
+      "variant_sku": "ZIG-ZAG-SLI-FIL-6MM-120-D34"
+    },
+    {
+      "odoo_id": 34,
+      "odoo_name": "Display: 25x Smoking Brown kurz (double window)",
+      "old_paths": [
+        "/shop/display-25x-smoking-brown-kurz-double-window-34"
+      ],
+      "new_path": "/products/smoking-brown-kurz-double-window",
+      "variant_sku": "SMO-BRO-KUR-DOU-WIN-D25"
+    },
+    {
+      "odoo_id": 40,
+      "odoo_name": "OCB Bio Slim Organic Hemp Rolls (24)",
+      "old_paths": [
+        "/shop/ocb-bio-slim-organic-hemp-rolls-40",
+        "/shop/ocb-bio-slim-organic-hemp-rolls-24-40"
+      ],
+      "new_path": "/products/ocb-bio-slim-organic-hemp-rolls",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 41,
+      "odoo_name": "OCB Slim Filter Bio (10x120 Tips)",
+      "old_paths": [
+        "/shop/ocb-slim-filter-bio-120-tips-41",
+        "/shop/ocb-slim-filter-bio-10x120-tips-41"
+      ],
+      "new_path": "/products/ocb-slim-filter-bio-120-tips",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 47,
+      "odoo_name": "Black Leaf El Humeros Konische Hülsen KS 100X (Kopie)",
+      "old_paths": [
+        "/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-47",
+        "/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-kopie-47"
+      ],
+      "new_path": "/products/black-leaf-el-humeros-konische-huelsen-ks-100x",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 48,
+      "odoo_name": "Purize Super SLIM White, 50er Pack, 5mm (Kopie)",
+      "old_paths": [
+        "/shop/purize-super-slim-white-5mm-48",
+        "/shop/purize-super-slim-white-50er-pack-5mm-kopie-48"
+      ],
+      "new_path": "/products/purize-super-slim-white-o5mm",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 49,
+      "odoo_name": "dubi Aktivkohlefilter ø7mm",
+      "old_paths": [
+        "/shop/dubi-aktivkohlefilter-7mm-49"
+      ],
+      "new_path": "/products/dubi-aktivkohlefilter-o7mm",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 50,
+      "odoo_name": "RAW Kristallglas Aschenbecher Rainbow",
+      "old_paths": [
+        "/shop/raw-kristallglas-aschenbecher-rainbow-50"
+      ],
+      "new_path": "/products/raw-kristallglas-aschenbecher-rainbow",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 51,
+      "odoo_name": "RAW Kristallglas Aschenbecher Ruby",
+      "old_paths": [
+        "/shop/raw-kristallglas-aschenbecher-ruby-51"
+      ],
+      "new_path": "/products/raw-kristallglas-aschenbecher-ruby",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 52,
+      "odoo_name": "RAW Kristallglas Aschenbecher Darkside",
+      "old_paths": [
+        "/shop/raw-kristallglas-aschenbecher-darkside-52"
+      ],
+      "new_path": "/products/raw-kristallglas-aschenbecher-darkside",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 54,
+      "odoo_name": "PURIZE XTRA Slim XMAS ø 5,9mm",
+      "old_paths": [
+        "/shop/purize-xtra-slim-xmas-6mm-54",
+        "/shop/purize-xtra-slim-xmas-5-9mm-54"
+      ],
+      "new_path": "/products/purize-xtra-slim-xmas-o-6mm",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 55,
+      "odoo_name": "Silikon Dose ø 22mm, hellgrün",
+      "old_paths": [
+        "/shop/silikon-dose-22mm-55",
+        "/shop/silikon-dose-22mm-hellgrun-55"
+      ],
+      "new_path": "/products/silikon-dose-o-22mm-hellgruen",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 56,
+      "odoo_name": "Elements King Size Ultra Thin",
+      "old_paths": [
+        "/shop/elements-king-slim-size-ultra-thin-56",
+        "/shop/elements-king-size-ultra-thin-56"
+      ],
+      "new_path": "/products/elements-king-slim-size-ultra-thin",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 57,
+      "odoo_name": "Box: 50x Elements King Slim Size Ultra Thin",
+      "old_paths": [
+        "/shop/box-50x-elements-king-slim-size-ultra-thin-57"
+      ],
+      "new_path": "/products/elements-king-slim-size-ultra-thin",
+      "variant_sku": "ELE-KIN-SLI-SIZ-ULT-THI-BX50"
+    },
+    {
+      "odoo_id": 58,
+      "odoo_name": "Elements BLUE Rolls SW",
+      "old_paths": [
+        "/shop/elements-blue-rolls-sw-58"
+      ],
+      "new_path": "/products/elements-blue-rolls-sw",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 59,
+      "odoo_name": "Box: 24x Elements BLUE Rolls SW",
+      "old_paths": [
+        "/shop/box-24x-elements-blue-rolls-sw-59"
+      ],
+      "new_path": "/products/elements-blue-rolls-sw",
+      "variant_sku": "ELE-BLU-ROL-SW-BX24"
+    },
+    {
+      "odoo_id": 60,
+      "odoo_name": "PURIZE Aktivkohlefilter ø 9mm",
+      "old_paths": [
+        "/shop/purize-aktivkohlefilter-9mm-60"
+      ],
+      "new_path": "/products/purize-aktivkohlefilter-o-9mm",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 61,
+      "odoo_name": "Gizeh DW Extra Fine (Kopie)",
+      "old_paths": [
+        "/shop/gizeh-dw-extra-fine-61",
+        "/shop/gizeh-dw-extra-fine-kopie-61"
+      ],
+      "new_path": "/products/gizeh-dw-extra-fine",
+      "variant_sku": null
+    }
+  ]
+}
