@@ -36,7 +36,13 @@ zwangsläufig `/app`. Deshalb steht der Pfad in `backend/medusa-config.ts`
 absolut.
 
 `MEDUSA_BACKEND_URL` wird beim Upload in die Datenbank geschrieben und ist
-danach nicht mehr aus der Umgebung korrigierbar. Vor dem ersten Upload prüfen.
+danach nicht mehr aus der Umgebung korrigierbar — ein falscher Wert bedeutet,
+alle Bilder erneut hochzuladen. `import-product-images.ts` prüft das deshalb
+selbst und bricht ab, wenn die Variable fehlt, keine gültige URL ist oder bei
+`NODE_ENV=production` auf `localhost`/`medusa` zeigt. Für Test- und
+Vorschauboxen ohne eigene API-Domain gibt es die Option `allow-internal-url`;
+die Storefront selbst kommt damit zurecht, der Medusa-Admin und
+Produktdaten-Feeds nicht.
 
 ## Bilder aufbereiten (einmal, auf dem Entwicklungsrechner)
 

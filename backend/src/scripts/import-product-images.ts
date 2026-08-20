@@ -14,6 +14,14 @@
  *   dry-run        nur anzeigen, nichts hochladen und nichts schreiben
  *   dir=<pfad>     Ordner mit den aufbereiteten Varianten.
  *                  Default: <ordner der json>/produktbilder
+ *   allow-internal-url
+ *                  Bild-URLs auf localhost o.ä. zulassen, obwohl
+ *                  NODE_ENV=production ist. Nur für Test- und Vorschauboxen
+ *                  ohne eigene API-Domain — im echten Betrieb bedeutet eine
+ *                  solche URL, dass die Bilder im Medusa-Admin und in jedem
+ *                  Produktdaten-Feed tot sind. Die Storefront selbst kommt
+ *                  auch damit zurecht, weil sie nur den Pfad hinter /static/
+ *                  auswertet (siehe jibbit-frontend/lib/media.ts).
  *
  * ─── Woher die Dateien kommen ──────────────────────────────────────────
  * NICHT aus dem kDrive und nicht in Originalgrösse. Die Vorlagen laufen einmal
@@ -92,6 +100,68 @@ type ProductRow = {
   images: { url: string }[] | null
 }
 
+/** Hostnamen, die nur auf der Maschine selbst gelten. */
+const LOOPBACK = ["localhost", "127.0.0.1", "0.0.0.0", "::1", "medusa"]
+
+/**
+ * Die URL, unter der die Bilder später abrufbar sein werden — und die
+ * einzige Angabe in diesem Lauf, die sich HINTERHER NICHT MEHR KORRIGIEREN
+ * LÄSST.
+ *
+ * Medusa schreibt beim Upload eine absolute URL in die Datenbank, gebildet aus
+ * `backend_url` des file-Moduls (siehe medusa-config.ts, gespeist aus
+ * MEDUSA_BACKEND_URL). Ist der Wert falsch, sind alle Bilder tot und müssen
+ * neu hochgeladen werden — kein Update-Script repariert das, weil die alten
+ * Dateien unter alten Schlüsseln im Dateispeicher liegen bleiben.
+ *
+ * Deshalb hier eine harte Prüfung statt eines Satzes in der Anleitung: der
+ * Default des Providers ist `http://localhost:9000/static`, und der greift
+ * still, wenn MEDUSA_BACKEND_URL in der .env fehlt.
+ */
+function checkBackendUrl(allowInternal: boolean): { base: string; error?: string } {
+  const raw = process.env.MEDUSA_BACKEND_URL
+  const isProduction = process.env.NODE_ENV === "production" && !allowInternal
+
+  if (!raw?.trim()) {
+    return {
+      base: "http://localhost:9000/static",
+      error: isProduction
+        ? "MEDUSA_BACKEND_URL ist nicht gesetzt. Die Bild-URLs wuerden auf " +
+          "http://localhost:9000 zeigen und waeren von aussen nicht abrufbar."
+        : undefined,
+    }
+  }
+
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    return {
+      base: raw,
+      error: `MEDUSA_BACKEND_URL ist keine gueltige URL: "${raw}"`,
+    }
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return { base: raw, error: `MEDUSA_BACKEND_URL braucht http oder https: "${raw}"` }
+  }
+
+  const base = `${raw.replace(/\/+$/, "")}/static`
+
+  if (isProduction && LOOPBACK.includes(url.hostname)) {
+    return {
+      base,
+      error:
+        `MEDUSA_BACKEND_URL zeigt auf "${url.hostname}" — das gilt nur ` +
+        "innerhalb der Maschine bzw. des Docker-Netzes. Browser koennten die " +
+        "Bilder nie laden. Erwartet wird die oeffentliche Adresse, etwa " +
+        "https://api-test.jibbit.ch.",
+    }
+  }
+
+  return { base }
+}
+
 /** Bereits vermerkte Uploads, defensiv gelesen — metadata ist freies JSON. */
 function readImageSources(metadata: Record<string, unknown> | null): ImageSources {
   const raw = metadata?.image_sources
@@ -130,6 +200,20 @@ export default async function importProductImages({ container, args }: ExecArgs)
   const imageDir = resolve(
     opts.value("dir") ?? join(dirname(resolve(mappingFile)), "produktbilder")
   )
+
+  // VOR allem anderen: eine falsche Backend-URL ist hinterher nicht mehr
+  // reparierbar. Lieber hier abbrechen als 30 Dateien mit toten URLs anlegen.
+  const backendUrl = checkBackendUrl(opts.flag("allow-internal-url"))
+  if (backendUrl.error) {
+    logger.error(backendUrl.error)
+    logger.error(
+      "Nichts hochgeladen. Die URL wird beim Upload in die Datenbank " +
+        "geschrieben und ist danach nur durch erneutes Hochladen aller Bilder " +
+        "zu aendern."
+    )
+    return
+  }
+  logger.info(`Bild-URLs werden lauten: ${backendUrl.base}/<datei>`)
 
   const mapping: ImageMapping = JSON.parse(readFileSync(resolve(mappingFile), "utf8"))
 
