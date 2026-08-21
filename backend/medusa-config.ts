@@ -120,6 +120,11 @@ module.exports = defineConfig({
               instance: process.env.PAYREXX_INSTANCE,
               apiSecret: process.env.PAYREXX_API_SECRET,
               webhookSecret: process.env.PAYREXX_WEBHOOK_SECRET,
+              // Leer = api.payrexx.com. zahls.ch ist ein White-Label derselben
+              // Plattform und spricht dieselbe API unter eigenem Host:
+              //   PAYREXX_API_BASE_URL=https://api.zahls.ch/v1.0/
+              // Siehe docs/payrexx-go-live.md §0.
+              apiBaseUrl: process.env.PAYREXX_API_BASE_URL,
               enabledPsps,
             },
           },
