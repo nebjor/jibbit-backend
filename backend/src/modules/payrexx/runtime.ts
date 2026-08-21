@@ -40,11 +40,13 @@ export function getPayrexxRuntime(logger: Logger): PayrexxRuntime {
   const instance = process.env.PAYREXX_INSTANCE ?? ""
   const apiSecret = process.env.PAYREXX_API_SECRET ?? ""
   const webhookSecret = process.env.PAYREXX_WEBHOOK_SECRET ?? ""
+  // Leer = Payrexx-Default. Für zahls.ch: https://api.zahls.ch/v1.0/
+  const baseUrl = process.env.PAYREXX_API_BASE_URL
   const redisUrl = process.env.REDIS_URL
 
   cached = {
     configured: Boolean(instance && apiSecret && webhookSecret),
-    client: new PayrexxClient({ instance, apiSecret }),
+    client: new PayrexxClient({ instance, apiSecret, baseUrl }),
     processor: new PayrexxWebhookProcessor({
       instance,
       webhookSecret,
