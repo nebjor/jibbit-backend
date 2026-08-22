@@ -26,6 +26,32 @@ describe("toRappen — Dezimal-CHF (Medusa) → Rappen (Payrexx)", () => {
     expect(toRappen(27.9)).toBe(2790)
   })
 
+  /**
+   * CHF 3.75 ist der erste Betrag im System mit einem Rappen-Anteil, der kein
+   * ganzer Franken ist — vorher gab es nur den Pauschalversand zu CHF 9.00.
+   * Geht hier ein Rappen verloren (374 statt 375), ist jede Kleinsendung
+   * falsch belastet, und der Betrags-Abgleich im Webhook wertet die Differenz
+   * als Manipulationsverdacht.
+   */
+  it("converts the letter shipping rate (CHF 3.75) to 375 Rappen", () => {
+    expect(toRappen(3.75)).toBe(375)
+    expect(toRappen("3.75")).toBe(375)
+    expect(fromRappen(375)).toBe(3.75)
+  })
+
+  it("keeps a cart with the letter rate exact to the Rappen", () => {
+    // Warenkorb CHF 12.50 + Brief CHF 3.75 = CHF 16.25
+    expect(toRappen(12.5 + 3.75)).toBe(1625)
+    // und ein Betrag knapp unter der Gratis-Schwelle
+    expect(toRappen(68.99 + 3.75)).toBe(7274)
+  })
+
+  it("survives the classic binary float traps", () => {
+    expect(toRappen(0.1 + 0.2)).toBe(30)
+    expect(toRappen(19.99)).toBe(1999)
+    expect(toRappen(2.675)).toBe(268)
+  })
+
   it("converts the Swiss flat shipping rate (CHF 9.00) to 900 Rappen", () => {
     expect(toRappen(9)).toBe(900)
   })
