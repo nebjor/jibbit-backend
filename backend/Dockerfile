@@ -25,7 +25,10 @@ RUN apk add --no-cache python3 make g++
 # dort `npm install --package-lock-only`, Ergebnis zurückkopieren) und mit
 # `npm ci --dry-run` prüfen. Dauerhafte Alternative: aus dem Workspace-Root
 # bauen oder den Ein-Member-Workspace ganz auflösen.
-COPY package.json package-lock.json ./
+# .npmrc MUSS mit hinein: es setzt legacy-peer-deps, ohne das `npm ci` am
+# exakt auf @medusajs/*@2.18.0 gepinnten peerDependencies-Block von
+# @zahls/medusa-plugin scheitert (Projekt: 2.13.6). Begruendung in .npmrc.
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci --maxsockets=8 --fetch-timeout=120000 --fetch-retries=5
 
 # ACHTUNG — kleine VPS.
@@ -71,6 +74,11 @@ USER node
 
 # nur das Build-Ergebnis übernehmen
 COPY --from=builder --chown=node:node /app/.medusa/server ./
+
+# .npmrc auch hier: `medusa build` kopiert es nicht nach .medusa/server,
+# und das npm install unten liefe sonst in denselben ERESOLVE-Abbruch
+# (@zahls/medusa-plugin pinnt seine Peers exakt auf 2.18.0).
+COPY --chown=node:node .npmrc ./
 
 # das generierte package.json bringt keine Lockfile mit → install statt ci
 RUN npm install --omit=dev --maxsockets=8 --fetch-timeout=120000 \
