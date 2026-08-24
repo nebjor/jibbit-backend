@@ -46,7 +46,11 @@ import type {
   ProviderWebhookPayload,
   WebhookActionResult,
 } from "@medusajs/framework/types"
-import { PayrexxClient, extractGatewayTransaction } from "./client"
+import {
+  PayrexxClient,
+  extractGatewayTransaction,
+  normalizePayrexxApiBaseUrl,
+} from "./client"
 import { toRappen } from "./amounts"
 import {
   IdempotencyStore,
@@ -65,6 +69,12 @@ export interface PayrexxProviderOptions {
   apiSecret: string
   webhookSecret: string
   enabledPsps: number[]
+  /**
+   * REST-API-Basis-Adresse inkl. Versionspfad. Leer = api.payrexx.com.
+   * Für die White-Label-Instanz zahls.ch: `https://api.zahls.ch/v1.0/`.
+   * Kommt aus PAYREXX_API_BASE_URL (medusa-config.ts).
+   */
+  apiBaseUrl?: string
 }
 
 type InjectedDependencies = {
@@ -134,6 +144,7 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
     this.client = new PayrexxClient({
       instance: options.instance,
       apiSecret: options.apiSecret,
+      baseUrl: options.apiBaseUrl,
     })
 
     const redisUrl = process.env.REDIS_URL
@@ -177,6 +188,12 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
     if (!options.webhookSecret) {
       throw new Error("Payrexx 'webhookSecret' is required.")
     }
+    // Wirft bei einem unbrauchbaren Wert (kein https, keine URL) — ein
+    // Tippfehler in PAYREXX_API_BASE_URL soll den Start scheitern lassen,
+    // nicht den ersten Bezahlversuch.
+    normalizePayrexxApiBaseUrl(
+      typeof options.apiBaseUrl === "string" ? options.apiBaseUrl : undefined
+    )
   }
 
   /**
