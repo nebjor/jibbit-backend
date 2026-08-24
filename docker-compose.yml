@@ -86,7 +86,22 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET muss gesetzt sein}
       COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET muss gesetzt sein}
 
-      # Payrexx / zahls.ch
+      # zahls.ch — offizielles Plugin (@zahls/medusa-plugin).
+      # Compose reicht NUR weiter, was hier ausdruecklich steht — ein Wert,
+      # der nur in der .env existiert, erreicht den Container nie, und der
+      # Fehler bleibt still (der Provider wird dann einfach nicht
+      # registriert). Deshalb stehen alle ZAHLS_-Variablen hier.
+      # Webhook-Adresse im zahls.ch-Backend:
+      #   https://<API_DOMAIN>/hooks/payment/zahls_zahls
+      ZAHLS_INSTANCE: ${ZAHLS_INSTANCE:-}
+      ZAHLS_API_KEY: ${ZAHLS_API_KEY:-}
+      ZAHLS_WEBHOOK_SECRET: ${ZAHLS_WEBHOOK_SECRET:-}
+      # Optional; leer = ${STORE_URL}/checkout/success|failed|cancel.
+      ZAHLS_SUCCESS_URL: ${ZAHLS_SUCCESS_URL:-}
+      ZAHLS_FAILED_URL: ${ZAHLS_FAILED_URL:-}
+      ZAHLS_CANCEL_URL: ${ZAHLS_CANCEL_URL:-}
+
+      # Payrexx / zahls.ch (bestehendes Modul, laeuft parallel weiter)
       PAYREXX_INSTANCE: ${PAYREXX_INSTANCE}
       # Leer = api.payrexx.com. Fuer ein zahls.ch-Konto zwingend
       # https://api.zahls.ch/v1.0/ — ohne diese Zeile erreicht der Wert aus

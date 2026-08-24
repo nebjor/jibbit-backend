@@ -48,6 +48,21 @@ export default defineMiddlewares({
       bodyParser: { preserveRawBody: true },
     },
     {
+      /**
+       * Dasselbe für den Webhook des zahls.ch-Plugins. Verarbeitet wird der
+       * POST von Medusas eingebauter Route /hooks/payment/:provider (das
+       * Plugin bringt keine eigene mit), aber unsere statische GET-Probe-
+       * Route (src/api/hooks/payment/zahls_zahls/route.ts) macht den Pfad
+       * zu einem STATISCHEN Eintrag im Body-Parser-Routing. Damit der rohe
+       * Body für die HMAC-Prüfung des Plugins sicher erhalten bleibt, steht
+       * preserveRawBody hier explizit — fehlte es, verwürfe das Plugin
+       * jeden Webhook still als "failed", weil die Signatur nie stimmt.
+       */
+      matcher: "/hooks/payment/zahls_zahls",
+      method: "POST",
+      bodyParser: { preserveRawBody: true },
+    },
+    {
       matcher: "/admin/customers/:id/addresses",
       method: "POST",
       middlewares: [validateAddress],

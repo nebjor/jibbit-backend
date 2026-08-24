@@ -26,6 +26,7 @@
     "@medusajs/cli": "2.13.6",
     "@medusajs/framework": "2.13.6",
     "@medusajs/medusa": "2.13.6",
+    "@zahls/medusa-plugin": "0.0.1",
     "axios": "^1.19.0",
     "ioredis": "^5.10.1",
     "nodemailer": "^7.0.13"
