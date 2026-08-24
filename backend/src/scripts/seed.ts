@@ -66,11 +66,12 @@ const FULFILLMENT_PROVIDER_ID = "swiss-shipping_swiss-shipping";
  * CHF — Dezimalbeträge, nicht Rappen.
  * NUR für Beschriftungen. Die tatsächliche Berechnung macht
  * SwissShippingProviderService.calculatePrice() mit den Werten aus
- * medusa-config.ts (fixedPrice / freeShippingThreshold) — beide Stellen
+ * medusa-config.ts (letterPrice / parcelPrice / freeShippingThreshold) — beide Stellen
  * müssen synchron gehalten werden.
  */
-const SHIPPING_FLAT_PRICE = 9;
-const FREE_SHIPPING_THRESHOLD = 100;
+const SHIPPING_LETTER_PRICE = 3.75;
+const SHIPPING_PARCEL_PRICE = 9;
+const FREE_SHIPPING_THRESHOLD = 69;
 
 /** Schweizer MwSt.-Normalsatz seit 01.01.2024. */
 const CH_VAT_RATE = 8.1;
@@ -323,8 +324,9 @@ export default async function seedJibbitData({ container }: ExecArgs) {
     });
 
     // EINE `calculated` Option, der Preis kommt aus
-    // SwissShippingProviderService.calculatePrice() (CHF 9.00, ab CHF 100.00
-    // Warenwert CHF 0.00).
+    // SwissShippingProviderService.calculatePrice(): Brief CHF 3.75,
+    // Paket CHF 9.00, ab CHF 69.00 Warenwert gratis. Brief oder Paket
+    // entscheidet das Variantengewicht.
     //
     // WARUM NICHT zwei FLAT Optionen mit `item_total`-Rules (naheliegender
     // und in vielen Tutorials so gezeigt)? Weil numerische Rules in Medusa
@@ -353,7 +355,7 @@ export default async function seedJibbitData({ container }: ExecArgs) {
           shipping_profile_id: shippingProfile.id,
           type: {
             label: "Standard",
-            description: `Schweizer Post, 2–3 Werktage. CHF ${SHIPPING_FLAT_PRICE}.00 — ab CHF ${FREE_SHIPPING_THRESHOLD}.00 Warenwert gratis.`,
+            description: `Schweizer Post, 2–3 Werktage. Brief CHF ${SHIPPING_LETTER_PRICE.toFixed(2)}, Paket CHF ${SHIPPING_PARCEL_PRICE.toFixed(2)} — ab CHF ${FREE_SHIPPING_THRESHOLD}.00 gratis.`,
             code: "standard",
           },
           // `calculated` Optionen führen KEINE hinterlegten Preise —
