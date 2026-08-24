@@ -89,6 +89,37 @@ type InjectedDependencies = {
 }
 
 /**
+ * Eine OPTIONALE Abhaengigkeit aus dem Container lesen.
+ *
+ * ⚠️ WARUM NICHT EINFACH `container.idempotencyStore`: Medusa reicht zur
+ * Laufzeit Awilix' Cradle-Proxy herein. Ein Zugriff auf einen NICHT
+ * registrierten Namen liefert dort kein `undefined` — er WIRFT
+ * (`AwilixResolutionError`). Der Ausdruck
+ *
+ *     container.idempotencyStore ?? fallback
+ *
+ * kommt deshalb nie beim Fallback an, sondern reisst die Erzeugung des
+ * Providers ab. Medusa meldet das anschliessend als «Unable to retrieve the
+ * payment provider with id: pp_payrexx_payrexx» — eine Meldung, die auf eine
+ * falsche Konfiguration zeigt, obwohl die Konfiguration stimmt. Die Kasse
+ * antwortet dem Kunden mit 500.
+ *
+ * In den Tests wird ein schlichtes Objekt uebergeben; dort IST ein fehlender
+ * Schluessel `undefined`. Genau deshalb blieb der Fehler in einer gruenen
+ * Testsuite unsichtbar und trat erst im Container auf.
+ */
+function optionalDependency<T>(
+  container: unknown,
+  key: "idempotencyStore" | "sessionStateStore"
+): T | undefined {
+  try {
+    return (container as Record<string, T | undefined>)[key]
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Payrexx-Status → Medusa-PaymentSessionStatus.
  *
  * Dieselbe Tabelle, die webhook.ts für die Webhook-Aktionen benutzt — nur in
@@ -149,7 +180,17 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
 
     const redisUrl = process.env.REDIS_URL
 
-    if (!redisUrl && !container.idempotencyStore) {
+    // Ueber optionalDependency() lesen, NICHT direkt — siehe dort.
+    const injectedIdempotencyStore = optionalDependency<IdempotencyStore>(
+      container,
+      "idempotencyStore"
+    )
+    const injectedSessionStateStore = optionalDependency<SessionStateStore>(
+      container,
+      "sessionStateStore"
+    )
+
+    if (!redisUrl && !injectedIdempotencyStore) {
       this.logger_.warn(
         "Payrexx: REDIS_URL not set — falling back to in-memory webhook " +
           "idempotency and session state. This survives neither a process " +
@@ -162,12 +203,12 @@ class PayrexxPaymentProviderService extends AbstractPaymentProvider<PayrexxProvi
       webhookSecret: options.webhookSecret,
       logger: this.logger_,
       idempotencyStore:
-        container.idempotencyStore ??
+        injectedIdempotencyStore ??
         (redisUrl
           ? new RedisIdempotencyStore({ redisUrl, logger: this.logger_ })
           : new InMemoryIdempotencyStore()),
       sessionStore:
-        container.sessionStateStore ??
+        injectedSessionStateStore ??
         (redisUrl
           ? new RedisSessionStateStore({ redisUrl, logger: this.logger_ })
           : new InMemorySessionStateStore()),
