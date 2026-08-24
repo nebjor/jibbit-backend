@@ -2,6 +2,12 @@ import { join } from 'node:path'
 
 import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
+import {
+  buildZahlsProviderOptions,
+  isZahlsPluginConfigured,
+  missingZahlsPluginEnv,
+} from './src/lib/zahls-plugin'
+
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
 /**
@@ -52,7 +58,45 @@ const enabledPsps = (process.env.PAYREXX_ENABLED_PSPS || '')
   .map((id) => Number(id.trim()))
   .filter((id) => Number.isFinite(id) && id > 0)
 
+/**
+ * zahls.ch über das OFFIZIELLE Plugin (@zahls/medusa-plugin).
+ *
+ * Der Provider wird NUR registriert, wenn ZAHLS_INSTANCE, ZAHLS_API_KEY und
+ * ZAHLS_WEBHOOK_SECRET alle gesetzt sind. Grund: `validateOptions()` im
+ * Plugin wirft bei jedem fehlenden Wert bereits beim Laden des
+ * Payment-Moduls — ein halb gefülltes .env würde den ganzen Shop am Start
+ * hindern (dieselbe Falle wie beim Payrexx-Modul mit leerem webhookSecret).
+ * Ohne vollständige Werte startet Medusa deshalb normal, nur eben ohne den
+ * zahls.ch-Provider; die Warnung unten sagt im Log, was fehlt.
+ *
+ * Provider-Kennung: pp_zahls_zahls (siehe src/lib/zahls-plugin.ts).
+ * Webhook-Adresse:  https://<API_DOMAIN>/hooks/payment/zahls_zahls
+ *
+ * Das vorhandene Payrexx-Modul (./src/modules/payrexx) bleibt vorerst
+ * PARALLEL registriert — es ist die aktuell laufende Lösung. Die Ablösung
+ * ist in docs/zahls-plugin.md beschrieben.
+ */
+const zahlsConfigured = isZahlsPluginConfigured(process.env)
+if (!zahlsConfigured) {
+  const missing = missingZahlsPluginEnv(process.env)
+  // console statt Logger: der Medusa-Logger existiert an dieser Stelle noch
+  // nicht — medusa-config wird vor allen Loadern ausgewertet.
+  console.warn(
+    `[zahls.ch] Provider nicht registriert — es fehlt: ${missing.join(', ')}. ` +
+      `Der Shop startet ohne zahls.ch-Zahlarten (Plugin-Checkout).`
+  )
+}
+
 module.exports = defineConfig({
+  plugins: [
+    // Offizielles zahls.ch-Plugin. Der Eintrag lädt die Plugin-Ressourcen
+    // (Admin-Erweiterungen; API-Routen bringt es keine mit) — der
+    // Payment-Provider selbst wird unten im payment-Modul registriert.
+    {
+      resolve: '@zahls/medusa-plugin',
+      options: {},
+    },
+  ],
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
 
@@ -113,6 +157,17 @@ module.exports = defineConfig({
       resolve: '@medusajs/medusa/payment',
       options: {
         providers: [
+          // zahls.ch (offizielles Plugin) — nur bei vollständiger
+          // Konfiguration, siehe Kommentar bei `zahlsConfigured` oben.
+          ...(zahlsConfigured
+            ? [
+                {
+                  resolve: '@zahls/medusa-plugin/providers/zahls',
+                  id: 'zahls',
+                  options: buildZahlsProviderOptions(process.env),
+                },
+              ]
+            : []),
           {
             resolve: './src/modules/payrexx',
             id: 'payrexx',
