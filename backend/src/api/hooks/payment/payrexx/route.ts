@@ -127,3 +127,24 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   const logger = req.scope.resolve<Logger>(ContainerRegistrationKeys.LOGGER)
   await handlePayrexxWebhook(req, res, getPayrexxRuntime(logger), logger)
 }
+
+/**
+ * Erreichbarkeitsprüfung — NICHT der Webhook selbst.
+ *
+ * Payrexx und zahls.ch prüfen eine eingetragene Webhook-Adresse, bevor sie
+ * sie annehmen. Diese Prüfung ist ein schlichter GET. Solange hier nur POST
+ * definiert war, antwortete Medusa darauf mit 404, und das Anbieter-Backend
+ * wies die Adresse als «nicht gültig» zurück — obwohl die Route existierte
+ * und für echte Webhooks einwandfrei funktioniert hätte.
+ *
+ * Bewusst OHNE jede Aussage über den Zustand: keine Angabe, ob Zugangsdaten
+ * hinterlegt sind, ob Redis läuft oder welche Instanz konfiguriert ist. Die
+ * Adresse ist öffentlich und unauthentifiziert erreichbar; alles, was hier
+ * mehr stünde, wäre eine Auskunft an jeden, der sie errät.
+ *
+ * Keine Seiteneffekte: kein Zugriff auf die Payrexx-Laufzeit, keine
+ * Idempotenz-Einträge, keine Zahlungslogik.
+ */
+export const GET = async (_req: MedusaRequest, res: MedusaResponse) => {
+  res.status(200).json({ status: "ok", accepts: "POST" })
+}
