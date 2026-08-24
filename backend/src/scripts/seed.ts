@@ -8,7 +8,9 @@
  * CHF 27.00 === 27. Alle `amount`-Werte hier sind Franken, keine Rappen.
  *
  * Provider-IDs (verifiziert gegen die DB nach `medusa db:migrate`):
- *   payment_provider      → pp_system_default, pp_payrexx_payrexx
+ *   payment_provider      → pp_system_default, pp_payrexx_payrexx,
+ *                           pp_zahls_zahls (nur bei gesetzter ZAHLS_*-Env,
+ *                           siehe Kommentar an der Region unten)
  *   fulfillment_provider  → swiss-shipping_swiss-shipping
  * `manual_manual` existiert in diesem Projekt NICHT — medusa-config.ts
  * registriert ausschliesslich den swiss-shipping Provider.
@@ -39,6 +41,11 @@ import {
   linkSalesChannelsToStockLocationWorkflow,
   updateStoresWorkflow,
 } from "@medusajs/medusa/core-flows";
+
+import {
+  isZahlsPluginConfigured,
+  ZAHLS_PROVIDER_ID,
+} from "../lib/zahls-plugin";
 
 // Der Stock-Seed importierte `ApiKey` aus ../../.medusa/types/query-entry-points.
 // Diese Datei wird generiert und existiert vor dem ersten Build nicht — der
@@ -154,7 +161,25 @@ export default async function seedJibbitData({ container }: ExecArgs) {
             // Solange keine Payrexx-Credentials gesetzt sind, schlägt
             // initiatePayment zur Laufzeit fehl — pp_system_default bleibt
             // deshalb als funktionierende Dev-Zahlart aktiv.
-            payment_providers: ["pp_system_default", "pp_payrexx_payrexx"],
+            //
+            // pp_zahls_zahls (offizielles zahls.ch-Plugin) kommt NUR dazu,
+            // wenn der Provider auch registriert ist — d.h. wenn
+            // ZAHLS_INSTANCE, ZAHLS_API_KEY und ZAHLS_WEBHOOK_SECRET gesetzt
+            // sind (siehe medusa-config.ts). Stünde die Kennung hier
+            // bedingungslos, schlüge der Seed auf einer Instanz ohne
+            // zahls-Konfiguration fehl: createRegionsWorkflow validiert
+            // jede payment_provider-ID gegen die geladenen Provider.
+            //
+            // Auf einer BESTEHENDEN Instanz (Region existiert schon) ändert
+            // der Seed nichts — dort den Provider im Admin aktivieren:
+            // Einstellungen → Regionen → Schweiz → zahls.ch hinzufügen.
+            payment_providers: [
+              "pp_system_default",
+              "pp_payrexx_payrexx",
+              ...(isZahlsPluginConfigured(process.env)
+                ? [ZAHLS_PROVIDER_ID]
+                : []),
+            ],
           },
         ],
       },
