@@ -1,15 +1,79 @@
-# Payrexx in Betrieb nehmen — Betreiber-Anleitung
+# Payrexx / zahls.ch in Betrieb nehmen — Betreiber-Anleitung
 
-Stand: 2026-08-20. Gilt für `backend/src/modules/payrexx/` (Medusa v2.13.6).
+Stand: 2026-08-21. Gilt für `backend/src/modules/payrexx/` (Medusa v2.13.6).
 
 Diese Datei beschreibt, **was der Betreiber eintragen muss**, damit über
-jibbit.ch echtes Geld fliessen kann. Der Code ist fertig; was fehlt, sind
-Zugangsdaten und zwei Einstellungen im Payrexx-Backend.
+jibbit.ch Geld fliessen kann — zunächst im zahls.ch-Testmodus, später echt.
+Der Code ist fertig; was fehlt, sind Zugangsdaten und zwei Einstellungen im
+Anbieter-Backend.
 
-Die **kaufmännische** Vorfrage — ob Payrexx unser Sortiment überhaupt
+Die **kaufmännische** Vorfrage — ob der Anbieter unser Sortiment überhaupt
 akzeptiert — steht in [`payment-providers-setup.md`](./payment-providers-setup.md)
-und ist der eigentliche Blocker. Ohne schriftliche Zusage von Payrexx
-Compliance bringt alles hier nichts.
+und ist der eigentliche Blocker. Ohne schriftliche Zusage der Compliance
+bringt alles hier nichts.
+
+---
+
+## 0. zahls.ch = Payrexx-Plattform unter anderem Namen
+
+Das Konto läuft bei **zahls.ch** (siebenberge gmbh, CHE‑236.282.765). zahls.ch
+ist ein **White-Label der Payrexx-Plattform** — dasselbe Produkt, andere
+Marke. Belege:
+
+- Die Verwaltung liegt unter `https://jibbit.zahls.ch/cadmin/…` (Payrexx'
+  Adressschema), die Zahlungsanbieter heissen dort „Payrexx Pay“ /
+  „Payrexx Pay Plus“.
+- Das **offizielle zahls.ch-WooCommerce-Plugin** (`zahls-ch-payment-gateway`
+  im WordPress-Verzeichnis) bündelt den Payrexx-PHP-Client mit umbenannten
+  Klassen und exakt einer inhaltlichen Änderung:
+  `const API_URL_BASE_DOMAIN = 'zahls.ch'` bei URL-Schema
+  `https://api.%s/…` — die API läuft also unter **`https://api.zahls.ch/v1.0/`**
+  und ist ansonsten die dokumentierte Payrexx REST API v1.0
+  (<https://developers.payrexx.com/reference/rest-api>).
+
+Das Modul spricht deshalb wahlweise beide Hosts — der Unterschied ist **eine
+Umgebungsvariable**, kein Code:
+
+```
+PAYREXX_INSTANCE=jibbit                          # aus https://jibbit.zahls.ch
+PAYREXX_API_BASE_URL=https://api.zahls.ch/v1.0/  # leer lassen für Payrexx selbst
+```
+
+**Restunsicherheit:** eine eigene zahls.ch-Entwicklerdokumentation ist nicht
+auffindbar (`zahls.ch/de/entwicklerdocs/rest-api` liefert 404); Grundlage sind
+die Payrexx-Dokumentation und der Quelltext des offiziellen Plugins. Ob auch
+die **Webhook-Signatur** (`X-Webhook-Signature`) beim White-Label identisch
+ausgeliefert wird, muss die erste Testtransaktion zeigen — steht im
+zahls.ch-Backend unter *Integrationen → Webhooks* kein Signatur-Schlüssel zur
+Verfügung, **nicht scharfschalten**, sondern zuerst den zahls.ch-Support
+fragen (jeder unsignierte Webhook wird von uns mit 401 abgewiesen).
+
+### Testmodus: eine Bestellung ohne echtes Geld durchspielen
+
+Im zahls.ch-Backend (`cadmin`):
+
+1. *Checkout → Zahlungsanbieter*: „Payrexx Pay“ auf **TEST MODUS** lassen.
+   Solange der PSP im Testmodus steht, bewegt keine Transaktion echtes Geld;
+   die Bezahlseite bietet Testzahlungen an (bei Karten die üblichen
+   Test-Kartennummern der Plattform, TWINT/Wallets als Simulation).
+2. *Integrationen → API und Integrationen*: API-Schlüssel erzeugen →
+   `PAYREXX_API_SECRET`.
+3. *Integrationen → Webhooks*: Webhook anlegen (URL siehe §2, Ereignistyp
+   Transaction) und den zugehörigen Signatur-Schlüssel als
+   `PAYREXX_WEBHOOK_SECRET` übernehmen.
+4. `.env` setzen (siehe §1, inklusive `PAYREXX_API_BASE_URL`), dann
+   `docker compose up -d medusa`.
+5. Im Shop eine Bestellung bis zur Kasse durchklicken → die Weiterleitung
+   führt auf `jibbit.zahls.ch`, dort mit Testdaten „bezahlen“ → zurück im
+   Shop muss die Bestellbestätigung erscheinen und im Medusa-Admin eine
+   Bestellung mit autorisierter Zahlung liegen.
+6. Danach die Signaturprüfung testen: der `curl` in §2 mit gefälschter
+   Signatur **muss 401** liefern.
+7. Betrag gegenprüfen: die Transaktion im zahls.ch-Dashboard muss auf den
+   Rappen dem Bestellbetrag entsprechen (§5).
+
+Die laufende Konto-Verifizierung („ein bis zwei Werktage“) blockiert den
+Testmodus nicht — sie ist Voraussetzung für echte Zahlungen, nicht für Tests.
 
 ---
 
@@ -21,9 +85,10 @@ Alles in die `.env` **im Repository-Wurzelverzeichnis** (nicht in
 
 | Variable | Woher | Ohne diesen Wert |
 |---|---|---|
-| `PAYREXX_INSTANCE` | Payrexx-Backend → der Name in der URL `https://<instance>.payrexx.com` | Jeder API-Aufruf schlägt fehl |
-| `PAYREXX_API_SECRET` | Payrexx-Backend → **Einstellungen → API & Plugins → API-Schlüssel** | Gateway-Erstellung schlägt fehl |
-| `PAYREXX_WEBHOOK_SECRET` | Payrexx-Backend → **Einstellungen → Webhooks** (Signatur-Schlüssel) | Jeder Webhook wird mit **401** abgewiesen |
+| `PAYREXX_INSTANCE` | Der Name in der Konto-URL: `https://<instance>.zahls.ch` bzw. `https://<instance>.payrexx.com` — für jibbit.zahls.ch also `jibbit` | Jeder API-Aufruf schlägt fehl |
+| `PAYREXX_API_BASE_URL` | Fest je Anbieter: `https://api.zahls.ch/v1.0/` für zahls.ch; **leer lassen** für Payrexx selbst (`https://api.payrexx.com/v1.0/`) | Aufrufe gehen an api.payrexx.com — bei einem zahls.ch-Konto kennt der Host die Instanz nicht |
+| `PAYREXX_API_SECRET` | zahls.ch-Backend → **Integrationen → API und Integrationen** (bei Payrexx: Einstellungen → API & Plugins) | Gateway-Erstellung schlägt fehl |
+| `PAYREXX_WEBHOOK_SECRET` | zahls.ch-Backend → **Integrationen → Webhooks** (Signatur-Schlüssel des angelegten Webhooks) | Jeder Webhook wird mit **401** abgewiesen |
 | `PAYREXX_ENABLED_PSPS` | Liste, siehe §3 | Payrexx zeigt dem Kunden **alle** freigeschalteten Methoden — kein Fehler, aber unkontrolliert |
 | `STORE_URL` | Die öffentliche Storefront-URL, z.B. `https://jibbit.ch` | Der Kunde wird nach der Zahlung auf `localhost:8000` geschickt |
 | `REDIS_URL` | Ist im Compose-Betrieb schon gesetzt (`redis://redis:6379`) | Idempotenz und Betragsabgleich fallen auf In-Memory zurück — **nicht produktionstauglich** |
@@ -39,9 +104,10 @@ nötig — die Werte kommen zur Laufzeit aus der Umgebung).
 
 ---
 
-## 2. Webhook-URL bei Payrexx hinterlegen
+## 2. Webhook-URL hinterlegen
 
-Payrexx-Backend → **Einstellungen → Webhooks → Webhook hinzufügen**:
+zahls.ch-Backend → **Integrationen → Webhooks → Webhook hinzufügen** (bei
+Payrexx: Einstellungen → Webhooks). Die einzutragende URL ist:
 
 ```
 https://api.jibbit.ch/hooks/payment/payrexx
@@ -108,9 +174,11 @@ einer Bezahlseite ohne die gewünschte Methode.
 Abrufen, sobald der Account existiert:
 
 ```bash
-# Signatur über einen LEEREN Query-String, base64-kodiert
+# Signatur über einen LEEREN Query-String, base64-kodiert.
+# BASE ist der Wert von PAYREXX_API_BASE_URL — für zahls.ch also
+# https://api.zahls.ch/v1.0 (für Payrexx selbst https://api.payrexx.com/v1.0).
 SIG=$(printf '' | openssl dgst -sha256 -hmac "$PAYREXX_API_SECRET" -binary | base64)
-curl -s "https://api.payrexx.com/v1.0/PaymentProvider/?instance=$PAYREXX_INSTANCE&ApiSignature=$(printf %s "$SIG" | jq -sRr @uri)"
+curl -s "$BASE/PaymentProvider/?instance=$PAYREXX_INSTANCE&ApiSignature=$(printf %s "$SIG" | jq -sRr @uri)"
 ```
 
 Endpunkt-Referenz:
@@ -119,11 +187,12 @@ Endpunkt-Referenz:
 In der Antwort:
 
 - **TWINT** → der Eintrag mit `name: "twint"`, dessen `id` eintragen.
-- **Rechnungskauf / Powerpay** → der Eintrag mit `name: "powerpay"`.
-  Erscheint erst, wenn der separate Vertrag mit der MF Group besteht und im
-  Payrexx-Backend verbunden ist.
-- **Karten** kommen bei Payrexx Pay über den Standard-Acquirer und brauchen
+- **Karten** kommen bei „Payrexx Pay“ über den Standard-Acquirer und brauchen
   in der Regel keinen eigenen Eintrag.
+- **Rechnungskauf**: bei zahls.ch gibt es **kein Powerpay** — Rechnungs- bzw.
+  Ratenkauf läuft dort über **Klarna** und nur mit „Payrexx Pay Plus“.
+  (Bei einem direkten Payrexx-Konto wäre es der Eintrag `name: "powerpay"`,
+  der einen separaten Vertrag mit der MF Group voraussetzt.)
 
 Beispiel für „nur TWINT und Powerpay anbieten“:
 
@@ -241,7 +310,9 @@ Payrexx-Dashboard. Der Admin-Weg ruft Payrexx auf und schreibt beides fort.
 | 3 | Vor Powerpay: klären, ob MF Group das **Delkredere-Risiko ab Zusage** trägt | Der Status `waiting` wird als „autorisiert" behandelt, wir versenden also vor Zahlungseingang |
 | 4 | Prüfen, ob Karten-Zahlungen bei Payrexx als **Pre-Authorization** oder als Direktbelastung ankommen | Bei Direktbelastung ist „Capture" im Admin nur eine Buchung; das Modul erkennt eine bereits verbuchte Transaktion und ruft Payrexx dann nicht erneut auf |
 | 5 | `@medusajs/event-bus-redis` + `@medusajs/workflow-engine-redis` einrichten | Aktuell laufen Event-Bus und Workflow-Engine in-memory. Unsere Webhook-Route ist davon unabhängig (sie verarbeitet synchron), aber alles andere Asynchrone im System überlebt keinen Neustart |
-| 6 | Ein **zweites Zahlungsmittel** (Vorauskasse) aktivieren | Damit der Shop weiterläuft, wenn Payrexx pausiert |
+| 6 | Ein **zweites Zahlungsmittel** (Vorauskasse) aktivieren | Damit der Shop weiterläuft, wenn der Anbieter pausiert |
+| 7 | **`pp_system_default` aus der Schweiz-Region entfernen** (Medusa-Admin → Settings → Regions, oder im Seed) | Der eingebaute Provider **autorisiert, ohne Geld zu bewegen**. Die Storefront bevorzugt ihn nicht mehr, aber solange er an der Region hängt, kann ein direkt gegen die Store-API gerichteter Request damit eine unbezahlte „bezahlte“ Bestellung erzeugen. Erst entfernen, wenn zahls.ch produktiv ist — er ist bis dahin der einzige Weg, den Checkout ohne PSP zu testen |
+| 8 | Verifizieren, dass zahls.ch-Webhooks die **`X-Webhook-Signature`** tragen | Grundlage ist die Payrexx-Doku, nicht eine zahls.ch-eigene (siehe §0). Ohne Signatur weist unsere Route alles mit 401 ab — dann zahls.ch-Support kontaktieren, nicht die Prüfung abschalten |
 
 ---
 
@@ -249,8 +320,9 @@ Payrexx-Dashboard. Der Admin-Weg ruft Payrexx auf und schreibt beides fort.
 
 ```bash
 docker compose exec medusa printenv | grep -c PAYREXX_
-# muss 4 sein — die Werte selbst NICHT ausgeben
+# muss 5 sein (zahls.ch, inkl. PAYREXX_API_BASE_URL) bzw. 4 (Payrexx direkt)
+# — die Werte selbst NICHT ausgeben
 ```
 
-Sind es weniger als 4, fehlt ein Eintrag in der `.env` oder der Container
+Sind es weniger, fehlt ein Eintrag in der `.env` oder der Container
 wurde nach der Änderung nicht neu gestartet.

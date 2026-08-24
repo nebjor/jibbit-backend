@@ -86,8 +86,13 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET muss gesetzt sein}
       COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET muss gesetzt sein}
 
-      # Payrexx
+      # Payrexx / zahls.ch
       PAYREXX_INSTANCE: ${PAYREXX_INSTANCE}
+      # Leer = api.payrexx.com. Fuer ein zahls.ch-Konto zwingend
+      # https://api.zahls.ch/v1.0/ — ohne diese Zeile erreicht der Wert aus
+      # der .env den Container NIE, und das Modul spricht stillschweigend
+      # den falschen Host an.
+      PAYREXX_API_BASE_URL: ${PAYREXX_API_BASE_URL:-}
       PAYREXX_API_SECRET: ${PAYREXX_API_SECRET}
       PAYREXX_WEBHOOK_SECRET: ${PAYREXX_WEBHOOK_SECRET}
       PAYREXX_ENABLED_PSPS: ${PAYREXX_ENABLED_PSPS:-}

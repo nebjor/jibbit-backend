@@ -91,19 +91,78 @@ export function extractGatewayTransaction(
 export interface PayrexxClientOptions {
   instance: string
   apiSecret: string
+  /**
+   * Basis-Adresse der REST API, inklusive Versionspfad.
+   *
+   * Default ist Payrexx selbst. White-Label-Betreiber derselben Plattform
+   * sprechen dieselbe API unter eigenem Host — zahls.ch (siebenberge gmbh)
+   * z.B. unter `https://api.zahls.ch/v1.0/`. Beleg: das offizielle
+   * zahls.ch-WooCommerce-Plugin bündelt den Payrexx-PHP-Client mit
+   * `API_URL_BASE_DOMAIN = 'zahls.ch'` und URL-Schema `https://api.%s/…`.
+   * Der Wert kommt aus `PAYREXX_API_BASE_URL`; ohne ihn ändert sich nichts.
+   */
+  baseUrl?: string
+}
+
+/** Payrexx' eigener API-Host — der Default, wenn nichts konfiguriert ist. */
+export const DEFAULT_PAYREXX_API_BASE_URL = "https://api.payrexx.com/v1.0/"
+
+/**
+ * Normalisiert und validiert die konfigurierte API-Basis-Adresse.
+ *
+ * - leer/undefined → Payrexx-Default (bestehende Installationen unverändert)
+ * - fehlender Slash am Ende wird ergänzt (axios hängt relative Pfade sonst an
+ *   das letzte Segment: aus `…/v1.0` + `Gateway/` würde `…/Gateway/`)
+ * - alles ausser `https:` wird abgelehnt, denn über diese Verbindung wandert
+ *   das API-Secret. Einzige Ausnahme: `http://localhost|127.0.0.1` für Tests
+ *   gegen einen lokal nachgebauten Server.
+ *
+ * Wirft bei einem unbrauchbaren Wert sofort — ein Tippfehler in der .env soll
+ * beim Start knallen, nicht erst beim ersten Bezahlversuch eines Kunden.
+ */
+export function normalizePayrexxApiBaseUrl(raw: string | undefined): string {
+  const value = (raw ?? "").trim()
+  if (!value) {
+    return DEFAULT_PAYREXX_API_BASE_URL
+  }
+
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error(
+      `PAYREXX_API_BASE_URL is not a valid URL: '${value}'. ` +
+        `Expected e.g. 'https://api.payrexx.com/v1.0/' or 'https://api.zahls.ch/v1.0/'.`
+    )
+  }
+
+  const isLocalhost =
+    url.hostname === "localhost" || url.hostname === "127.0.0.1"
+
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocalhost)) {
+    throw new Error(
+      `PAYREXX_API_BASE_URL must use https (got '${value}'). ` +
+        `The API secret travels over this connection.`
+    )
+  }
+
+  return value.endsWith("/") ? value : `${value}/`
 }
 
 export class PayrexxClient {
   private httpClient: AxiosInstance
   private apiSecret: string
   private instance: string
+  /** Nur für Diagnose/Tests lesbar — nie zusammen mit Secrets loggen. */
+  readonly baseUrl: string
 
   constructor(options: PayrexxClientOptions) {
     this.instance = options.instance
     this.apiSecret = options.apiSecret
+    this.baseUrl = normalizePayrexxApiBaseUrl(options.baseUrl)
 
     this.httpClient = axios.create({
-      baseURL: `https://api.payrexx.com/v1.0/`,
+      baseURL: this.baseUrl,
       timeout: 15000,
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
