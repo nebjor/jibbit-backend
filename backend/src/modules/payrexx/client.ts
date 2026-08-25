@@ -168,6 +168,47 @@ export class PayrexxClient {
         "Content-Type": "application/x-www-form-urlencoded",
       },
     })
+
+    // ─── Warum dieser Interceptor ──────────────────────────────────────────
+    //
+    // Axios wirft bei einem Fehlerstatus mit der Meldung «Request failed with
+    // status code 403» — und sonst nichts. Payrexx legt den GRUND aber in den
+    // Antwortkoerper (`{"status":"error","message":"…"}`). Ohne diesen
+    // Interceptor landet im Log nur die Statuszahl, und ein 403 kann dann
+    // ebenso gut ein falscher Schluessel, eine falsche Instanz oder der
+    // falsche Host sein. Das hat hier bereits eine Fehlersuche gekostet.
+    //
+    // Bewusst NICHT protokolliert wird der Query-String: dort steht die
+    // `ApiSignature`. Sie ist zwar nicht der Schluessel selbst, aber ein aus
+    // ihm abgeleiteter Wert — der gehoert nicht in Containerlogs, die
+    // weitergereicht und archiviert werden. Deshalb wird die Adresse am `?`
+    // abgeschnitten.
+    this.httpClient.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const status = error?.response?.status
+        if (!status) {
+          return Promise.reject(error)
+        }
+
+        const data = error?.response?.data
+        let detail: string
+        try {
+          detail = typeof data === "string" ? data : JSON.stringify(data)
+        } catch {
+          detail = String(data)
+        }
+
+        const method = String(error?.config?.method ?? "").toUpperCase()
+        const path = String(error?.config?.url ?? "").split("?")[0]
+
+        error.message =
+          `Payrexx API ${status} on ${method} ${path} — ` +
+          `${(detail ?? "").slice(0, 400)}`
+
+        return Promise.reject(error)
+      }
+    )
   }
 
   /**
