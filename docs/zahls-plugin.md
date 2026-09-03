@@ -61,8 +61,8 @@ Stand: 2026-08-24. Betrifft `@zahls/medusa-plugin@0.0.1` auf Medusa **2.13.6**.
   diesen Pfad ist in `backend/src/api/middlewares.ts` gesetzt — nicht
   entfernen, sonst stimmt keine Signatur mehr.
 - **Statusmeldung:** `confirmed` → Webhook-Aktion **`captured`**
-  (`PaymentActions.SUCCESSFUL`). Das ist anders als beim Payrexx-Modul
-  (`confirmed` → `authorized`), aber auf 2.13.6 sicher: das Payment-Modul
+  (`PaymentActions.SUCCESSFUL`). Das ist anders als beim früheren
+  Eigenbau-Modul (`confirmed` → `authorized`), aber auf 2.13.6 sicher: das Payment-Modul
   bricht eine zweite Capture an `payment.captured_at` ab, und das
   provider-seitige `capturePayment` des Plugins ist bei einem bereits
   bestätigten Gateway ein No-Op (kein zweiter API-Aufruf Richtung zahls.ch).
@@ -102,46 +102,42 @@ Nicht hier entschieden — Abwägung für den Betreiber:
 
 | | Bleiben auf 2.13.6 (dieser Stand) | Upgrade auf 2.18.0 |
 |---|---|---|
-| Aufwand | erledigt | alle `@medusajs/*` gleichziehen, Migrationen fahren, alle Module/Routen/Workflows nachtesten (payrexx, swiss-shipping, smtp, Odoo-Skripte), Docker-Lockfile neu |
+| Aufwand | erledigt | alle `@medusajs/*` gleichziehen, Migrationen fahren, alle Module/Routen/Workflows nachtesten (swiss-shipping, smtp, Odoo-Skripte), Docker-Lockfile neu |
 | Risiko | `waiting`-Lücke (harmlos, s.o.); `legacy-peer-deps` bleibt nötig | Breaking Changes über 5 Minor-Versionen; produktive Instanz mit Livedaten |
 | Gewinn | — | Peer-Pins passen wieder, `waiting` → sauberes `pending_authorization` |
 
-## Webhook-Zuverlässigkeit — ehrlicher Unterschied zum Payrexx-Modul
+## Webhook-Zuverlässigkeit — ehrlich benannt
 
 Die eingebaute Route antwortet **immer 200** (auch bei ungültiger Signatur)
 und verarbeitet **asynchron** über den Event-Bus mit 5 s Verzögerung. Dieses
 Projekt fährt den **In-Memory**-Event-Bus: ein Neustart in diesem Fenster
 verliert das Ereignis, und zahls.ch wiederholt nicht, weil es schon 200
-bekommen hat. Das Payrexx-Modul hat für genau diese Punkte eine eigene
-synchrone Route mit ehrlichen Statuscodes (401/500) gebaut.
+bekommen hat. Das frühere Eigenbau-Modul hatte für genau diese Punkte eine
+eigene synchrone Route mit ehrlichen Statuscodes (401/500) gebaut.
 
 Das ist der Preis des offiziellen Plugins in Standardkonfiguration. Milderung
 ohne Eigenbau: Redis-Event-Bus (`@medusajs/event-bus-redis`) konfigurieren —
 Redis läuft im Stack bereits. Das ist hier **nicht** Teil dieses Umbaus und
 sollte vor dem Livegang entschieden werden.
 
-## Was mit dem Payrexx-Modul geschieht
+## Ablösung des früheren Payrexx-Eigenbau-Moduls — vollzogen
 
-`backend/src/modules/payrexx/` bleibt **parallel registriert** — es ist die
-derzeit laufende Lösung (über `PAYREXX_API_BASE_URL=https://api.zahls.ch/v1.0/`
-spricht es dasselbe zahls.ch-Konto an). Beide Provider können gleichzeitig an
-der Region hängen; im Checkout erscheint jeder als eigene Zahlart.
+Das Eigenbau-Modul (`backend/src/modules/payrexx/`, sprach dasselbe
+zahls.ch-Konto über die Payrexx-API an) ist **entfernt**, samt seiner Routen
+(`/hooks/payment/payrexx`, `/store/payrexx/return`), Tests und
+`PAYREXX_*`-Variablen. Das offizielle Plugin ist der einzige
+Zahlungsanbieter.
 
-Ablösung, wenn der Plugin-Weg im Testmodus durchgespielt ist:
+Auf dem Server ist dafür einmalig nötig:
 
-1. Storefront auf den Plugin-Flow umstellen (Redirect auf
-   `paymentSession.data.link`; Rückkehrseite darf sich nicht mehr auf
-   `?payment_session_id=…` verlassen — die Redirect-URLs des Plugins sind
-   statisch, massgeblich ist der Webhook).
-2. `pp_payrexx_payrexx` in Admin → Regionen von der Region nehmen.
-3. Payrexx-Modul, seine Routen (`/hooks/payment/payrexx`,
-   `/store/payrexx/return`), Tests und `PAYREXX_*`-Variablen entfernen;
-   Webhook-Eintrag im zahls.ch-Backend auf die neue Adresse umstellen.
-
-Bis dahin gilt: **zwei Webhook-Adressen sind zwei verschiedene Dinge.**
-`/hooks/payment/payrexx` gehört zum alten Modul,
-`/hooks/payment/zahls_zahls` zum Plugin. Im zahls.ch-Backend muss die
-Adresse zu dem Provider passen, über den die Zahlung angelegt wurde.
+1. `pp_payrexx_payrexx` in Admin → Einstellungen → Regionen → Schweiz von
+   der Region nehmen (falls noch vorhanden) und stattdessen **zahls.ch**
+   (`pp_zahls_zahls`) hinzufügen.
+2. Den Webhook-Eintrag im zahls.ch-Backend auf
+   `https://<API_DOMAIN>/hooks/payment/zahls_zahls` umstellen — die alte
+   Adresse `/hooks/payment/payrexx` existiert nicht mehr.
+3. In der `.env` die drei `ZAHLS_*`-Pflichtwerte setzen (s. Kurzfassung
+   oben); alte `PAYREXX_*`-Einträge können weg.
 
 ## Nicht verifiziert (ehrlicherweise)
 
@@ -149,6 +145,7 @@ Adresse zu dem Provider passen, über den die Zahlung angelegt wurde.
   TWINT-Testzahlung, Webhook-Empfang) — dafür braucht es die echten
   TEST-Zugangsdaten des Betreibers.
 - Die GET-Prüfung von zahls.ch wurde gegen die neue Route nicht live
-  ausgelöst (gleicher Mechanismus wie beim Payrexx-Modul, dort belegt).
+  ausgelöst (gleicher Mechanismus wie beim früheren Eigenbau-Modul, dort
+  belegt).
 - Ob zahls.ch für `waiting` überhaupt Webhooks schickt (bestimmt nur, wie
   viel Log-Rauschen die bekannte Lücke erzeugt).

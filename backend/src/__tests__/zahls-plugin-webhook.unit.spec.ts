@@ -9,9 +9,9 @@
  *    X-Webhook-Signature; Vergleich timing-sicher. Falsche oder fehlende
  *    Signatur → Wurf (kein stilles Durchwinken).
  *
- * 2. Mapping: `confirmed` → "captured" (PaymentActions.SUCCESSFUL). Das ist
- *    ANDERS als beim vorhandenen Payrexx-Modul, das confirmed bewusst auf
- *    "authorized" abbildet. Beim Plugin ist "captured" trotzdem sicher:
+ * 2. Mapping: `confirmed` → "captured" (PaymentActions.SUCCESSFUL). Das war
+ *    ANDERS beim früheren Eigenbau-Modul, das confirmed bewusst auf
+ *    "authorized" abbildete. Beim Plugin ist "captured" trotzdem sicher:
  *    Medusas processPaymentWorkflow ruft dann capturePaymentWorkflow, und
  *    dessen provider-seitiges capturePayment ist beim Plugin für einen
  *    bereits bestätigten Gateway ein No-Op (Status "confirmed" → Daten

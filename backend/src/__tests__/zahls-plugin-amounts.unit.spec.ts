@@ -6,9 +6,8 @@
  * Warum das hier steht: Medusa v2 rechnet in Dezimalbeträgen (CHF 3.75 ist
  * die Zahl 3.75), die zahls.ch/Payrexx-API in der kleinsten Währungseinheit
  * (CHF 3.75 sind 375 Rappen). Ein Fehler um Faktor 100 ist der Totalschaden:
- * hundertfache Belastung oder 99 % Rabatt. Diese Tests nageln fest, dass das
- * Plugin auf 2.13.6 exakt dieselbe Umrechnung liefert wie das vorhandene
- * Payrexx-Modul (src/modules/payrexx/amounts.ts).
+ * hundertfache Belastung oder 99 % Rabatt. Diese Tests nageln die
+ * Umrechnung des Plugins auf 2.13.6 fest.
  *
  * Die Testfälle laufen bewusst gegen den KOMPILIERTEN Plugin-Code aus
  * node_modules (das Paket liefert nur .medusa/server-Build aus, keinen
