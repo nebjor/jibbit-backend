@@ -3,11 +3,21 @@
 Status: research + plan, 2026-08-01
 Assortment: **rolling papers, filters/tips, grinders**. No tobacco, no nicotine, no CBD/THC, no vapes/e-liquids, no bongs/water pipes/vaporizers.
 
+> **Stand 2026-09 — technische Umsetzung geändert.** Der Shop läuft
+> ausschliesslich über das **offizielle zahls.ch-Plugin**
+> (`@zahls/medusa-plugin`, Provider `pp_zahls_zahls`); das frühere
+> Eigenbau-Payrexx-Modul (`backend/src/modules/payrexx/`) und alle
+> `PAYREXX_*`-Variablen sind entfernt. Einrichtung und Betrieb:
+> **[`zahls-plugin.md`](./zahls-plugin.md)**. Die Akzeptanz-/Underwriting-
+> Recherche unten bleibt als Kontext stehen (zahls.ch ist ein White-Label
+> derselben Payrexx-Plattform); §7 beschrieb den alten Code-Stand und ist
+> überholt.
+
 ---
 
 ## TL;DR
 
-1. **The code is not the blocker — the contract is.** `backend/src/modules/payrexx/` already implements a full Medusa v2 payment provider against the Payrexx Gateway API, including TWINT and Powerpay support, HMAC webhook validation, capture and refund. What's missing is a *live Payrexx account*.
+1. **The code is not the blocker — the contract is.** ~~`backend/src/modules/payrexx/`~~ *(inzwischen: das offizielle zahls.ch-Plugin, siehe Hinweis oben)* implements a full Medusa v2 payment provider against the Payrexx Gateway API, including TWINT support, HMAC webhook validation, capture and refund. What's missing is a *live account*.
 2. **Before applying, get a written acceptance ruling.** Payrexx's published prohibited list bans tobacco sales, paraphernalia (bongs, vaporizers, water pipes) and CBD/THC — but **does not name papers, filters or grinders**. Genuine gray zone; only Payrexx compliance can close it. Ready-to-send email in §3.
 3. **"Sign up at Payrexx *and* TWINT" is probably wrong.** With Payrexx Pay you get TWINT under a single contract, no separate TWINT signup. A separate TWINT contract only becomes necessary on the fallback path (§2).
 4. **Powerpay: consider deferring.** Most likely of the three to decline, most onboarding effort, worst economics at a CHF 15–40 basket. The code already supports it, so it costs nothing to add later.
@@ -180,40 +190,28 @@ Underwriters look at the live site. Cheap, and they move the needle:
 
 ---
 
-## 7. Technical state — what's built, what's left
+## 7. Technical state (Stand 2026-09)
 
-The integration is **already largely done**. `backend/src/modules/payrexx/` implements a Medusa v2 `AbstractPaymentProvider` over the Payrexx Gateway API:
+Die Zahlung läuft über das **offizielle zahls.ch-Plugin**
+(`@zahls/medusa-plugin`, Provider `pp_zahls_zahls`, Hosted Redirect — kein
+PCI-Scope). Das frühere Eigenbau-Payrexx-Modul und seine Routen
+(`/hooks/payment/payrexx`, `/store/payrexx/return`) sind entfernt.
 
-- ✅ Gateway creation → hosted payment page redirect (keeps us out of PCI scope)
-- ✅ `psp[]` parameter wired for **TWINT and Powerpay** selection
-- ✅ HMAC-SHA256 webhook signature validation, timing-safe, with format/length guards
-- ✅ Redis-backed idempotency on webhook retries; amount plausibility checks
-- ✅ capture / refund / cancel / update (immutable gateways → delete + recreate)
-- ✅ Hardened webhook endpoint `POST /hooks/payment/payrexx` (401 on a forged
-  signature, 500 so Payrexx retries) plus a return-reconciliation endpoint
-  `POST /store/payrexx/return`. Both converge on the same decision and the
-  same idempotency key, so a customer who never reaches the return page still
-  gets a correctly paid order.
-- ✅ Amount cross-check against the gateway currently registered for the session
-- ✅ Swiss shipping module (CHF 9 flat, free ≥ CHF 100), unit tests for both modules
+- Konfiguration: `ZAHLS_INSTANCE`, `ZAHLS_API_KEY`, `ZAHLS_WEBHOOK_SECRET`
+  (optional `ZAHLS_SUCCESS_URL`/`ZAHLS_FAILED_URL`/`ZAHLS_CANCEL_URL`,
+  sonst abgeleitet aus `STORE_URL`).
+- Webhook-Adresse: `https://<API_DOMAIN>/hooks/payment/zahls_zahls`.
+- Einrichtung, Verhalten und offene Punkte (Event-Bus in-memory,
+  `waiting`-Lücke auf Medusa 2.13.6): **[`zahls-plugin.md`](./zahls-plugin.md)**.
 
 ### Open items before go-live
 
-> Betreiber-Anleitung (Zugangsdaten, Webhook-URL, PSP-IDs, Prüfschritte):
-> **[`payrexx-go-live.md`](./payrexx-go-live.md)**.
-
 | # | Item | Where | Severity |
 |---|---|---|---|
-| 1 | **`PAYREXX_ENABLED_PSPS` is empty** — fill with real TWINT/Powerpay PSP IDs from [Retrieve all payment providers](https://developers.payrexx.com/reference/retrieve-all-payment-providers) once the account exists. Empty = no PSP restriction sent. | `backend/.env` | blocker (needs account) |
-| 2 | **`STORE_URL=http://localhost:8000`** — must become the real domain, or redirects and webhooks break in production. | `backend/.env` | blocker |
-| 3 | **Live Payrexx credentials** (`ZAHLS_INSTANCE`, `ZAHLS_API_SECRET`, `ZAHLS_WEBHOOK_SECRET`) | `backend/.env` | blocker (needs account) |
-| 4 | Idempotency store is in-memory — **erledigt.** Redis-backed, atomares `SET NX EX`, pro Tenant genamespact, mit `release()`, damit ein gescheiterter Folgeschritt Payrexx' Retry nicht verschluckt. | `modules/payrexx/idempotency-store.ts` | done |
-| 5 | Webhook amount isn't compared to the session amount — **erledigt.** Der Gateway-Betrag wird pro Session festgehalten (`session-store.ts`) und bei jedem Webhook abgeglichen. Eine Abweichung wird nie automatisch abgeschlossen, sondern als `ZAHLS AMOUNT MISMATCH — MANUAL REVIEW REQUIRED` geloggt. | `modules/payrexx/webhook.ts` | done |
-| 6 | **Powerpay `waiting` → `authorized`** — we'd treat an unsettled invoice as authorized and ship the goods. That's likely correct *if* MF Group assumes the del credere risk on approval; **confirm against the merchant contract** before enabling Powerpay. | `modules/payrexx/webhook.ts` | confirm at contract |
-| 7 | **Payrexx' Webhook-Retry-Fenster ist unbekannt** — die Idempotenz-TTL von 48 h ist eine grosszügige Annahme, kein bestätigter Wert. Bei Payrexx-Support erfragen. | `modules/payrexx/webhook.ts` | ask provider |
-| 8 | **Event-Bus und Workflow-Engine laufen in-memory** — die Payrexx-Webhook-Route ist davon bewusst unabhängig (sie verarbeitet synchron), alles andere Asynchrone überlebt aber keinen Neustart. `@medusajs/event-bus-redis` + `@medusajs/workflow-engine-redis` erwägen. | `medusa-config.ts` | fix before launch |
-
-Items 1–3 need the account. Item 6 only matters if we pursue Powerpay at all.
+| 1 | **`STORE_URL=http://localhost:8000`** — must become the real domain, or redirects break in production. | `backend/.env` | blocker |
+| 2 | **Live zahls.ch credentials** (`ZAHLS_INSTANCE`, `ZAHLS_API_KEY`, `ZAHLS_WEBHOOK_SECRET`) | `backend/.env` | blocker (needs account) |
+| 3 | **Event-Bus und Workflow-Engine laufen in-memory** — der Plugin-Webhook wird asynchron über den Event-Bus verarbeitet; ein Neustart im Verarbeitungsfenster verliert das Ereignis. `@medusajs/event-bus-redis` + `@medusajs/workflow-engine-redis` erwägen (siehe `zahls-plugin.md`). | `medusa-config.ts` | fix before launch |
+| 4 | `pp_system_default` vor Go-Live von der Region nehmen (die Storefront blockiert ihn in Produktion zusätzlich). | Admin → Regionen | before launch |
 
 ---
 

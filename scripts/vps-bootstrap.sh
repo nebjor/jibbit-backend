@@ -256,7 +256,7 @@ Noch von Hand, in dieser Reihenfolge:
       jibbit.ch, www.jibbit.ch, api.jibbit.ch  ->  $(curl -fsS -m 5 https://api.ipify.org 2>/dev/null || echo '<IP dieser VPS>')
 
  2. $TARGET_DIR/medusa-ecom/.env ausfüllen:
-      PAYREXX_*        Zugangsdaten
+      ZAHLS_*          Zugangsdaten (ZAHLS_INSTANCE, ZAHLS_API_KEY, ZAHLS_WEBHOOK_SECRET)
       SMTP_*           Mailversand
       STORE_CORS       https://jibbit.ch
       ADMIN_CORS       https://api.jibbit.ch

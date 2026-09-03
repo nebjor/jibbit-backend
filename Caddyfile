@@ -33,7 +33,7 @@
 		-Server
 	}
 
-	# Webhook-Endpoint: Keine Rate-Limits (Payrexx Retries)
+	# Webhook-Endpoint: Keine Rate-Limits (zahls.ch-Retries)
 	handle /hooks/payment/* {
 		reverse_proxy medusa:9000
 	}
@@ -64,7 +64,11 @@
 		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://media.payrexx.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.jibbit.ch https://api.payrexx.com;"
+		# Keine PSP-Hosts in der CSP: der Checkout übergibt per VOLLSTÄNDIGER
+		# Weiterleitung an die gehostete zahls.ch-Bezahlseite (eigene Origin,
+		# eigene Policy). Die Storefront lädt selbst kein PSP-Script und
+		# spricht die PSP-API nie direkt an — das tut nur das Backend.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.jibbit.ch;"
 		X-XSS-Protection "0"
 		-Server
 	}
