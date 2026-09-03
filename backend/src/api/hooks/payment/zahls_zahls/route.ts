@@ -13,8 +13,7 @@
  * zahls.ch prüft eine eingetragene Webhook-Adresse aber mit einem GET, bevor
  * es sie annimmt. Ohne diese Datei antwortete Medusa darauf mit 404, und das
  * zahls.ch-Backend wies die Adresse als «nicht gültig» zurück — exakt der
- * Fehler, an dem die Einrichtung schon einmal gescheitert ist (siehe die
- * gleiche Prüfroute für das Payrexx-Modul, src/api/hooks/payment/payrexx/).
+ * Fehler, an dem die Einrichtung schon einmal gescheitert ist.
  *
  * ─── Warum hier KEIN POST steht ────────────────────────────────────────────
  *

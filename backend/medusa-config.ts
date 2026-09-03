@@ -50,31 +50,18 @@ const fileBackendUrl = `${(
 ).replace(/\/+$/, '')}/static`
 
 /**
- * PSP-IDs kommen als kommaseparierte Liste aus der Umgebung (z.B. "1,17").
- * IDs für TWINT und Powerpay: https://developers.payrexx.com/reference/retrieve-all-payment-providers
- */
-const enabledPsps = (process.env.PAYREXX_ENABLED_PSPS || '')
-  .split(',')
-  .map((id) => Number(id.trim()))
-  .filter((id) => Number.isFinite(id) && id > 0)
-
-/**
  * zahls.ch über das OFFIZIELLE Plugin (@zahls/medusa-plugin).
  *
  * Der Provider wird NUR registriert, wenn ZAHLS_INSTANCE, ZAHLS_API_KEY und
  * ZAHLS_WEBHOOK_SECRET alle gesetzt sind. Grund: `validateOptions()` im
  * Plugin wirft bei jedem fehlenden Wert bereits beim Laden des
  * Payment-Moduls — ein halb gefülltes .env würde den ganzen Shop am Start
- * hindern (dieselbe Falle wie beim Payrexx-Modul mit leerem webhookSecret).
+ * hindern.
  * Ohne vollständige Werte startet Medusa deshalb normal, nur eben ohne den
  * zahls.ch-Provider; die Warnung unten sagt im Log, was fehlt.
  *
  * Provider-Kennung: pp_zahls_zahls (siehe src/lib/zahls-plugin.ts).
  * Webhook-Adresse:  https://<API_DOMAIN>/hooks/payment/zahls_zahls
- *
- * Das vorhandene Payrexx-Modul (./src/modules/payrexx) bleibt vorerst
- * PARALLEL registriert — es ist die aktuell laufende Lösung. Die Ablösung
- * ist in docs/zahls-plugin.md beschrieben.
  */
 const zahlsConfigured = isZahlsPluginConfigured(process.env)
 if (!zahlsConfigured) {
@@ -168,21 +155,6 @@ module.exports = defineConfig({
                 },
               ]
             : []),
-          {
-            resolve: './src/modules/zahls',
-            id: 'zahls',
-            options: {
-              instance: process.env.ZAHLS_INSTANCE,
-              apiSecret: process.env.ZAHLS_API_SECRET,
-              webhookSecret: process.env.ZAHLS_WEBHOOK_SECRET,
-              // Leer = api.zahls.com. zahls.ch ist ein White-Label derselben
-              // Plattform und spricht dieselbe API unter eigenem Host:
-              //   ZAHLS_API_BASE_URL=https://api.zahls.ch/v1.0/
-              // Siehe docs/zahls-go-live.md §0.
-              apiBaseUrl: process.env.ZAHLS_API_BASE_URL,
-              enabledPsps: process.env.ZAHLS_ENABLED_PSPS,
-            },
-          },
         ],
       },
     },

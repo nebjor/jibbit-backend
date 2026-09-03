@@ -11,8 +11,8 @@
  *
  * `ZahlsPaymentProviderService.validateOptions()` im Plugin WIRFT, sobald
  * apiKey, instance oder webhookSecret fehlt — und zwar beim Modul-Laden,
- * d.h. Medusa käme gar nicht hoch (derselbe Fussangel wie beim vorhandenen
- * Payrexx-Modul: leeres webhookSecret bei gesetzter Instanz = Boot-Abbruch).
+ * d.h. Medusa käme gar nicht hoch (leeres webhookSecret bei gesetzter
+ * Instanz = Boot-Abbruch).
  *
  * Deshalb registriert medusa-config.ts den Provider NUR, wenn alle drei
  * Pflichtwerte gesetzt sind. Ein halb gefülltes .env startet den Shop damit
@@ -82,11 +82,10 @@ export function missingZahlsPluginEnv(env: ZahlsPluginEnv): string[] {
  *
  * Der Betreiber muss nur Instanzname, API-Schlüssel und Webhook-Secret
  * hinterlegen. Die Redirect-URLs leiten sich aus STORE_URL ab (dieselbe
- * Variable, die schon das Payrexx-Modul und die Passwort-Reset-Mail nutzen)
- * und sind nur für Sonderfälle einzeln übersteuerbar.
+ * Variable, die schon die Passwort-Reset-Mail nutzt) und sind nur für
+ * Sonderfälle einzeln übersteuerbar.
  *
- * Die Pfade /checkout/success|failed|cancel entsprechen denen, die das
- * vorhandene Payrexx-Modul verwendet. Unterschied: das Plugin kann keine
+ * Zu den Pfaden /checkout/success|failed|cancel: das Plugin kann keine
  * session-spezifische Query anhängen (statische URLs pro Provider), die
  * Storefront darf sich hier also NICHT auf ?payment_session_id=… verlassen —
  * massgeblich ist ohnehin der Webhook, nie der Redirect.
