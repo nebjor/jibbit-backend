@@ -96,21 +96,6 @@ services:
       ZAHLS_INSTANCE: ${ZAHLS_INSTANCE:-}
       ZAHLS_API_KEY: ${ZAHLS_API_KEY:-}
       ZAHLS_WEBHOOK_SECRET: ${ZAHLS_WEBHOOK_SECRET:-}
-      # Optional; leer = ${STORE_URL}/checkout/success|failed|cancel.
-      ZAHLS_SUCCESS_URL: ${ZAHLS_SUCCESS_URL:-}
-      ZAHLS_FAILED_URL: ${ZAHLS_FAILED_URL:-}
-      ZAHLS_CANCEL_URL: ${ZAHLS_CANCEL_URL:-}
-
-      # Payrexx / zahls.ch (bestehendes Modul, laeuft parallel weiter)
-      PAYREXX_INSTANCE: ${PAYREXX_INSTANCE}
-      # Leer = api.payrexx.com. Fuer ein zahls.ch-Konto zwingend
-      # https://api.zahls.ch/v1.0/ — ohne diese Zeile erreicht der Wert aus
-      # der .env den Container NIE, und das Modul spricht stillschweigend
-      # den falschen Host an.
-      PAYREXX_API_BASE_URL: ${PAYREXX_API_BASE_URL:-}
-      PAYREXX_API_SECRET: ${PAYREXX_API_SECRET}
-      PAYREXX_WEBHOOK_SECRET: ${PAYREXX_WEBHOOK_SECRET}
-      PAYREXX_ENABLED_PSPS: ${PAYREXX_ENABLED_PSPS:-}
 
       # Store URL für Redirects — und Basis des Links in der
       # Passwort-zurücksetzen-E-Mail. Der Link wird bewusst NICHT aus dem

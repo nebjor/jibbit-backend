@@ -35,8 +35,8 @@ Das Modul spricht deshalb wahlweise beide Hosts — der Unterschied ist **eine
 Umgebungsvariable**, kein Code:
 
 ```
-PAYREXX_INSTANCE=jibbit                          # aus https://jibbit.zahls.ch
-PAYREXX_API_BASE_URL=https://api.zahls.ch/v1.0/  # leer lassen für Payrexx selbst
+ZAHLS_INSTANCE=jibbit                          # aus https://jibbit.zahls.ch
+ZAHLS_API_BASE_URL=https://api.zahls.ch/v1.0/  # leer lassen für Payrexx selbst
 ```
 
 **Restunsicherheit:** eine eigene zahls.ch-Entwicklerdokumentation ist nicht
@@ -85,8 +85,8 @@ Alles in die `.env` **im Repository-Wurzelverzeichnis** (nicht in
 
 | Variable | Woher | Ohne diesen Wert |
 |---|---|---|
-| `PAYREXX_INSTANCE` | Der Name in der Konto-URL: `https://<instance>.zahls.ch` bzw. `https://<instance>.payrexx.com` — für jibbit.zahls.ch also `jibbit` | Jeder API-Aufruf schlägt fehl |
-| `PAYREXX_API_BASE_URL` | Fest je Anbieter: `https://api.zahls.ch/v1.0/` für zahls.ch; **leer lassen** für Payrexx selbst (`https://api.payrexx.com/v1.0/`) | Aufrufe gehen an api.payrexx.com — bei einem zahls.ch-Konto kennt der Host die Instanz nicht |
+| `ZAHLS_INSTANCE` | Der Name in der Konto-URL: `https://<instance>.zahls.ch` bzw. `https://<instance>.payrexx.com` — für jibbit.zahls.ch also `jibbit` | Jeder API-Aufruf schlägt fehl |
+| `ZAHLS_API_BASE_URL` | Fest je Anbieter: `https://api.zahls.ch/v1.0/` für zahls.ch; **leer lassen** für Payrexx selbst (`https://api.payrexx.com/v1.0/`) | Aufrufe gehen an api.payrexx.com — bei einem zahls.ch-Konto kennt der Host die Instanz nicht |
 | `PAYREXX_API_SECRET` | zahls.ch-Backend → **Integrationen → API und Integrationen** (bei Payrexx: Einstellungen → API & Plugins) | Gateway-Erstellung schlägt fehl |
 | `PAYREXX_WEBHOOK_SECRET` | zahls.ch-Backend → **Integrationen → Webhooks** (Signatur-Schlüssel des angelegten Webhooks) | Jeder Webhook wird mit **401** abgewiesen |
 | `PAYREXX_ENABLED_PSPS` | Liste, siehe §3 | Payrexx zeigt dem Kunden **alle** freigeschalteten Methoden — kein Fehler, aber unkontrolliert |
@@ -177,8 +177,8 @@ Abrufen, sobald der Account existiert:
 # Signatur über einen LEEREN Query-String, base64-kodiert.
 # BASE ist der Wert von PAYREXX_API_BASE_URL — für zahls.ch also
 # https://api.zahls.ch/v1.0 (für Payrexx selbst https://api.payrexx.com/v1.0).
-SIG=$(printf '' | openssl dgst -sha256 -hmac "$PAYREXX_API_SECRET" -binary | base64)
-curl -s "$BASE/PaymentProvider/?instance=$PAYREXX_INSTANCE&ApiSignature=$(printf %s "$SIG" | jq -sRr @uri)"
+SIG=$(printf '' | openssl dgst -sha256 -hmac "$ZAHLS_API_SECRET" -binary | base64)
+curl -s "$BASE/PaymentProvider/?instance=$ZAHLS_INSTANCE&ApiSignature=$(printf %s "$SIG" | jq -sRr @uri)"
 ```
 
 Endpunkt-Referenz:

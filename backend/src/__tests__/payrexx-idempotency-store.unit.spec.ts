@@ -18,7 +18,7 @@ import { Redis } from "ioredis"
 import {
   InMemoryIdempotencyStore,
   RedisIdempotencyStore,
-} from "../modules/payrexx/idempotency-store"
+} from "../modules/zahls/idempotency-store"
 
 const RedisMock = Redis as unknown as jest.Mock
 

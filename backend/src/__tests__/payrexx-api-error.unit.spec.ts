@@ -11,7 +11,7 @@
  * Query-String protokolliert werden, denn dort steht die `ApiSignature`.
  */
 
-import { PayrexxClient } from "../modules/payrexx/client"
+import { PayrexxClient } from "../modules/zahls/client"
 
 function interceptorOf(client: PayrexxClient) {
   // Der Interceptor haengt an der internen axios-Instanz.

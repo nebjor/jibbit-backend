@@ -17,7 +17,7 @@ import {
   InMemorySessionStateStore,
   RedisSessionStateStore,
   type PayrexxSessionState,
-} from "../modules/payrexx/session-store"
+} from "../modules/zahls/session-store"
 
 const RedisMock = Redis as unknown as jest.Mock
 

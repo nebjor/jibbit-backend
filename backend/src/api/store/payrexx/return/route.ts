@@ -38,13 +38,13 @@ import {
   Modules,
 } from "@medusajs/framework/utils"
 import type { Logger, IPaymentModuleService } from "@medusajs/framework/types"
-import { completePayrexxPayment } from "../../../../modules/payrexx/complete-payment"
-import { extractGatewayTransaction } from "../../../../modules/payrexx/client"
-import { mapPayrexxStatus } from "../../../../modules/payrexx/service"
+import { completePayrexxPayment } from "../../../../modules/zahls/complete-payment"
+import { extractGatewayTransaction } from "../../../../modules/zahls/client"
+import { mapPayrexxStatus } from "../../../../modules/zahls/service"
 import {
   getPayrexxRuntime,
   type PayrexxRuntime,
-} from "../../../../modules/payrexx/runtime"
+} from "../../../../modules/zahls/runtime"
 
 const ACTIONABLE = new Set(["authorized", "captured"])
 

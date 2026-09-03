@@ -13,11 +13,11 @@
  */
 
 import crypto from "crypto"
-import PayrexxPaymentProviderService from "../modules/payrexx/service"
+import PayrexxPaymentProviderService from "../modules/zahls/service"
 import {
   IdempotencyStore,
   InMemoryIdempotencyStore,
-} from "../modules/payrexx/idempotency-store"
+} from "../modules/zahls/idempotency-store"
 
 const WEBHOOK_SECRET = "test_webhook_secret_32chars_long!"
 
