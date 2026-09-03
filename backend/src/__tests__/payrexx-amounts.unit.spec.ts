@@ -13,7 +13,7 @@ import {
   fromRappen,
   isPlausibleRappenAmount,
   RAPPEN_PER_CHF,
-} from "../modules/payrexx/amounts"
+} from "../modules/zahls/amounts"
 
 describe("toRappen — Dezimal-CHF (Medusa) → Rappen (Payrexx)", () => {
   it("uses a factor of 100, not 1 and not 10000", () => {

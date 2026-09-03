@@ -7,8 +7,8 @@
  * den aktuell gültigen Gateway und die Behandlung von Rückerstattungen.
  */
 
-import { decideAction, extractTransaction } from "../modules/payrexx/webhook"
-import type { PayrexxSessionState } from "../modules/payrexx/session-store"
+import { decideAction, extractTransaction } from "../modules/zahls/webhook"
+import type { PayrexxSessionState } from "../modules/zahls/session-store"
 
 const SESSION = "payses_01HTEST"
 

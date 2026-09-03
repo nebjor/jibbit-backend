@@ -25,7 +25,7 @@
  * Deshalb bildet dieser Test den Proxy nach, statt ein Objekt zu benutzen.
  */
 
-import PayrexxPaymentProviderService from "../modules/payrexx/service"
+import PayrexxPaymentProviderService from "../modules/zahls/service"
 
 const loggerStub = {
   info: jest.fn(),

@@ -19,5 +19,8 @@
   },
   "devDependencies": {
     "sharp": "^0.34.5"
+  },
+  "dependencies": {
+    "@zahls/medusa-plugin": "^0.0.1"
   }
 }

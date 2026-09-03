@@ -8,7 +8,7 @@
  * 4. Idempotency (keine doppelten Buchungen bei Retries)
  */
 
-import { PayrexxClient } from "../modules/payrexx/client"
+import { PayrexxClient } from "../modules/zahls/client"
 
 describe("Payrexx Security Tests", () => {
   const WEBHOOK_SECRET = "test_webhook_secret_32chars_long!"

@@ -35,13 +35,13 @@ import {
   PayrexxClient,
   DEFAULT_PAYREXX_API_BASE_URL,
   normalizePayrexxApiBaseUrl,
-} from "../modules/payrexx/client"
-import PayrexxPaymentProviderService from "../modules/payrexx/service"
+} from "../modules/zahls/client"
+import PayrexxPaymentProviderService from "../modules/zahls/service"
 import { handlePayrexxWebhook } from "../api/hooks/payment/payrexx/route"
 import { handlePayrexxReturn } from "../api/store/payrexx/return/route"
-import { InMemoryIdempotencyStore } from "../modules/payrexx/idempotency-store"
-import { InMemorySessionStateStore } from "../modules/payrexx/session-store"
-import type { PayrexxRuntime } from "../modules/payrexx/runtime"
+import { InMemoryIdempotencyStore } from "../modules/zahls/idempotency-store"
+import { InMemorySessionStateStore } from "../modules/zahls/session-store"
+import type { PayrexxRuntime } from "../modules/zahls/runtime"
 import { Modules } from "@medusajs/framework/utils"
 
 const INSTANCE = "jibbit"

@@ -41,11 +41,11 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import type { Logger } from "@medusajs/framework/types"
-import { completePayrexxPayment } from "../../../../modules/payrexx/complete-payment"
+import { completePayrexxPayment } from "../../../../modules/zahls/complete-payment"
 import {
   getPayrexxRuntime,
   type PayrexxRuntime,
-} from "../../../../modules/payrexx/runtime"
+} from "../../../../modules/zahls/runtime"
 
 /** Aktionen, für die es überhaupt etwas zu tun gibt. */
 const ACTIONABLE = new Set(["authorized", "captured"])
@@ -58,8 +58,8 @@ export async function handlePayrexxWebhook(
 ): Promise<void> {
   if (!runtime.configured) {
     logger.error(
-      "Payrexx webhook received but the provider is not configured " +
-        "(PAYREXX_INSTANCE / PAYREXX_API_SECRET / PAYREXX_WEBHOOK_SECRET missing)."
+      "Zahls webhook received but the provider is not configured " +
+        "(ZAHLS_INSTANCE / ZAHLS_API_SECRET / ZAHLS_WEBHOOK_SECRET missing)."
     )
     res.status(503).json({ message: "Payrexx is not configured." })
     return
