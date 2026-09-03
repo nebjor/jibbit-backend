@@ -96,6 +96,11 @@ services:
       ZAHLS_INSTANCE: ${ZAHLS_INSTANCE:-}
       ZAHLS_API_KEY: ${ZAHLS_API_KEY:-}
       ZAHLS_WEBHOOK_SECRET: ${ZAHLS_WEBHOOK_SECRET:-}
+      # Optionale Redirect-Ziele; leer = ${STORE_URL}/checkout/success|failed|cancel
+      # (siehe backend/src/lib/zahls-plugin.ts, buildZahlsProviderOptions).
+      ZAHLS_SUCCESS_URL: ${ZAHLS_SUCCESS_URL:-}
+      ZAHLS_FAILED_URL: ${ZAHLS_FAILED_URL:-}
+      ZAHLS_CANCEL_URL: ${ZAHLS_CANCEL_URL:-}
 
       # Store URL für Redirects — und Basis des Links in der
       # Passwort-zurücksetzen-E-Mail. Der Link wird bewusst NICHT aus dem

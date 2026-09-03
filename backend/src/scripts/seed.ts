@@ -8,7 +8,7 @@
  * CHF 27.00 === 27. Alle `amount`-Werte hier sind Franken, keine Rappen.
  *
  * Provider-IDs (verifiziert gegen die DB nach `medusa db:migrate`):
- *   payment_provider      → pp_system_default, pp_payrexx_payrexx,
+ *   payment_provider      → pp_system_default,
  *                           pp_zahls_zahls (nur bei gesetzter ZAHLS_*-Env,
  *                           siehe Kommentar an der Region unten)
  *   fulfillment_provider  → swiss-shipping_swiss-shipping
@@ -158,11 +158,6 @@ export default async function seedJibbitData({ container }: ExecArgs) {
             // MwSt. Ohne dieses Flag schlägt Medusa die 8.1% auf den
             // gepflegten Preis auf (CHF 2.50 → 2.70 im Warenkorb).
             is_tax_inclusive: true,
-            // pp_payrexx_payrexx ist registriert und in der DB vorhanden.
-            // Solange keine Payrexx-Credentials gesetzt sind, schlägt
-            // initiatePayment zur Laufzeit fehl — pp_system_default bleibt
-            // deshalb als funktionierende Dev-Zahlart aktiv.
-            //
             // pp_zahls_zahls (offizielles zahls.ch-Plugin) kommt NUR dazu,
             // wenn der Provider auch registriert ist — d.h. wenn
             // ZAHLS_INSTANCE, ZAHLS_API_KEY und ZAHLS_WEBHOOK_SECRET gesetzt
@@ -175,8 +170,11 @@ export default async function seedJibbitData({ container }: ExecArgs) {
             // der Seed nichts — dort den Provider im Admin aktivieren:
             // Einstellungen → Regionen → Schweiz → zahls.ch hinzufügen.
             payment_providers: [
+              // pp_system_default bleibt als Dev-/CI-Zahlart aktiv, solange
+              // keine zahls.ch-Credentials gesetzt sind. Vor Go-Live von der
+              // Region nehmen — die Storefront blockiert ihn in Produktion
+              // ohnehin (jibbit-frontend, lib/checkout/payment.ts).
               "pp_system_default",
-              "pp_payrexx_payrexx",
               ...(isZahlsPluginConfigured(process.env)
                 ? [ZAHLS_PROVIDER_ID]
                 : []),
