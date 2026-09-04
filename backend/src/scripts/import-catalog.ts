@@ -49,6 +49,12 @@ import {
 import { isValidGtin } from "./galaxus-common"
 import { roundTo } from "./import-price-tiers"
 import { parseScriptArgs } from "./script-args"
+import {
+  KatalogLieferant,
+  REORDER_POINT_KEY,
+  SUPPLIERS_KEY,
+  validateLieferantenDaten,
+} from "../lib/nachschub"
 
 const CURRENCY = "chf"
 const OPTION_TITLE = "Verpackungseinheit"
@@ -69,6 +75,20 @@ export type CatalogVariant = {
   ean?: string | null
   /** Verpackungsgewicht in Gramm — schaltet den Brieftarif frei. */
   weight_g?: number | null
+  /**
+   * Meldebestand der Nachschubsteuerung: liegt der verfügbare Bestand auf
+   * oder unter diesem Wert, erscheint die Variante auf der Admin-Seite
+   * «Nachschub» und im nachschub-report.ts. Landet in
+   * variant.metadata.reorder_point.
+   */
+  reorder_point?: number | null
+  /**
+   * Bezugsquellen des Betreibers, erster Eintrag = Hauptlieferant. Die url
+   * muss eine absolute http(s)-Adresse der Produktseite beim Lieferanten
+   * sein — alles andere bricht den Import ab (siehe lib/nachschub.ts).
+   * Landet in variant.metadata.suppliers.
+   */
+  suppliers?: KatalogLieferant[] | null
 }
 
 export type CatalogProduct = {
@@ -110,6 +130,10 @@ export function validateCatalogData(catalog: CatalogProduct[]): string[] {
       }
     }
   }
+
+  // Nachschubsteuerung: Meldebestand und Lieferanten (insbesondere die
+  // URL-Sperre auf http/https) — gleiche Abbruch-Mechanik wie oben.
+  errors.push(...validateLieferantenDaten(catalog))
 
   return errors
 }
@@ -214,7 +238,8 @@ type PreparedVariant = {
   weight?: number
   manage_inventory: boolean
   options: Record<string, string>
-  metadata: Record<string, string | number>
+  /** units_per_pack/pack_type, dazu reorder_point und suppliers (Nachschub). */
+  metadata: Record<string, unknown>
   prices: {
     amount: number
     currency_code: string
@@ -354,6 +379,19 @@ export default async function importCatalog({ container, args }: ExecArgs) {
           // Für den Grundpreis "CHF 0.98 / Stk." auf der Produktseite.
           units_per_pack: v.units_per_pack,
           pack_type: v.pack_type,
+          // Nachschubsteuerung — nur setzen, wenn gepflegt (validiert oben).
+          ...(v.reorder_point != null
+            ? { [REORDER_POINT_KEY]: v.reorder_point }
+            : {}),
+          ...(v.suppliers?.length
+            ? {
+                [SUPPLIERS_KEY]: v.suppliers.map((s) => ({
+                  name: s.name.trim(),
+                  url: s.url.trim(),
+                  article_number: s.article_number?.trim() || null,
+                })),
+              }
+            : {}),
         },
         prices: v.tiers.map((t) => ({
           amount: roundTo(t.price, step),
