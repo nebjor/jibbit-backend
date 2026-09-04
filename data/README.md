@@ -96,6 +96,63 @@ Was noch fehlt, zeigt der Bereitschaftsbericht:
     cd backend
     npx medusa exec ./src/scripts/galaxus-report.ts
 
+## Nachschub: `reorder_point` und `suppliers`
+
+Für die Nachschubsteuerung (Admin-Seite «Nachschub», Widget an der
+Produktseite, `nachschub-report.ts`) kennt das Katalogformat je Variante
+zwei weitere optionale Felder — `reorder_point` (Meldebestand: liegt der
+verfügbare Bestand auf oder unter diesem Wert, gilt die Variante als
+nachzubestellen) und `suppliers` (Bezugsquellen des Betreibers, der erste
+Eintrag ist der Hauptlieferant):
+
+    {
+      "product": "Gizeh DW Extra Fine",
+      "ref": null,
+      "variants": [
+        {
+          "label": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "reorder_point": 10,
+          "suppliers": [
+            {
+              "name": "Grosshandel AG",
+              "url": "https://grosshandel.example.ch/produkt/gizeh-dw-extra-fine",
+              "article_number": "GH-4711"
+            },
+            {
+              "name": "Zweitlieferant GmbH",
+              "url": "https://zweitlieferant.example.ch/p/12345"
+            }
+          ],
+          "tiers": [ … ]
+        }
+      ]
+    }
+
+`update-catalog.ts` schreibt beides in die `metadata` der Variante
+(`reorder_point`, `suppliers`) — keine Datenbankmigration nötig. Gleiche
+Regeln wie bei den Galaxus-Feldern: nur gepflegte, abweichende Werte werden
+geschrieben, fehlende Felder löschen nie etwas.
+
+**Die `url` muss eine absolute `http(s)`-Adresse der Produktseite beim
+Lieferanten sein.** Alles andere (`javascript:`, `data:`, relative Pfade,
+`www.…` ohne Schema) bricht das Einspielen ab — die Adresse wird im Admin
+als Link gerendert, und dort sitzt jemand mit vollen Rechten. Geprüft wird
+zusätzlich beim Rendern (siehe `backend/src/lib/nachschub.ts`).
+
+Der Meldebestand greift nur, wenn die Variante auch Bestandsführung hat —
+also `quantity` in `inventory.json` gepflegt ist. Varianten ohne Bestand
+oder ohne Meldebestand zählen Übersicht und Bericht als «nicht
+überwachbar» — solange dort nicht 0 steht, ist eine leere Nachschubliste
+keine Entwarnung.
+
+Der Bericht fürs Terminal (Konsole, optional CSV zum Ausdrucken):
+
+    cd backend
+    npx medusa exec ./src/scripts/nachschub-report.ts
+    npx medusa exec ./src/scripts/nachschub-report.ts csv=../export/nachschub.csv
+
 ## Nachziehen bestehender Produkte
 
     cd backend
