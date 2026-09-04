@@ -37,3 +37,8 @@ _backup/
 /partners-summary.json
 /orders.json
 /orders-summary.json
+
+# ─── Galaxus-Exporte ────────────────────────────────────────────────────────
+# Erzeugte CSV-Dateien (galaxus-export.ts) — Momentaufnahmen von Preisen und
+# Beständen, die bei jedem Lauf neu entstehen. Gehören nicht ins Repository.
+/export/
