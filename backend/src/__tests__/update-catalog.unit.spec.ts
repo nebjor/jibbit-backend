@@ -264,6 +264,61 @@ describe("planCatalogUpdate", () => {
     expect(plan.noBasePrice).toEqual([`${angelHandle} (${angelSkuEA})`])
   })
 
+  it("plant EAN, Gewicht und Marke, wenn der Katalog sie neu liefert", () => {
+    const catalog: CatalogProduct[] = [
+      {
+        ...angel,
+        brand: "Angel",
+        variants: [
+          { ...angel.variants[0], ean: "4012345678901", weight_g: 30 },
+          angel.variants[1],
+        ],
+      },
+    ]
+    const plan = planCatalogUpdate({
+      ...base,
+      catalog,
+      existing: [existingAngel()],
+    })
+    expect(plan.products).toHaveLength(1)
+    expect(plan.products[0].update.metadata).toEqual({ brand: "Angel" })
+    expect(plan.products[0].variantData).toEqual([
+      {
+        variant_id: "var_1",
+        sku: angelSkuEA,
+        update: { ean: "4012345678901", weight: 30 },
+      },
+    ])
+
+    // Zweiter Lauf mit nachgezogenem Ist-Zustand: nichts mehr zu tun.
+    const after = existingAngel({ metadata: { brand: "Angel" } })
+    after.variants[0].ean = "4012345678901"
+    after.variants[0].weight = 30
+    const second = planCatalogUpdate({ ...base, catalog, existing: [after] })
+    expect(second.products).toHaveLength(0)
+  })
+
+  it("löscht nie EAN/Gewicht/Marke, wenn der Katalog keine Werte hat", () => {
+    const existing = existingAngel({ metadata: { brand: "Angel" } })
+    existing.variants[0].ean = "4012345678901"
+    existing.variants[0].weight = 30
+    const plan = planCatalogUpdate({ ...base, existing: [existing] })
+    expect(plan.products).toHaveLength(0)
+  })
+
+  it("erhält beim Setzen der Marke vorhandene Metadaten", () => {
+    const existing = existingAngel({ metadata: { seo_title: "Angel Filter" } })
+    const plan = planCatalogUpdate({
+      ...base,
+      catalog: [{ ...angel, brand: "Angel" }],
+      existing: [existing],
+    })
+    expect(plan.products[0].update.metadata).toEqual({
+      seo_title: "Angel Filter",
+      brand: "Angel",
+    })
+  })
+
   it("überspringt Inventar mit quantity=null und meldet unbekannte SKUs", () => {
     const plan = planCatalogUpdate({
       ...base,

@@ -17,9 +17,14 @@
  *                  damit die Artikel sofort bestellbar sind und der Bestand
  *                  später im Admin nachgepflegt werden kann.
  *
- * Was dieses Script NICHT liefert: Bilder, Beschreibungen und Gewichte. Die
- * stehen nicht in den Preisregeln und gehören ohnehin ins Admin. Ohne Gewicht
- * ist der Versand nicht betroffen — jibbit rechnet pauschal.
+ * Was dieses Script NICHT liefert: Bilder und Beschreibungen. Die stehen
+ * nicht in den Preisregeln — Beschreibungen kommen über update-catalog.ts,
+ * Bilder über import-product-images.ts.
+ *
+ * Je Variante können ean (GTIN, 8–14 Ziffern) und weight_g (Gramm) gepflegt
+ * sein, je Produkt brand (Marke). Alle drei braucht die Galaxus-Anbindung
+ * (galaxus-export.ts); das Gewicht schaltet zusätzlich den Brieftarif des
+ * swiss-shipping-Moduls frei, der ohne Gewichte nie greift.
  *
  * Idempotent über den Handle: bereits vorhandene Produkte werden übersprungen,
  * nicht überschrieben. Wer vorhandene Produkte nachziehen will (Beschreibung,
@@ -41,6 +46,7 @@ import {
   createInventoryLevelsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
+import { isValidGtin } from "./galaxus-common"
 import { roundTo } from "./import-price-tiers"
 import { parseScriptArgs } from "./script-args"
 
@@ -59,12 +65,53 @@ export type CatalogVariant = {
   pack_type: "single" | "display" | "box"
   units_per_pack: number
   tiers: CatalogTier[]
+  /** GTIN/EAN, 8–14 Ziffern — Pflicht für Galaxus, sonst optional. */
+  ean?: string | null
+  /** Verpackungsgewicht in Gramm — schaltet den Brieftarif frei. */
+  weight_g?: number | null
 }
 
 export type CatalogProduct = {
   product: string
   ref: string | null
   variants: CatalogVariant[]
+  /** Marke (Galaxus «BrandName») — landet in product.metadata.brand. */
+  brand?: string | null
+}
+
+/**
+ * EANs und Gewichte des ganzen Katalogs prüfen, BEVOR etwas geschrieben
+ * wird. Eine falsche GTIN fällt sonst erst auf, wenn Galaxus die Datei
+ * ablehnt; eine doppelte ordnet zwei Artikel demselben Produkt zu.
+ *
+ * Exportiert, weil update-catalog.ts dieselbe Prüfung braucht.
+ */
+export function validateCatalogData(catalog: CatalogProduct[]): string[] {
+  const errors: string[] = []
+  const seenEans = new Map<string, string>()
+
+  for (const entry of catalog) {
+    for (const v of entry.variants) {
+      const where = `${entry.product} (${v.label})`
+      if (v.ean != null) {
+        if (!isValidGtin(v.ean)) {
+          errors.push(`${where}: EAN «${v.ean}» ist keine GTIN (8–14 Ziffern)`)
+        } else {
+          const owner = seenEans.get(v.ean)
+          if (owner) {
+            errors.push(`${where}: EAN ${v.ean} bereits vergeben an ${owner}`)
+          } else {
+            seenEans.set(v.ean, where)
+          }
+        }
+      }
+      if (v.weight_g != null && !(v.weight_g > 0)) {
+        errors.push(`${where}: weight_g muss über 0 liegen (ist ${v.weight_g})`)
+      }
+    }
+  }
+
+  return errors
 }
 
 /**
@@ -162,6 +209,9 @@ export function skuFor(
 type PreparedVariant = {
   title: string
   sku: string
+  ean?: string
+  /** Gramm — so führt Medusa Gewichte im Admin (siehe swiss-shipping). */
+  weight?: number
   manage_inventory: boolean
   options: Record<string, string>
   metadata: Record<string, string | number>
@@ -178,6 +228,7 @@ type PreparedProduct = {
   handle: string
   category: string
   category_ids: string[]
+  metadata?: Record<string, string>
   variants: PreparedVariant[]
   options: { title: string; values: string[] }[]
 }
@@ -206,6 +257,14 @@ export default async function importCatalog({ container, args }: ExecArgs) {
 
   if (!catalog.length) {
     logger.warn("catalog.json ist leer.")
+    return
+  }
+
+  // EANs/Gewichte des ganzen Katalogs prüfen, bevor irgendetwas passiert.
+  const dataErrors = validateCatalogData(catalog)
+  if (dataErrors.length) {
+    logger.error("Ungültige Katalogdaten — nichts wurde angelegt:")
+    dataErrors.forEach((e) => logger.error(`  ${e}`))
     return
   }
 
@@ -283,9 +342,12 @@ export default async function importCatalog({ container, args }: ExecArgs) {
       handle,
       category,
       category_ids: categoryEntry ? [categoryEntry.id] : [],
+      metadata: entry.brand ? { brand: entry.brand } : undefined,
       variants: entry.variants.map((v) => ({
         title: v.label,
         sku: skuFor(entry.product, v),
+        ean: v.ean ?? undefined,
+        weight: v.weight_g ?? undefined,
         manage_inventory: manageInventory,
         options: { [OPTION_TITLE]: v.label },
         metadata: {
@@ -373,6 +435,7 @@ export default async function importCatalog({ container, args }: ExecArgs) {
         handle: p.handle,
         status: ProductStatus.PUBLISHED,
         category_ids: p.category_ids,
+        metadata: p.metadata,
         shipping_profile_id: shippingProfile.id,
         options: p.options,
         variants: p.variants,
