@@ -170,6 +170,20 @@ services:
       # genutztes Image darf keine tenant-spezifische Konfiguration enthalten.
       STATIC_TENANTS: ${STATIC_TENANTS:?STATIC_TENANTS muss gesetzt sein — sonst 404 auf allen Hosts}
 
+      # PostHog (Analyse). BEIDE optional: fehlt der Schluessel, laedt die
+      # Storefront posthog-js gar nicht erst — kein Fehler, nur ein Hinweis im
+      # Serverlog.
+      #
+      # Diese Zeilen sind Pflicht, obwohl die Werte optional sind: Compose
+      # reicht NUR weiter, was hier unter `environment:` steht. Ein Wert in der
+      # .env erreicht den Container sonst nie, und der Fehler bleibt still —
+      # genau das ist bei PAYREXX_API_BASE_URL schon einmal passiert.
+      #
+      # Bewusst ohne NEXT_PUBLIC_: solche Variablen werden zur Bauzeit ins
+      # Image gebacken. Der Schluessel wird zur Laufzeit serverseitig gelesen.
+      POSTHOG_KEY: ${POSTHOG_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://eu.i.posthog.com}
+
       BASE_DOMAIN: ${BASE_DOMAIN:-jibbit.app}
       CONTROL_PLANE_URL: ${CONTROL_PLANE_URL:-}
       CONTROL_PLANE_TOKEN: ${CONTROL_PLANE_TOKEN:-}
