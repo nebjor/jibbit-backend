@@ -61,6 +61,41 @@ laufenden Odoo-Sitemap (Stand 2026-08-20). `catalog.json` bleibt unberührt.
   die in Medusa Varianten sind. Einzubauen in der Next.js-Storefront
   (siehe PR); am robustesten über die Odoo-ID am Pfadende.
 
+## Galaxus-Felder: `ean`, `weight_g`, `brand`
+
+Für die Anbindung ans Digitec-Galaxus-Händlerprogramm (siehe
+`docs/galaxus-marktplatz.md`) kennt das Katalogformat drei zusätzliche,
+optionale Felder — je Variante `ean` (GTIN, 8–14 Ziffern, als String, damit
+führende Nullen überleben) und `weight_g` (Verpackungsgewicht in Gramm), je
+Produkt `brand` (Marke):
+
+    {
+      "product": "Gizeh DW Extra Fine",
+      "ref": null,
+      "brand": "Gizeh",
+      "variants": [
+        {
+          "label": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "ean": "4012345678901",
+          "weight_g": 25,
+          "tiers": [ … ]
+        }
+      ]
+    }
+
+`import-catalog.ts` und `update-catalog.ts` prüfen die EANs (8–14 Ziffern,
+keine Duplikate) und brechen bei Fehlern ab, bevor etwas geschrieben wird.
+Fehlende Felder sind erlaubt und löschen nie einen Wert in Medusa. Das
+Gewicht schaltet nebenbei den Brieftarif (CHF 3.75) des
+swiss-shipping-Moduls frei, der ohne Varianten-Gewichte nie greift.
+
+Was noch fehlt, zeigt der Bereitschaftsbericht:
+
+    cd backend
+    npx medusa exec ./src/scripts/galaxus-report.ts
+
 ## Nachziehen bestehender Produkte
 
     cd backend
