@@ -29,6 +29,9 @@
  * Was das Script anfasst — und was nicht:
  *   - subtitle/description: nur wenn die Content-Datei einen Wert hat und er
  *     vom Bestand abweicht. Leere Content-Felder überschreiben nie.
+ *   - ean/weight_g je Variante und brand je Produkt (Galaxus-Felder, siehe
+ *     import-catalog.ts): nur wenn der Katalog einen Wert hat und er
+ *     abweicht. Fehlende Katalogwerte löschen nie einen Wert in Medusa.
  *   - Preise: die Basispreise (price_list_id=null) der Variante werden als
  *     Ganzes mit den Staffeln aus dem Katalog abgeglichen und bei Abweichung
  *     ersetzt. Preislisten-Preise (Aktionen) bleiben unberührt — der
@@ -55,7 +58,12 @@ import {
 } from "@medusajs/medusa/core-flows"
 
 import { roundTo } from "./import-price-tiers"
-import { CatalogProduct, skuFor, slugify } from "./import-catalog"
+import {
+  CatalogProduct,
+  skuFor,
+  slugify,
+  validateCatalogData,
+} from "./import-catalog"
 import { parseScriptArgs } from "./script-args"
 
 const CURRENCY = "chf"
@@ -105,6 +113,10 @@ export type ExistingPrice = {
 export type ExistingVariant = {
   id: string
   sku: string | null
+  /** GTIN/EAN — optional, weil ältere Aufrufer das Feld nicht laden. */
+  ean?: string | null
+  /** Gramm — optional, weil ältere Aufrufer das Feld nicht laden. */
+  weight?: number | null
   manage_inventory: boolean
   prices: ExistingPrice[]
   inventory_item_ids: string[]
@@ -116,6 +128,8 @@ export type ExistingProduct = {
   title: string
   subtitle: string | null
   description: string | null
+  /** Produkt-Metadaten; die Marke steht unter metadata.brand. */
+  metadata?: Record<string, unknown> | null
   variants: ExistingVariant[]
 }
 
@@ -141,11 +155,22 @@ export type VariantPricePlan = {
   prices: DesiredPrice[]
 }
 
+export type VariantDataPlan = {
+  variant_id: string
+  sku: string
+  update: { ean?: string; weight?: number }
+}
+
 export type ProductPlan = {
   id: string
   handle: string
-  update: { subtitle?: string; description?: string }
+  update: {
+    subtitle?: string
+    description?: string
+    metadata?: Record<string, unknown>
+  }
   variantPrices: VariantPricePlan[]
+  variantData: VariantDataPlan[]
   changes: FieldChange[]
 }
 
@@ -274,6 +299,7 @@ export function planCatalogUpdate(input: {
       handle,
       update: {},
       variantPrices: [],
+      variantData: [],
       changes: [],
     }
 
@@ -292,6 +318,22 @@ export function planCatalogUpdate(input: {
       }
     }
 
+    // Marke — nur setzen, wenn der Katalog eine hat und sie abweicht.
+    // metadata wird gemerged geschrieben, damit andere Schlüssel überleben.
+    const haveBrand =
+      typeof product.metadata?.brand === "string" ? product.metadata.brand : ""
+    if (entry.brand && entry.brand !== haveBrand) {
+      productPlan.update.metadata = {
+        ...(product.metadata ?? {}),
+        brand: entry.brand,
+      }
+      productPlan.changes.push({
+        field: "brand",
+        before: fmtText(haveBrand || null),
+        after: fmtText(entry.brand),
+      })
+    }
+
     // Preise je Variante, Zuordnung über die deterministische SKU.
     for (const variant of entry.variants) {
       const sku = skuFor(entry.product, variant)
@@ -303,6 +345,39 @@ export function planCatalogUpdate(input: {
           after: "wird NICHT angelegt (import-catalog.ts verwenden)",
         })
         continue
+      }
+
+      // EAN und Gewicht — unabhängig vom Preisproblem weiter unten, damit
+      // Galaxus-Daten auch dann ankommen, wenn eine Staffel klemmt.
+      const dataUpdate: VariantDataPlan["update"] = {}
+      if (variant.ean != null && variant.ean !== (existingVariant.ean ?? null)) {
+        dataUpdate.ean = variant.ean
+        productPlan.changes.push({
+          field: `${sku} ean`,
+          before: existingVariant.ean ?? "(leer)",
+          after: variant.ean,
+        })
+      }
+      if (
+        variant.weight_g != null &&
+        variant.weight_g !== (existingVariant.weight ?? null)
+      ) {
+        dataUpdate.weight = variant.weight_g
+        productPlan.changes.push({
+          field: `${sku} gewicht`,
+          before:
+            existingVariant.weight != null
+              ? `${existingVariant.weight} g`
+              : "(leer)",
+          after: `${variant.weight_g} g`,
+        })
+      }
+      if (Object.keys(dataUpdate).length) {
+        productPlan.variantData.push({
+          variant_id: existingVariant.id,
+          sku,
+          update: dataUpdate,
+        })
       }
 
       // Wie import-catalog.ts: eine Staffel, die nicht bei 1 beginnt, lässt
@@ -411,6 +486,15 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
   }
   const catalog = mergeCatalogs(...catalogs)
 
+  // Dieselbe Prüfung wie import-catalog.ts: kaputte EANs oder Gewichte
+  // sollen auffallen, bevor irgendetwas geschrieben wird.
+  const dataErrors = validateCatalogData(catalog)
+  if (dataErrors.length) {
+    logger.error("Ungültige Katalogdaten — nichts wurde geändert:")
+    dataErrors.forEach((e) => logger.error(`  ${e}`))
+    return
+  }
+
   const contentPath = opts.value("content")
   const content = contentPath ? readJson<ContentEntry[]>(contentPath) : []
 
@@ -428,8 +512,11 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       "title",
       "subtitle",
       "description",
+      "metadata",
       "variants.id",
       "variants.sku",
+      "variants.ean",
+      "variants.weight",
       "variants.manage_inventory",
       "variants.prices.amount",
       "variants.prices.currency_code",
@@ -446,9 +533,12 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
     title: p.title,
     subtitle: p.subtitle ?? null,
     description: p.description ?? null,
+    metadata: p.metadata ?? null,
     variants: (p.variants ?? []).map((v: any) => ({
       id: v.id,
       sku: v.sku ?? null,
+      ean: v.ean ?? null,
+      weight: v.weight == null ? null : Number(v.weight),
       manage_inventory: !!v.manage_inventory,
       prices: (v.prices ?? []).map((pr: any) => ({
         amount: Number(pr.amount),
@@ -615,6 +705,19 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       },
     })
     logger.info(`${priceUpdates.length} Varianten-Preise ersetzt.`)
+  }
+
+  const dataUpdates = plan.products.flatMap((p) => p.variantData)
+  if (dataUpdates.length) {
+    await updateProductVariantsWorkflow(container).run({
+      input: {
+        product_variants: dataUpdates.map((v) => ({
+          id: v.variant_id,
+          ...v.update,
+        })),
+      },
+    })
+    logger.info(`${dataUpdates.length} Varianten-Stammdaten (EAN/Gewicht) gesetzt.`)
   }
 
   const manageUpdates = plan.inventory.filter((i) => i.set_manage_inventory)
