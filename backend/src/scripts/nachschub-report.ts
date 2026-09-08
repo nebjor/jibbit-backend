@@ -14,14 +14,14 @@
  *                ALLE Varianten mit Statusspalte, zum Ausdrucken/Abhaken.
  *
  * WICHTIG — eine leere Fällig-Liste ist KEINE Entwarnung: Varianten ohne
- * Bestandsführung (inventory.json quantity=null) oder ohne Meldebestand
- * (reorder_point in catalog.json) können gar nicht überwacht werden. Der
- * Bericht nennt deshalb immer beide Zahlen: wie viele Varianten überwacht
- * werden und wie viele nicht überwachbar sind.
+ * Bestandsführung oder ohne Meldebestand können gar nicht überwacht werden.
+ * Der Bericht nennt deshalb immer beide Zahlen: wie viele Varianten
+ * überwacht werden und wie viele nicht überwachbar sind.
  *
  * Der Bericht liest NUR und schreibt nie in die Datenbank. Gepflegt werden
- * die Daten in data/catalog.json (reorder_point, suppliers) und
- * data/inventory.json (quantity), eingespielt mit update-catalog.ts.
+ * die Daten im Admin: Meldebestand und Lieferanten im Widget «Nachschub»
+ * an der Produktseite (variant.metadata.reorder_point/.suppliers), der
+ * Bestand über Medusas Lagerbestände an der Variante.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs"
@@ -160,8 +160,8 @@ export default async function nachschubReport({ container, args }: ExecArgs) {
         `Meldebestand) — für diese Varianten sagt der Bericht NICHTS aus.`
     )
     logger.warn(
-      "  Nachpflegen: quantity in data/inventory.json, reorder_point und " +
-        "suppliers in data/catalog.json, dann update-catalog.ts."
+      "  Nachpflegen im Admin: Bestand über die Lagerbestände der Variante, " +
+        "Meldebestand und Lieferanten im Widget «Nachschub» an der Produktseite."
     )
   } else {
     logger.info(`  Alle ${u.gesamt} Varianten werden überwacht.`)

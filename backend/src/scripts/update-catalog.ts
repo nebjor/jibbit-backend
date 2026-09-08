@@ -32,10 +32,11 @@
  *   - ean/weight_g je Variante und brand je Produkt (Galaxus-Felder, siehe
  *     import-catalog.ts): nur wenn der Katalog einen Wert hat und er
  *     abweicht. Fehlende Katalogwerte löschen nie einen Wert in Medusa.
- *   - reorder_point/suppliers je Variante (Nachschubsteuerung, siehe
- *     lib/nachschub.ts): gleiche Regeln — nur setzen, wenn gepflegt und
- *     abweichend; die Varianten-Metadaten werden gemerged geschrieben.
- *     Lieferanten-URLs müssen http(s) sein, sonst bricht der Lauf ab.
+ *   - Meldebestand/Lieferanten (Nachschubsteuerung): NIE. Die pflegt der
+ *     Betreiber laufend im Admin (Widget «Nachschub» an der Produktseite,
+ *     variant.metadata.reorder_point/.suppliers) — dieses Script fasst die
+ *     Varianten-Metadaten gar nicht mehr an, damit ein Katalog-Lauf seine
+ *     Eingaben nicht überschreiben kann.
  *   - Preise: die Basispreise (price_list_id=null) der Variante werden als
  *     Ganzes mit den Staffeln aus dem Katalog abgeglichen und bei Abweichung
  *     ersetzt. Preislisten-Preise (Aktionen) bleiben unberührt — der
@@ -69,7 +70,6 @@ import {
   validateCatalogData,
 } from "./import-catalog"
 import { parseScriptArgs } from "./script-args"
-import { nachschubMetadataUpdate } from "../lib/nachschub"
 
 const CURRENCY = "chf"
 const ROUND_DEFAULT = 0.05
@@ -122,11 +122,6 @@ export type ExistingVariant = {
   ean?: string | null
   /** Gramm — optional, weil ältere Aufrufer das Feld nicht laden. */
   weight?: number | null
-  /**
-   * Varianten-Metadaten (units_per_pack, reorder_point, suppliers, …) —
-   * optional, weil ältere Aufrufer das Feld nicht laden.
-   */
-  metadata?: Record<string, unknown> | null
   manage_inventory: boolean
   prices: ExistingPrice[]
   inventory_item_ids: string[]
@@ -171,8 +166,6 @@ export type VariantDataPlan = {
   update: {
     ean?: string
     weight?: number
-    /** Vollständig gemergte Varianten-Metadaten (Meldebestand/Lieferanten). */
-    metadata?: Record<string, unknown>
   }
 }
 
@@ -387,24 +380,6 @@ export function planCatalogUpdate(input: {
           after: `${variant.weight_g} g`,
         })
       }
-      // Meldebestand & Lieferanten (Nachschubsteuerung) — wie EAN/Gewicht:
-      // nur setzen, wenn der Katalog etwas hat und es abweicht. Die metadata
-      // wird gemerged geschrieben, damit units_per_pack & Co. überleben.
-      const nachschub = nachschubMetadataUpdate(
-        existingVariant.metadata ?? null,
-        variant
-      )
-      if (nachschub) {
-        dataUpdate.metadata = nachschub.metadata
-        for (const ch of nachschub.changes) {
-          productPlan.changes.push({
-            field: `${sku} ${ch.field}`,
-            before: ch.before,
-            after: ch.after,
-          })
-        }
-      }
-
       if (Object.keys(dataUpdate).length) {
         productPlan.variantData.push({
           variant_id: existingVariant.id,
@@ -550,7 +525,6 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       "variants.sku",
       "variants.ean",
       "variants.weight",
-      "variants.metadata",
       "variants.manage_inventory",
       "variants.prices.amount",
       "variants.prices.currency_code",
@@ -573,7 +547,6 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       sku: v.sku ?? null,
       ean: v.ean ?? null,
       weight: v.weight == null ? null : Number(v.weight),
-      metadata: v.metadata ?? null,
       manage_inventory: !!v.manage_inventory,
       prices: (v.prices ?? []).map((pr: any) => ({
         amount: Number(pr.amount),
@@ -752,10 +725,7 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
         })),
       },
     })
-    logger.info(
-      `${dataUpdates.length} Varianten-Stammdaten ` +
-        `(EAN/Gewicht/Meldebestand/Lieferanten) gesetzt.`
-    )
+    logger.info(`${dataUpdates.length} Varianten-Stammdaten (EAN/Gewicht) gesetzt.`)
   }
 
   const manageUpdates = plan.inventory.filter((i) => i.set_manage_inventory)
