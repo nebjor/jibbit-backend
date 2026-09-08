@@ -1,54 +1,39 @@
 /**
  * Nachschubsteuerung — Adressprüfung, Auswahl der nachzubestellenden
- * Varianten und der Metadaten-Abgleich in update-catalog.ts.
+ * Varianten und die Pflege im Admin (Formular-Bausteine + API-Prüfung).
  *
- * Die drei kritischen Punkte laut Anforderung:
+ * Die kritischen Punkte:
  *   1. Die Lieferanten-URL wird im Admin als Link gerendert — nur http/https
- *      darf durchkommen, geprüft beim Einspielen UND beim Rendern.
+ *      darf durchkommen, geprüft beim Speichern (Formular UND Admin-API)
+ *      sowie beim Rendern.
  *   2. Grenzfall: Bestand GENAU auf dem Meldebestand ist fällig.
  *   3. Eine leere Fällig-Liste ist keine Entwarnung — die Zählung der nicht
  *      überwachbaren Varianten muss stimmen (heute: alle 35).
+ *   4. Die metadata der Variante wird beim Speichern als GANZES geschrieben —
+ *      fremde Schlüssel (units_per_pack, pack_type, …) müssen den
+ *      Speichervorgang überleben.
  */
 
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
-
-const runMock = jest.fn(async () => ({ result: [] as any[] }))
-
-jest.mock("@medusajs/medusa/core-flows", () => ({
-  // import-catalog.ts (mit-importiert) braucht diese Namen ebenfalls.
-  createProductCategoriesWorkflow: jest.fn(() => ({ run: runMock })),
-  createProductsWorkflow: jest.fn(() => ({ run: runMock })),
-  createInventoryItemsWorkflow: jest.fn(() => ({ run: runMock })),
-  createInventoryLevelsWorkflow: jest.fn(() => ({ run: runMock })),
-  updateInventoryLevelsWorkflow: jest.fn(() => ({ run: runMock })),
-  updateProductsWorkflow: jest.fn(() => ({ run: runMock })),
-  updateProductVariantsWorkflow: jest.fn(() => ({ run: runMock })),
-}))
-
-import { updateProductVariantsWorkflow } from "@medusajs/medusa/core-flows"
 
 import {
   isSafeSupplierUrl,
   istFaellig,
-  nachschubMetadataUpdate,
+  LieferantEingabe,
+  lieferantenEingabeAusMetadata,
+  meldebestandEingabeAusMetadata,
+  nachschubFormularMetadata,
   nachschubUebersicht,
   NachschubZeile,
   parseLieferanten,
   parseMeldebestand,
-  validateLieferantenDaten,
+  pruefeLieferantenEingabe,
+  pruefeMeldebestandEingabe,
+  sammleNachschubMetadataFehler,
+  validateNachschubMetadata,
 } from "../lib/nachschub"
-import {
-  CatalogProduct,
-  skuFor,
-  slugify,
-  validateCatalogData,
-} from "../scripts/import-catalog"
-import updateCatalog, {
-  ExistingProduct,
-  planCatalogUpdate,
-} from "../scripts/update-catalog"
+import { validateNachschubBody } from "../api/middlewares"
 
 const DATA_DIR = resolve(__dirname, "../../../data")
 
@@ -229,44 +214,77 @@ describe("nachschubUebersicht", () => {
   })
 })
 
-// ─── Prüfung beim Einspielen ────────────────────────────────────
+// ─── Pflege im Admin: Formular-Bausteine ────────────────────────
 
-const lieferantOk = {
-  name: "Grosshandel A",
-  url: "https://a.example.ch/p/1",
-  article_number: "A-100",
+function lieferant(overrides: Partial<LieferantEingabe> = {}): LieferantEingabe {
+  return {
+    name: "Grosshandel A",
+    url: "https://a.example.ch/p/1",
+    article_number: "A-100",
+    ...overrides,
+  }
 }
 
-function katalogMit(variante: Record<string, unknown>): CatalogProduct[] {
-  return [
-    {
-      product: "Testprodukt",
-      ref: null,
-      variants: [
-        {
-          label: "Einzeln",
-          pack_type: "single",
-          units_per_pack: 1,
-          tiers: [{ min_quantity: 1, max_quantity: null, price: 2 }],
-          ...variante,
-        } as any,
-      ],
-    },
-  ]
-}
+describe("lieferantenEingabeAusMetadata", () => {
+  it("liest Rohwerte — auch kaputte, damit sie korrigiert werden können", () => {
+    expect(
+      lieferantenEingabeAusMetadata({
+        suppliers: [
+          { name: "A", url: "https://a.example.ch/p", article_number: "A-1" },
+          { name: "", url: "javascript:alert(1)" },
+          { name: "C" },
+        ],
+      })
+    ).toEqual([
+      { name: "A", url: "https://a.example.ch/p", article_number: "A-1" },
+      { name: "", url: "javascript:alert(1)", article_number: "" },
+      { name: "C", url: "", article_number: "" },
+    ])
+  })
 
-describe("validateLieferantenDaten", () => {
-  it("akzeptiert gepflegte Daten und fehlende Felder", () => {
+  it("übersteht Müll", () => {
+    expect(lieferantenEingabeAusMetadata(null)).toEqual([])
+    expect(lieferantenEingabeAusMetadata({ suppliers: "kaputt" })).toEqual([])
     expect(
-      validateLieferantenDaten(
-        katalogMit({ reorder_point: 10, suppliers: [lieferantOk] })
-      )
-    ).toEqual([])
-    expect(validateLieferantenDaten(katalogMit({}))).toEqual([])
+      lieferantenEingabeAusMetadata({ suppliers: [null, 42, { name: 7 }] })
+    ).toEqual([{ name: "", url: "", article_number: "" }])
+  })
+})
+
+describe("meldebestandEingabeAusMetadata", () => {
+  it.each([
+    [{ reorder_point: 10 }, "10"],
+    [{ reorder_point: 0 }, "0"],
+    [{ reorder_point: "kaputt" }, ""],
+    [{}, ""],
+    [null, ""],
+  ])("metadata=%p -> %p", (metadata, want) => {
+    expect(meldebestandEingabeAusMetadata(metadata as any)).toBe(want)
+  })
+})
+
+describe("pruefeMeldebestandEingabe", () => {
+  it("leer ist erlaubt (= nicht überwachen), ganze Zahlen ab 0 auch", () => {
+    expect(pruefeMeldebestandEingabe("")).toBeNull()
+    expect(pruefeMeldebestandEingabe("  ")).toBeNull()
+    expect(pruefeMeldebestandEingabe("0")).toBeNull()
+    expect(pruefeMeldebestandEingabe("10")).toBeNull()
+  })
+
+  it.each([["-1"], ["2.5"], ["abc"], ["1e"]])(
+    "lehnt %s ab",
+    (wert) => {
+      expect(pruefeMeldebestandEingabe(wert)).toContain("ganze Zahl")
+    }
+  )
+})
+
+describe("pruefeLieferantenEingabe — die Adressprüfung beim Speichern", () => {
+  it("akzeptiert gültige Einträge, leere Liste und leere Adresse", () => {
+    expect(pruefeLieferantenEingabe([])).toEqual([])
+    expect(pruefeLieferantenEingabe([lieferant()])).toEqual([])
     expect(
-      validateLieferantenDaten(
-        katalogMit({ reorder_point: null, suppliers: null })
-      )
+      pruefeLieferantenEingabe([lieferant({ url: "", article_number: "" })])
     ).toEqual([])
   })
 
@@ -276,155 +294,46 @@ describe("validateLieferantenDaten", () => {
     ["data:text/html,x"],
     ["/relativ"],
     ["www.ohne-schema.ch/produkt"],
-  ])("lehnt die Lieferanten-URL «%s» ab", (url) => {
-    const errors = validateLieferantenDaten(
-      katalogMit({ suppliers: [{ name: "X", url }] })
-    )
-    expect(errors).toHaveLength(1)
-    expect(errors[0]).toContain("http(s)")
+  ])("lehnt die Adresse «%s» beim Speichern ab", (url) => {
+    const fehler = pruefeLieferantenEingabe([lieferant({ url })])
+    expect(fehler).toHaveLength(1)
+    expect(fehler[0]).toContain("http(s)")
   })
 
-  it("lehnt kaputte Meldebestände und Einträge ohne Namen ab", () => {
-    expect(
-      validateLieferantenDaten(katalogMit({ reorder_point: -3 }))
-    ).toHaveLength(1)
-    expect(
-      validateLieferantenDaten(katalogMit({ reorder_point: 2.5 }))
-    ).toHaveLength(1)
-    expect(
-      validateLieferantenDaten(
-        katalogMit({ suppliers: [{ url: "https://a.example.ch/p" }] })
-      )
-    ).toHaveLength(1)
-    expect(
-      validateLieferantenDaten(katalogMit({ suppliers: "kaputt" }))
-    ).toHaveLength(1)
-  })
-
-  it("läuft über validateCatalogData mit — beide Import-Scripts prüfen so", () => {
-    const errors = validateCatalogData(
-      katalogMit({ suppliers: [{ name: "X", url: "javascript:alert(1)" }] })
-    )
-    expect(errors.some((e) => e.includes("http(s)"))).toBe(true)
-  })
-})
-
-// ─── Metadaten-Abgleich (update-catalog.ts) ─────────────────────
-
-describe("nachschubMetadataUpdate", () => {
-  it("setzt Meldebestand und Lieferanten und lässt fremde Schlüssel stehen", () => {
-    const res = nachschubMetadataUpdate(
-      { units_per_pack: 1, pack_type: "single" },
-      { reorder_point: 10, suppliers: [lieferantOk] }
-    )
-    expect(res).not.toBeNull()
-    expect(res!.metadata).toEqual({
-      units_per_pack: 1,
-      pack_type: "single",
-      reorder_point: 10,
-      suppliers: [
-        {
-          name: "Grosshandel A",
-          url: "https://a.example.ch/p/1",
-          article_number: "A-100",
-        },
-      ],
-    })
-    expect(res!.changes.map((c) => c.field).sort()).toEqual([
-      "lieferanten",
-      "meldebestand",
+  it("lehnt einen leeren Lieferantennamen ab — er wird nicht gespeichert", () => {
+    expect(pruefeLieferantenEingabe([lieferant({ name: "" })])).toEqual([
+      "Lieferant 1: Name fehlt.",
+    ])
+    expect(pruefeLieferantenEingabe([lieferant({ name: "   " })])).toEqual([
+      "Lieferant 1: Name fehlt.",
     ])
   })
 
-  it("ist idempotent: gleiche Werte -> nichts zu tun", () => {
-    const erst = nachschubMetadataUpdate(null, {
-      reorder_point: 10,
-      suppliers: [lieferantOk],
-    })
-    expect(
-      nachschubMetadataUpdate(erst!.metadata, {
-        reorder_point: 10,
-        suppliers: [lieferantOk],
-      })
-    ).toBeNull()
-  })
-
-  it("fehlende Katalogwerte löschen nie etwas", () => {
-    const existing = {
-      reorder_point: 10,
-      suppliers: [{ name: "A", url: "https://a.example.ch/p", article_number: null }],
-    }
-    expect(nachschubMetadataUpdate(existing, {})).toBeNull()
-    expect(
-      nachschubMetadataUpdate(existing, { reorder_point: null, suppliers: null })
-    ).toBeNull()
-  })
-
-  it("meldet nur das abweichende Feld", () => {
-    const res = nachschubMetadataUpdate(
-      {
-        reorder_point: 5,
-        suppliers: [{ name: "Grosshandel A", url: "https://a.example.ch/p/1", article_number: "A-100" }],
-      },
-      { reorder_point: 12, suppliers: [lieferantOk] }
-    )
-    expect(res!.changes.map((c) => c.field)).toEqual(["meldebestand"])
-    expect(res!.metadata.reorder_point).toBe(12)
+  it("nennt die Position des kaputten Eintrags", () => {
+    const fehler = pruefeLieferantenEingabe([
+      lieferant(),
+      lieferant({ name: "", url: "ftp://x" }),
+    ])
+    expect(fehler).toEqual([
+      "Lieferant 2: Name fehlt.",
+      expect.stringContaining("Lieferant 2: Adresse"),
+    ])
   })
 })
 
-// ─── planCatalogUpdate: Lieferantendaten je Variante ────────────
-
-const testprodukt: CatalogProduct = katalogMit({
-  reorder_point: 10,
-  suppliers: [lieferantOk],
-})[0]
-const testHandle = slugify(testprodukt.product)
-const testSku = skuFor(testprodukt.product, testprodukt.variants[0])
-
-function existingTestprodukt(
-  metadata: Record<string, unknown> | null = null
-): ExistingProduct {
-  return {
-    id: "prod_1",
-    handle: testHandle,
-    title: testprodukt.product,
-    subtitle: null,
-    description: null,
-    variants: [
-      {
-        id: "var_1",
-        sku: testSku,
-        metadata,
-        manage_inventory: false,
-        inventory_item_ids: [],
-        prices: [
-          {
-            amount: 2,
-            currency_code: "chf",
-            min_quantity: 1,
-            max_quantity: null,
-            price_list_id: null,
-          },
-        ],
-      },
-    ],
-  }
-}
-
-describe("planCatalogUpdate mit Nachschubdaten", () => {
-  it("plant das Metadaten-Update für die Variante", () => {
-    const plan = planCatalogUpdate({
-      existing: [existingTestprodukt()],
-      catalog: [testprodukt],
-      content: [],
-      inventory: [],
-      step: 0.05,
-    })
-    expect(plan.products).toHaveLength(1)
-    const [data] = plan.products[0].variantData
-    expect(data.variant_id).toBe("var_1")
-    expect(data.update.metadata).toEqual({
+describe("nachschubFormularMetadata — die gefährlichste Stelle", () => {
+  it("LÄSST FREMDE SCHLÜSSEL STEHEN: metadata wird als Ganzes geschrieben", () => {
+    // units_per_pack & Co. stammen aus der Odoo-Migration. Gingen sie beim
+    // Speichern im Widget verloren, wäre der Grundpreis auf der
+    // Produktseite kaputt — deshalb wird IMMER gemergt geschrieben.
+    const res = nachschubFormularMetadata(
+      { units_per_pack: 60, pack_type: "display", irgendwas: { tief: true } },
+      { meldebestand: "10", lieferanten: [lieferant()] }
+    )
+    expect(res).toEqual({
+      units_per_pack: 60,
+      pack_type: "display",
+      irgendwas: { tief: true },
       reorder_point: 10,
       suppliers: [
         {
@@ -434,72 +343,181 @@ describe("planCatalogUpdate mit Nachschubdaten", () => {
         },
       ],
     })
-    expect(
-      plan.products[0].changes.map((c) => c.field)
-    ).toEqual([`${testSku} meldebestand`, `${testSku} lieferanten`])
   })
 
-  it("zweiter Lauf: nichts zu tun", () => {
-    const erst = planCatalogUpdate({
-      existing: [existingTestprodukt()],
-      catalog: [testprodukt],
-      content: [],
-      inventory: [],
-      step: 0.05,
+  it("Entfernen des letzten Lieferanten leert sauber — kein kaputter Eintrag", () => {
+    const res = nachschubFormularMetadata(
+      {
+        units_per_pack: 1,
+        suppliers: [{ name: "Alt", url: "https://alt.example.ch/p" }],
+      },
+      { meldebestand: "5", lieferanten: [] }
+    )
+    expect(res.suppliers).toBeNull()
+    expect(res.units_per_pack).toBe(1)
+    // Die Leser sehen danach schlicht «kein Lieferant gepflegt»:
+    expect(parseLieferanten(res)).toEqual([])
+  })
+
+  it("leerer Meldebestand leert den Schlüssel (nicht 0, nicht NaN)", () => {
+    const res = nachschubFormularMetadata(
+      { reorder_point: 10, units_per_pack: 1 },
+      { meldebestand: "", lieferanten: [lieferant()] }
+    )
+    expect(res.reorder_point).toBeNull()
+    expect(parseMeldebestand(res)).toBeNull()
+  })
+
+  it("trimmt und normalisiert: leere URL/Artikelnummer werden null", () => {
+    const res = nachschubFormularMetadata(null, {
+      meldebestand: " 7 ",
+      lieferanten: [
+        { name: "  B  ", url: "  ", article_number: "" },
+      ],
     })
-    const geschrieben = erst.products[0].variantData[0].update.metadata!
-    const zweit = planCatalogUpdate({
-      existing: [existingTestprodukt(geschrieben)],
-      catalog: [testprodukt],
-      content: [],
-      inventory: [],
-      step: 0.05,
+    expect(res).toEqual({
+      reorder_point: 7,
+      suppliers: [{ name: "B", url: null, article_number: null }],
     })
-    expect(zweit.products).toHaveLength(0)
   })
 })
 
-// ─── Einspielen bricht bei böser URL ab, bevor etwas passiert ───
+// ─── Prüfung beim Speichern über die Admin-API ──────────────────
 
-describe("updateCatalog (exec) mit böser Lieferanten-URL", () => {
-  const graphMock = jest.fn()
-  const errorMock = jest.fn()
-  const container = {
-    resolve: (key: string) => {
-      if (key === "logger") {
-        return { info: jest.fn(), warn: jest.fn(), error: errorMock }
-      }
-      if (key === "query") {
-        return { graph: graphMock }
-      }
-      if (key === "link" || key === "remoteLink") {
-        return { create: jest.fn() }
-      }
-      throw new Error(`unerwartetes resolve(${key})`)
-    },
-  } as any
-
-  it("bricht ab: keine Datenbank-Abfrage, kein Workflow, klare Fehlermeldung", async () => {
-    jest.clearAllMocks()
-    const dir = mkdtempSync(join(tmpdir(), "nachschub-"))
-    const catalogPath = join(dir, "catalog.json")
-    writeFileSync(
-      catalogPath,
-      JSON.stringify(
-        katalogMit({ suppliers: [{ name: "Böse", url: "JavaScript:alert(1)" }] })
-      )
-    )
-
-    await updateCatalog({ container, args: [catalogPath] } as any)
-
-    expect(graphMock).not.toHaveBeenCalled()
-    expect(updateProductVariantsWorkflow).not.toHaveBeenCalled()
-    expect(runMock).not.toHaveBeenCalled()
-    expect(errorMock).toHaveBeenCalledWith(
-      "Ungültige Katalogdaten — nichts wurde geändert:"
-    )
+describe("validateNachschubMetadata", () => {
+  it("nichts zu beanstanden ohne Nachschub-Schlüssel oder bei null", () => {
+    expect(validateNachschubMetadata(undefined)).toEqual([])
+    expect(validateNachschubMetadata(null)).toEqual([])
+    expect(validateNachschubMetadata("egal")).toEqual([])
+    expect(validateNachschubMetadata({ brand: "Gizeh" })).toEqual([])
     expect(
-      errorMock.mock.calls.some(([msg]) => String(msg).includes("http(s)"))
-    ).toBe(true)
+      validateNachschubMetadata({ reorder_point: null, suppliers: null })
+    ).toEqual([])
+  })
+
+  it("akzeptiert gültige Nachschubdaten (auch die Formular-Normalform)", () => {
+    expect(
+      validateNachschubMetadata(
+        nachschubFormularMetadata(
+          { units_per_pack: 1 },
+          {
+            meldebestand: "10",
+            lieferanten: [lieferant(), lieferant({ url: "" })],
+          }
+        )
+      )
+    ).toEqual([])
+  })
+
+  it.each([
+    ["javascript:alert(1)"],
+    ["JavaScript:alert(1)"],
+    ["data:text/html,x"],
+    ["/relativ"],
+  ])("blockt die Lieferanten-URL «%s» an der API", (url) => {
+    const fehler = validateNachschubMetadata({
+      suppliers: [{ name: "X", url }],
+    })
+    expect(fehler).toHaveLength(1)
+    expect(fehler[0]).toContain("http(s)")
+  })
+
+  it("blockt Einträge ohne Namen und kaputte Strukturen", () => {
+    expect(
+      validateNachschubMetadata({ suppliers: [{ url: "https://a.example.ch/p" }] })
+    ).toEqual([expect.stringContaining("name fehlt")])
+    expect(validateNachschubMetadata({ suppliers: "kaputt" })).toEqual([
+      expect.stringContaining("Liste"),
+    ])
+    expect(validateNachschubMetadata({ suppliers: [42] })).toEqual([
+      expect.stringContaining("Objekt"),
+    ])
+  })
+
+  it("blockt kaputte Meldebestände", () => {
+    expect(validateNachschubMetadata({ reorder_point: -3 })).toHaveLength(1)
+    expect(validateNachschubMetadata({ reorder_point: 2.5 })).toHaveLength(1)
+    expect(validateNachschubMetadata({ reorder_point: "abc" })).toHaveLength(1)
+    expect(validateNachschubMetadata({ reorder_point: 0 })).toEqual([])
+  })
+})
+
+describe("sammleNachschubMetadataFehler — deckt auch Batch-Routen ab", () => {
+  const boese = { suppliers: [{ name: "Böse", url: "javascript:alert(1)" }] }
+
+  it("findet die metadata im direkten Varianten-Update", () => {
+    expect(sammleNachschubMetadataFehler({ metadata: boese })).toHaveLength(1)
+  })
+
+  it("findet die metadata in Batch- und verschachtelten Updates", () => {
+    // POST /admin/products/:id/variants/batch
+    expect(
+      sammleNachschubMetadataFehler({ update: [{ id: "v1", metadata: boese }] })
+    ).toHaveLength(1)
+    // POST /admin/products/batch mit eingebetteten Varianten
+    expect(
+      sammleNachschubMetadataFehler({
+        update: [{ id: "p1", variants: [{ id: "v1", metadata: boese }] }],
+      })
+    ).toHaveLength(1)
+    // POST /admin/products mit Varianten
+    expect(
+      sammleNachschubMetadataFehler({ variants: [{ metadata: boese }] })
+    ).toHaveLength(1)
+  })
+
+  it("lässt harmlose Bodies durch", () => {
+    expect(sammleNachschubMetadataFehler(undefined)).toEqual([])
+    expect(sammleNachschubMetadataFehler({ title: "Neu" })).toEqual([])
+    expect(
+      sammleNachschubMetadataFehler({ metadata: { brand: "Gizeh" } })
+    ).toEqual([])
+    expect(
+      sammleNachschubMetadataFehler({
+        metadata: nachschubFormularMetadata(null, {
+          meldebestand: "3",
+          lieferanten: [lieferant()],
+        }),
+      })
+    ).toEqual([])
+  })
+})
+
+describe("validateNachschubBody (Middleware)", () => {
+  function aufruf(body: unknown) {
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    }
+    const next = jest.fn()
+    validateNachschubBody({ body } as any, res as any, next)
+    return { res, next }
+  }
+
+  it("weist eine javascript:-Adresse mit 400 ab — kein next()", () => {
+    const { res, next } = aufruf({
+      metadata: { suppliers: [{ name: "Böse", url: "javascript:alert(1)" }] },
+    })
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({
+      message: expect.stringContaining("http(s)"),
+    })
+    expect(next).not.toHaveBeenCalled()
+  })
+
+  it("lässt einen Request ohne Nachschubdaten passieren", () => {
+    const { res, next } = aufruf({ title: "Neuer Titel" })
+    expect(next).toHaveBeenCalled()
+    expect(res.status).not.toHaveBeenCalled()
+  })
+
+  it("lässt gültige Nachschubdaten passieren", () => {
+    const { next } = aufruf({
+      metadata: nachschubFormularMetadata(
+        { units_per_pack: 1 },
+        { meldebestand: "5", lieferanten: [lieferant()] }
+      ),
+    })
+    expect(next).toHaveBeenCalled()
   })
 })

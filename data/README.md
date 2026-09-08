@@ -96,58 +96,24 @@ Was noch fehlt, zeigt der Bereitschaftsbericht:
     cd backend
     npx medusa exec ./src/scripts/galaxus-report.ts
 
-## Nachschub: `reorder_point` und `suppliers`
+## Nachschub: Meldebestand und Lieferanten — NICHT hier
 
-Für die Nachschubsteuerung (Admin-Seite «Nachschub», Widget an der
-Produktseite, `nachschub-report.ts`) kennt das Katalogformat je Variante
-zwei weitere optionale Felder — `reorder_point` (Meldebestand: liegt der
-verfügbare Bestand auf oder unter diesem Wert, gilt die Variante als
-nachzubestellen) und `suppliers` (Bezugsquellen des Betreibers, der erste
-Eintrag ist der Hauptlieferant):
+Meldebestand (`reorder_point`) und Lieferanten (`suppliers`) der
+Nachschubsteuerung sind **keine Katalogfelder mehr**. Der Betreiber pflegt
+sie laufend — im Admin, im Widget «Nachschub» an der Produktseite.
+Gespeichert wird über die Admin-API in die `metadata` der Variante (gleiche
+Schlüssel, keine Datenbankmigration); `import-catalog.ts` und
+`update-catalog.ts` fassen die Varianten-Metadaten nicht an. So verlangt
+eine Änderung keinen Build und kein `git pull` — und ein `git pull` kann
+die Eingaben nicht überschreiben.
 
-    {
-      "product": "Gizeh DW Extra Fine",
-      "ref": null,
-      "variants": [
-        {
-          "label": "Einzeln",
-          "pack_type": "single",
-          "units_per_pack": 1,
-          "reorder_point": 10,
-          "suppliers": [
-            {
-              "name": "Grosshandel AG",
-              "url": "https://grosshandel.example.ch/produkt/gizeh-dw-extra-fine",
-              "article_number": "GH-4711"
-            },
-            {
-              "name": "Zweitlieferant GmbH",
-              "url": "https://zweitlieferant.example.ch/p/12345"
-            }
-          ],
-          "tiers": [ … ]
-        }
-      ]
-    }
+Die Lieferanten-`url` muss eine absolute `http(s)`-Adresse sein — geprüft
+beim Speichern im Formular, beim Schreiben über die Admin-API
+(`src/api/middlewares.ts`) und beim Rendern
+(`backend/src/lib/nachschub.ts`), denn die Adresse wird im Admin als Link
+gerendert, und dort sitzt jemand mit vollen Rechten.
 
-`update-catalog.ts` schreibt beides in die `metadata` der Variante
-(`reorder_point`, `suppliers`) — keine Datenbankmigration nötig. Gleiche
-Regeln wie bei den Galaxus-Feldern: nur gepflegte, abweichende Werte werden
-geschrieben, fehlende Felder löschen nie etwas.
-
-**Die `url` muss eine absolute `http(s)`-Adresse der Produktseite beim
-Lieferanten sein.** Alles andere (`javascript:`, `data:`, relative Pfade,
-`www.…` ohne Schema) bricht das Einspielen ab — die Adresse wird im Admin
-als Link gerendert, und dort sitzt jemand mit vollen Rechten. Geprüft wird
-zusätzlich beim Rendern (siehe `backend/src/lib/nachschub.ts`).
-
-Der Meldebestand greift nur, wenn die Variante auch Bestandsführung hat —
-also `quantity` in `inventory.json` gepflegt ist. Varianten ohne Bestand
-oder ohne Meldebestand zählen Übersicht und Bericht als «nicht
-überwachbar» — solange dort nicht 0 steht, ist eine leere Nachschubliste
-keine Entwarnung.
-
-Der Bericht fürs Terminal (Konsole, optional CSV zum Ausdrucken):
+Der Bericht fürs Terminal (Konsole, optional CSV zum Ausdrucken) liest nur:
 
     cd backend
     npx medusa exec ./src/scripts/nachschub-report.ts
