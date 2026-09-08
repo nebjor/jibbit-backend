@@ -62,17 +62,6 @@ const STOCK_LOCATION_NAME = "Lager Zürich";
 const FULFILLMENT_SET_NAME = "Versand Schweiz";
 const FULFILLMENT_PROVIDER_ID = "swiss-shipping_swiss-shipping";
 
-/**
- * CHF — Dezimalbeträge, nicht Rappen.
- * NUR für Beschriftungen. Die tatsächliche Berechnung macht
- * SwissShippingProviderService.calculatePrice() mit den Werten aus
- * medusa-config.ts (letterPrice / parcelPrice / freeShippingThreshold) — beide Stellen
- * müssen synchron gehalten werden.
- */
-const SHIPPING_LETTER_PRICE = 3.75;
-const SHIPPING_PARCEL_PRICE = 9;
-const FREE_SHIPPING_THRESHOLD = 69;
-
 /** Schweizer MwSt.-Normalsatz seit 01.01.2024. */
 const CH_VAT_RATE = 8.1;
 
@@ -353,7 +342,14 @@ export default async function seedJibbitData({ container }: ExecArgs) {
           shipping_profile_id: shippingProfile.id,
           type: {
             label: "Standard",
-            description: `Schweizer Post, 2–3 Werktage. Brief CHF ${SHIPPING_LETTER_PRICE.toFixed(2)}, Paket CHF ${SHIPPING_PARCEL_PRICE.toFixed(2)} — ab CHF ${FREE_SHIPPING_THRESHOLD}.00 gratis.`,
+            // BEWUSST OHNE PREISE. Dieser Text wird beim Einrichten EINMAL
+            // in die Datenbank geschrieben und danach nie wieder angefasst —
+            // eine Tarifaenderung zieht hier nicht mit. Genau so stand hier
+            // monatelang «CHF 9.00 — ab CHF 100.00 gratis», während die Kasse
+            // längst 69/3.75/9.00 rechnete, und der Kunde las eine Falschangabe.
+            // Der Preis steht ohnehin daneben und wird pro Bestellung frisch
+            // berechnet (src/modules/swiss-shipping).
+            description: "Schweizer Post, 2–3 Werktage",
             code: "standard",
           },
           // `calculated` Optionen führen KEINE hinterlegten Preise —
