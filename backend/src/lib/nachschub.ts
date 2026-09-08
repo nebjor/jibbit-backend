@@ -1,26 +1,33 @@
 /**
  * Nachschubsteuerung — gemeinsame, reine Bausteine.
  *
- * Der Betreiber pflegt je Variante in data/catalog.json einen Meldebestand
- * (reorder_point) und seine Bezugsquellen (suppliers); update-catalog.ts
- * schreibt beides in die metadata der Variante. Von dort lesen drei Abnehmer:
+ * Der Betreiber pflegt Meldebestand (reorder_point) und Bezugsquellen
+ * (suppliers) je Variante direkt im Admin: im Widget «Nachschub» an der
+ * Produktseite. Gespeichert wird über die Admin-API in die metadata der
+ * Variante. Von dort lesen drei Abnehmer:
  *
  *   - das Admin-Widget an der Produktseite (src/admin/widgets/nachschub-widget.tsx)
  *   - die Admin-Seite «Nachschub»          (src/admin/routes/nachschub/page.tsx)
  *   - der Bericht fürs Terminal            (src/scripts/nachschub-report.ts)
  *
  * Dieses Modul ist bewusst rein (keine Datenbank, kein Medusa-Import): die
- * Admin-Oberfläche bündelt es per Vite mit, die Scripts per tsc, und die
- * Unit-Tests füttern es direkt.
+ * Admin-Oberfläche bündelt es per Vite mit, Scripts und Middleware per tsc,
+ * und die Unit-Tests füttern es direkt.
  *
  * SICHERHEIT — die Lieferanten-URL wird im Admin als Link gerendert, und dort
- * sitzt jemand mit vollen Rechten. Die Datei wird von Hand gepflegt, also
- * gilt sie als nicht vertrauenswürdig: isSafeSupplierUrl() lässt NUR http:
- * und https: durch (kein javascript:, data:, vbscript:, keine relativen
- * Angaben). Geprüft wird zweimal — beim Einspielen (validateLieferantenDaten
- * bricht den Import ab) UND beim Rendern (parseLieferanten liefert für alles
- * andere url=null, der Link entfällt). Jeder gerenderte Link trägt zusätzlich
- * rel="noopener noreferrer".
+ * sitzt jemand mit vollen Rechten. isSafeSupplierUrl() lässt NUR http: und
+ * https: durch (kein javascript:, data:, vbscript:, keine relativen
+ * Angaben). Geprüft wird dreimal:
+ *
+ *   1. beim Speichern im Formular (pruefeLieferantenEingabe) — der Betreiber
+ *      sieht den Fehler sofort;
+ *   2. beim Speichern über die Admin-API (validateNachschubMetadata via
+ *      Middleware in src/api/middlewares.ts) — wer die API direkt anspricht,
+ *      umgeht das Formular;
+ *   3. beim Rendern (parseLieferanten liefert für alles andere url=null, der
+ *      Link entfällt) — der eigentliche Schutz, falls doch etwas in der
+ *      Datenbank landet. Jeder gerenderte Link trägt zusätzlich
+ *      rel="noopener noreferrer".
  */
 
 /** Schlüssel in variant.metadata, unter denen die Nachschubdaten liegen. */
@@ -142,7 +149,7 @@ export type NachschubUebersicht = {
    * Entwarnung — Übersicht und Bericht müssen ihn deshalb immer nennen.
    */
   nichtUeberwachbar: number
-  /** davon: keine Bestandsführung (inventory.json quantity=null). */
+  /** davon: keine Bestandsführung an der Variante. */
   ohneBestand: number
   /** davon: Bestand da, aber kein Meldebestand (reorder_point) gepflegt. */
   ohneMeldebestand: number
@@ -195,143 +202,198 @@ export function nachschubUebersicht(
   }
 }
 
-// ─── Prüfung beim Einspielen (catalog.json) ─────────────────────
+// ─── Pflege im Admin: Formular-Bausteine ────────────────────────
+//
+// Das Widget «Nachschub» (Produktseite) bearbeitet Meldebestand und
+// Lieferanten je Variante. Diese Bausteine sind rein und getestet:
+// Rohwerte fürs Formular lesen, Eingaben prüfen, die metadata fürs
+// Speichern MERGEN — die Admin-API schreibt metadata als Ganzes, fremde
+// Schlüssel (units_per_pack, pack_type, …) müssen also mitkommen, sonst
+// sind sie nach dem Speichern weg.
 
-/** So stehen die Felder in data/catalog.json je Variante. */
-export type KatalogLieferant = {
+/** Eine Formularzeile im Widget — Rohtext, wie ihn der Betreiber eintippt. */
+export type LieferantEingabe = {
   name: string
-  /** Adresse der Produktseite beim Lieferanten — nur http(s) erlaubt. */
   url: string
-  /** Artikelnummer beim Lieferanten, optional. */
-  article_number?: string | null
-}
-
-type KatalogVarianteMitNachschub = {
-  label: string
-  reorder_point?: number | null
-  suppliers?: KatalogLieferant[] | null
+  article_number: string
 }
 
 /**
- * Lieferanten- und Meldebestandsdaten des Katalogs prüfen, BEVOR etwas
- * geschrieben wird — gleiche Mechanik wie die EAN-Prüfung in
- * validateCatalogData(): eine nicht-leere Fehlerliste bricht den Lauf ab.
- * Insbesondere kommt so nie eine javascript:-Adresse in die Datenbank.
+ * Roh-Lieferanten fürs Formular lesen — bewusst UNGEFILTERT (anders als
+ * parseLieferanten): auch ein Eintrag ohne Namen oder mit kaputter Adresse
+ * soll im Formular erscheinen, damit er korrigiert werden kann.
  */
-export function validateLieferantenDaten(
-  catalog: { product: string; variants: KatalogVarianteMitNachschub[] }[]
+export function lieferantenEingabeAusMetadata(
+  metadata: Record<string, unknown> | null | undefined
+): LieferantEingabe[] {
+  const raw = metadata?.[SUPPLIERS_KEY]
+  if (!Array.isArray(raw)) {
+    return []
+  }
+  const eintraege: LieferantEingabe[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") {
+      continue
+    }
+    const e = entry as Record<string, unknown>
+    eintraege.push({
+      name: typeof e.name === "string" ? e.name : "",
+      url: typeof e.url === "string" ? e.url : "",
+      article_number:
+        typeof e.article_number === "string" ? e.article_number : "",
+    })
+  }
+  return eintraege
+}
+
+/** Meldebestand als Formularwert: "" = nicht gepflegt. */
+export function meldebestandEingabeAusMetadata(
+  metadata: Record<string, unknown> | null | undefined
+): string {
+  const n = parseMeldebestand(metadata)
+  return n === null ? "" : String(n)
+}
+
+/** Leer ist erlaubt (= kein Meldebestand); sonst ganze Zahl >= 0. */
+export function pruefeMeldebestandEingabe(wert: string): string | null {
+  if (wert.trim() === "") {
+    return null
+  }
+  const n = Number(wert)
+  return Number.isInteger(n) && n >= 0
+    ? null
+    : "Meldebestand muss eine ganze Zahl ab 0 sein — oder leer bleiben."
+}
+
+/**
+ * Formularprüfung vor dem Speichern: jeder Lieferant braucht einen Namen,
+ * und eine Adresse (optional) muss eine absolute http(s)-Adresse sein.
+ * Der Betreiber sieht den Fehler so sofort — statt später einen toten
+ * Link. Leere Liste = keine Fehler (alle Lieferanten entfernt ist gültig).
+ */
+export function pruefeLieferantenEingabe(
+  eintraege: LieferantEingabe[]
 ): string[] {
-  const errors: string[] = []
-  for (const entry of catalog) {
-    for (const v of entry.variants) {
-      const where = `${entry.product} (${v.label})`
-      if (v.reorder_point != null) {
-        if (!Number.isInteger(v.reorder_point) || v.reorder_point < 0) {
-          errors.push(
-            `${where}: reorder_point muss eine ganze Zahl >= 0 sein ` +
-              `(ist ${v.reorder_point})`
-          )
-        }
-      }
-      if (v.suppliers == null) {
-        continue
-      }
-      if (!Array.isArray(v.suppliers)) {
-        errors.push(`${where}: suppliers muss eine Liste sein`)
-        continue
-      }
-      v.suppliers.forEach((s, i) => {
-        const wo = `${where}, Lieferant ${i + 1}`
-        if (!s || typeof s !== "object") {
-          errors.push(`${wo}: Eintrag muss ein Objekt mit name und url sein`)
+  const fehler: string[] = []
+  eintraege.forEach((l, i) => {
+    const wo = `Lieferant ${i + 1}`
+    if (!l.name.trim()) {
+      fehler.push(`${wo}: Name fehlt.`)
+    }
+    const url = l.url.trim()
+    if (url && !isSafeSupplierUrl(url)) {
+      fehler.push(
+        `${wo}: Adresse muss eine vollständige http(s)-Adresse sein ` +
+          `(«${url}» ist keine).`
+      )
+    }
+  })
+  return fehler
+}
+
+/**
+ * Die metadata fürs Speichern bauen — GEMERGT: alle fremden Schlüssel der
+ * Variante bleiben erhalten, nur reorder_point und suppliers werden
+ * gesetzt. Leere Eingaben leeren den jeweiligen Schlüssel sauber (null):
+ * parseMeldebestand/parseLieferanten lesen null als «nicht gepflegt», und
+ * null räumt den Wert auch dann ab, wenn die API metadata schlüsselweise
+ * mergen sollte.
+ */
+export function nachschubFormularMetadata(
+  existing: Record<string, unknown> | null | undefined,
+  eingabe: { meldebestand: string; lieferanten: LieferantEingabe[] }
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = { ...(existing ?? {}) }
+  const m = eingabe.meldebestand.trim()
+  metadata[REORDER_POINT_KEY] = m === "" ? null : Number(m)
+  metadata[SUPPLIERS_KEY] = eingabe.lieferanten.length
+    ? eingabe.lieferanten.map((l) => ({
+        name: l.name.trim(),
+        url: l.url.trim() || null,
+        article_number: l.article_number.trim() || null,
+      }))
+    : null
+  return metadata
+}
+
+// ─── Prüfung beim Speichern über die Admin-API ──────────────────
+
+/**
+ * Nachschub-Schlüssel in einer metadata prüfen — die Server-Seite der
+ * Formularprüfung: wer die Admin-API direkt anspricht, umgeht das Formular.
+ * Fremde Schlüssel werden nicht beanstandet; fehlen reorder_point und
+ * suppliers ganz (oder sind null), gibt es nichts zu prüfen. Insbesondere
+ * kommt so nie eine javascript:-Adresse in die Datenbank.
+ */
+export function validateNachschubMetadata(metadata: unknown): string[] {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return []
+  }
+  const m = metadata as Record<string, unknown>
+  const fehler: string[] = []
+
+  if (m[REORDER_POINT_KEY] != null && parseMeldebestand(m) === null) {
+    fehler.push(
+      `${REORDER_POINT_KEY} muss eine ganze Zahl >= 0 sein ` +
+        `(ist ${JSON.stringify(m[REORDER_POINT_KEY])})`
+    )
+  }
+
+  const raw = m[SUPPLIERS_KEY]
+  if (raw != null) {
+    if (!Array.isArray(raw)) {
+      fehler.push(`${SUPPLIERS_KEY} muss eine Liste sein`)
+    } else {
+      raw.forEach((entry, i) => {
+        const wo = `${SUPPLIERS_KEY}[${i}]`
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          fehler.push(`${wo}: Eintrag muss ein Objekt mit name sein`)
           return
         }
-        if (typeof s.name !== "string" || !s.name.trim()) {
-          errors.push(`${wo}: name fehlt`)
+        const e = entry as Record<string, unknown>
+        if (typeof e.name !== "string" || !e.name.trim()) {
+          fehler.push(`${wo}: name fehlt`)
         }
-        if (!isSafeSupplierUrl(s.url)) {
-          errors.push(
+        if (e.url != null && e.url !== "" && !isSafeSupplierUrl(e.url)) {
+          fehler.push(
             `${wo}: url muss eine absolute http(s)-Adresse sein ` +
-              `(ist «${String((s as { url?: unknown }).url ?? "")}»)`
+              `(ist «${String(e.url)}»)`
           )
         }
-        if (
-          s.article_number != null &&
-          (typeof s.article_number !== "string" || !s.article_number.trim())
-        ) {
-          errors.push(`${wo}: article_number muss ein nicht-leerer String sein`)
+        if (e.article_number != null && typeof e.article_number !== "string") {
+          fehler.push(`${wo}: article_number muss ein Text sein`)
         }
       })
     }
   }
-  return errors
-}
-
-// ─── Metadaten-Abgleich für update-catalog.ts ───────────────────
-
-/** Normalform, in der die Lieferanten in variant.metadata.suppliers liegen. */
-function normalisiereLieferanten(
-  suppliers: KatalogLieferant[]
-): { name: string; url: string; article_number: string | null }[] {
-  return suppliers.map((s) => ({
-    name: s.name.trim(),
-    url: s.url.trim(),
-    article_number: s.article_number?.trim() || null,
-  }))
-}
-
-export type NachschubMetadataUpdate = {
-  /** Vollständige, gemergte metadata der Variante (andere Schlüssel überleben). */
-  metadata: Record<string, unknown>
-  changes: { field: string; before: string; after: string }[]
-}
-
-function fmtLieferanten(l: { name: string }[] | null): string {
-  return l && l.length ? l.map((s) => s.name).join(", ") : "(leer)"
+  return fehler
 }
 
 /**
- * Entscheiden, ob und wie variant.metadata für die Nachschubsteuerung
- * nachgezogen werden muss. Gleiche Regeln wie bei EAN/Gewicht/Marke:
- * nur setzen, wenn der Katalog einen Wert hat und er abweicht — fehlende
- * Katalogwerte löschen nie etwas. Rückgabe null = nichts zu tun.
+ * Einen Request-Body rekursiv nach metadata-Objekten absuchen und deren
+ * Nachschub-Schlüssel prüfen. Deckt alle Admin-Produktrouten ab — Update
+ * einer Variante, Batch-Varianten, Produkt anlegen/ändern mit
+ * eingebetteten Varianten — ohne jede Route einzeln zu kennen.
  */
-export function nachschubMetadataUpdate(
-  existing: Record<string, unknown> | null | undefined,
-  wanted: {
-    reorder_point?: number | null
-    suppliers?: KatalogLieferant[] | null
+export function sammleNachschubMetadataFehler(
+  body: unknown,
+  tiefe = 0
+): string[] {
+  if (tiefe > 6 || !body || typeof body !== "object") {
+    return []
   }
-): NachschubMetadataUpdate | null {
-  const changes: NachschubMetadataUpdate["changes"] = []
-  const metadata: Record<string, unknown> = { ...(existing ?? {}) }
-
-  if (wanted.reorder_point != null) {
-    const have = parseMeldebestand(existing ?? null)
-    if (have !== wanted.reorder_point) {
-      metadata[REORDER_POINT_KEY] = wanted.reorder_point
-      changes.push({
-        field: "meldebestand",
-        before: have === null ? "(leer)" : String(have),
-        after: String(wanted.reorder_point),
-      })
+  const fehler: string[] = []
+  if (Array.isArray(body)) {
+    for (const eintrag of body) {
+      fehler.push(...sammleNachschubMetadataFehler(eintrag, tiefe + 1))
     }
+    return fehler
   }
-
-  if (wanted.suppliers != null && Array.isArray(wanted.suppliers)) {
-    const soll = normalisiereLieferanten(wanted.suppliers)
-    const ist = existing?.[SUPPLIERS_KEY]
-    if (JSON.stringify(ist ?? null) !== JSON.stringify(soll)) {
-      metadata[SUPPLIERS_KEY] = soll
-      changes.push({
-        field: "lieferanten",
-        before: fmtLieferanten(
-          Array.isArray(ist) ? (ist as { name: string }[]) : null
-        ),
-        after: fmtLieferanten(soll),
-      })
+  for (const [key, value] of Object.entries(body)) {
+    if (key === "metadata") {
+      fehler.push(...validateNachschubMetadata(value))
     }
+    fehler.push(...sammleNachschubMetadataFehler(value, tiefe + 1))
   }
-
-  return changes.length ? { metadata, changes } : null
+  return fehler
 }
