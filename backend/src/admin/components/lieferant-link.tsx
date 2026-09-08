@@ -4,8 +4,9 @@
  *
  * SICHERHEIT: gerendert wird ausschliesslich Lieferant.url, und die ist per
  * parseLieferanten() (lib/nachschub.ts) garantiert http(s) — eine
- * javascript:-Adresse aus der handgepflegten catalog.json käme sonst hier im
- * Admin mit vollen Rechten zur Ausführung. Steht statt einer sicheren URL
+ * javascript:-Adresse, die es an Formular- und API-Prüfung vorbei in die
+ * Varianten-Metadaten geschafft hätte, käme sonst hier im Admin mit vollen
+ * Rechten zur Ausführung. Steht statt einer sicheren URL
  * nur eine unsichere Roh-Angabe da, erscheint eine Warnung und KEIN Link.
  * Jeder Link trägt target="_blank" rel="noopener noreferrer".
  */
@@ -52,7 +53,7 @@ export const LieferantLink = ({
         {lieferant.name}
       </Text>
       {lieferant.unsichereUrl ? (
-        <Tooltip content={`Adresse nicht verlinkbar: «${lieferant.unsichereUrl}» — nur http/https ist erlaubt (data/catalog.json korrigieren).`}>
+        <Tooltip content={`Adresse nicht verlinkbar: «${lieferant.unsichereUrl}» — nur http/https ist erlaubt. An der Produktseite im Abschnitt «Nachschub» über «Bearbeiten» korrigieren.`}>
           <Text size="small" leading="compact" className="text-ui-fg-error">
             Adresse ungültig
           </Text>

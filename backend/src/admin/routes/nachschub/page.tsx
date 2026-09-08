@@ -56,9 +56,9 @@ const NachschubSeite = () => {
         <Heading level="h1">Nachschub</Heading>
         <Text size="small" leading="compact" className="text-ui-fg-subtle">
           Varianten auf oder unter ihrem Meldebestand — die dringendsten
-          zuerst. Meldebestand (reorder_point) und Lieferanten (suppliers)
-          werden in data/catalog.json gepflegt und mit update-catalog.ts
-          eingespielt; der Bestand kommt aus data/inventory.json.
+          zuerst. Meldebestand und Lieferanten werden an der Produktseite im
+          Abschnitt «Nachschub» gepflegt, der Bestand über die Lagerbestände
+          der Variante.
         </Text>
       </div>
 
@@ -106,10 +106,10 @@ const NachschubSeite = () => {
                   überwacht werden — diese Liste ist für sie ohne Aussage.
                 </Text>
                 <Text size="small" leading="compact" className="text-ui-fg-subtle">
-                  {u.ohneBestand} ohne Bestandsführung (quantity in
-                  data/inventory.json pflegen), {u.ohneMeldebestand} ohne
-                  Meldebestand (reorder_point in data/catalog.json pflegen),
-                  danach update-catalog.ts laufen lassen. Eine leere Liste
+                  {u.ohneBestand} ohne Bestandsführung (an der Variante die
+                  Lagerbestände aktivieren und pflegen), {u.ohneMeldebestand}{" "}
+                  ohne Meldebestand (an der Produktseite im Abschnitt
+                  «Nachschub» über «Bearbeiten» setzen). Eine leere Liste
                   heisst hier nicht «alles im grünen Bereich».
                 </Text>
               </div>
