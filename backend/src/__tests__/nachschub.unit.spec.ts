@@ -27,14 +27,18 @@ import {
   fuehreVariantenLieferantenZusammen,
   isSafeSupplierUrl,
   istFaellig,
+  istImportLand,
+  LIEFERANT_LAENDER,
   LieferantEingabe,
   lieferantenEingabeAusMetadata,
   lieferantenFormularMetadata,
+  lieferantLandKurz,
   meldebestandEingabeAusMetadata,
   meldebestandFormularMetadata,
   nachschubUebersicht,
   NachschubZeile,
   parseLieferanten,
+  parseLieferantLand,
   parseMeldebestand,
   pruefeLieferantenEingabe,
   pruefeMeldebestandEingabe,
@@ -103,8 +107,14 @@ describe("parseLieferanten", () => {
         name: "Grosshandel A",
         url: "https://a.example.ch/p/1",
         artikelnummer: "A-100",
+        land: null,
       },
-      { name: "Grosshandel B", url: "http://b.example.ch/p/2", artikelnummer: null },
+      {
+        name: "Grosshandel B",
+        url: "http://b.example.ch/p/2",
+        artikelnummer: null,
+        land: null,
+      },
     ])
   })
 
@@ -123,6 +133,95 @@ describe("parseLieferanten", () => {
     expect(
       parseLieferanten({ suppliers: [null, 42, { url: "https://x.ch/p" }] })
     ).toEqual([]) // Einträge ohne Namen fallen weg
+  })
+})
+
+// ─── Herkunftsland des Lieferanten ──────────────────────────────
+
+describe("parseLieferantLand — feste Auswahl, nichts wird geraten", () => {
+  it("kennt alle Codes der festen Auswahl", () => {
+    for (const { code } of LIEFERANT_LAENDER) {
+      expect(parseLieferantLand(code)).toBe(code)
+    }
+  })
+
+  it("verzeiht Gross/Kleinschreibung und Leerraum", () => {
+    expect(parseLieferantLand("de")).toBe("DE")
+    expect(parseLieferantLand(" ch ")).toBe("CH")
+    expect(parseLieferantLand("other")).toBe("OTHER")
+  })
+
+  it.each([
+    ["Deutschland", "Klartext statt Code"],
+    ["BRD", "freie Schreibweise"],
+    ["XX", "unbekannter Code"],
+    ["", "leer"],
+  ])("liest «%s» (%s) als unbekannt — nie als Schweiz", (raw) => {
+    expect(parseLieferantLand(raw)).toBeNull()
+  })
+
+  it("übersteht Nicht-Strings", () => {
+    expect(parseLieferantLand(null)).toBeNull()
+    expect(parseLieferantLand(undefined)).toBeNull()
+    expect(parseLieferantLand(42)).toBeNull()
+  })
+})
+
+describe("istImportLand — was sich in der Einkaufsliste abheben muss", () => {
+  it("die Schweiz ist Inland, alles andere GEPFLEGTE ist Import", () => {
+    expect(istImportLand("CH")).toBe(false)
+    expect(istImportLand("DE")).toBe(true)
+    expect(istImportLand("AT")).toBe(true)
+    expect(istImportLand("OTHER")).toBe(true)
+  })
+
+  it("unbekannt (null) ist KEIN Import — nichts raten, nichts einfärben", () => {
+    expect(istImportLand(null)).toBe(false)
+  })
+})
+
+describe("lieferantLandKurz", () => {
+  it("zeigt den Code, nur das Sammelbecken bekommt Klartext", () => {
+    expect(lieferantLandKurz("DE")).toBe("DE")
+    expect(lieferantLandKurz("CH")).toBe("CH")
+    expect(lieferantLandKurz("OTHER")).toBe("anderes Land")
+  })
+})
+
+describe("parseLieferanten — das Herkunftsland", () => {
+  it("liest gültige Codes, auch kleingeschrieben", () => {
+    const lieferanten = parseLieferanten({
+      suppliers: [
+        { name: "A", country: "DE" },
+        { name: "B", country: "ch" },
+      ],
+    })
+    expect(lieferanten.map((l) => l.land)).toEqual(["DE", "CH"])
+  })
+
+  it("DER BESTEHENDE EINTRAG: ein Lieferant ohne country bleibt intakt, Land unbekannt", () => {
+    // Der AKRA-Eintrag existierte vor dem Länderfeld. Er darf weder
+    // kaputtgehen noch als «Schweiz» geraten werden — unbekannt ist
+    // unbekannt.
+    const [akra] = parseLieferanten({
+      suppliers: [
+        { name: "AKRA", url: "https://akra.example.de/p/1", article_number: "10379" },
+      ],
+    })
+    expect(akra).toEqual({
+      name: "AKRA",
+      url: "https://akra.example.de/p/1",
+      artikelnummer: "10379",
+      land: null,
+    })
+    expect(istImportLand(akra.land)).toBe(false)
+  })
+
+  it("ein unbekannter country-Wert wird unbekannt, nie geraten", () => {
+    const [l] = parseLieferanten({
+      suppliers: [{ name: "X", country: "Germany" }],
+    })
+    expect(l.land).toBeNull()
   })
 })
 
@@ -229,6 +328,7 @@ function lieferant(overrides: Partial<LieferantEingabe> = {}): LieferantEingabe 
     name: "Grosshandel A",
     url: "https://a.example.ch/p/1",
     article_number: "A-100",
+    country: "",
     ...overrides,
   }
 }
@@ -244,10 +344,30 @@ describe("lieferantenEingabeAusMetadata", () => {
         ],
       })
     ).toEqual([
-      { name: "A", url: "https://a.example.ch/p", article_number: "A-1" },
-      { name: "", url: "javascript:alert(1)", article_number: "" },
-      { name: "C", url: "", article_number: "" },
+      {
+        name: "A",
+        url: "https://a.example.ch/p",
+        article_number: "A-1",
+        country: "",
+      },
+      { name: "", url: "javascript:alert(1)", article_number: "", country: "" },
+      { name: "C", url: "", article_number: "", country: "" },
     ])
+  })
+
+  it("normalisiert das Land auf die feste Auswahl — Unbekanntes wird «nicht gepflegt»", () => {
+    // Anders als bei der URL gibt es kein Freitextfeld, das eine kaputte
+    // Angabe zur Korrektur zeigen könnte — die Auswahl kennt nur die Codes.
+    expect(
+      lieferantenEingabeAusMetadata({
+        suppliers: [
+          { name: "A", country: "de" },
+          { name: "B", country: "CH" },
+          { name: "C", country: "Deutschland" },
+          { name: "D" },
+        ],
+      }).map((l) => l.country)
+    ).toEqual(["DE", "CH", "", ""])
   })
 
   it("übersteht Müll", () => {
@@ -255,7 +375,7 @@ describe("lieferantenEingabeAusMetadata", () => {
     expect(lieferantenEingabeAusMetadata({ suppliers: "kaputt" })).toEqual([])
     expect(
       lieferantenEingabeAusMetadata({ suppliers: [null, 42, { name: 7 }] })
-    ).toEqual([{ name: "", url: "", article_number: "" }])
+    ).toEqual([{ name: "", url: "", article_number: "", country: "" }])
   })
 })
 
@@ -326,6 +446,16 @@ describe("pruefeLieferantenEingabe — die Adressprüfung beim Speichern", () =>
       "Lieferant 2: Name fehlt.",
       expect.stringContaining("Lieferant 2: Adresse"),
     ])
+  })
+
+  it("Land: leer und feste Codes sind erlaubt, alles andere nicht", () => {
+    expect(pruefeLieferantenEingabe([lieferant({ country: "" })])).toEqual([])
+    expect(pruefeLieferantenEingabe([lieferant({ country: "CH" })])).toEqual([])
+    expect(pruefeLieferantenEingabe([lieferant({ country: "de" })])).toEqual([])
+    const fehler = pruefeLieferantenEingabe([
+      lieferant({ country: "Deutschland" }),
+    ])
+    expect(fehler).toEqual([expect.stringContaining("Lieferant 1: Land")])
   })
 })
 
@@ -399,9 +529,24 @@ describe("lieferantenFormularMetadata — Produkt-metadata, ebenso gefährlich",
           name: "Grosshandel A",
           url: "https://a.example.ch/p/1",
           article_number: "A-100",
+          country: null,
         },
       ],
     })
+  })
+
+  it("schreibt das Land als Code der festen Auswahl — leer bleibt null (unbekannt)", () => {
+    const res = lieferantenFormularMetadata({ brand: "Gizeh" }, [
+      lieferant({ country: "DE" }),
+      lieferant({ name: "B", country: "ch" }), // wird normalisiert
+      lieferant({ name: "C", country: "" }), // nicht gepflegt — wird NICHT geraten
+    ])
+    expect((res.suppliers as any[]).map((s) => s.country)).toEqual([
+      "DE",
+      "CH",
+      null,
+    ])
+    expect(res.brand).toBe("Gizeh")
   })
 
   it("Entfernen des letzten Lieferanten leert sauber — kein kaputter Eintrag", () => {
@@ -440,10 +585,12 @@ describe("lieferantenFormularMetadata — Produkt-metadata, ebenso gefährlich",
 
   it("trimmt und normalisiert: leere URL/Artikelnummer werden null", () => {
     const res = lieferantenFormularMetadata(null, [
-      { name: "  B  ", url: "  ", article_number: "" },
+      { name: "  B  ", url: "  ", article_number: "", country: " de " },
     ])
     expect(res).toEqual({
-      suppliers: [{ name: "B", url: null, article_number: null }],
+      suppliers: [
+        { name: "B", url: null, article_number: null, country: "DE" },
+      ],
     })
   })
 })
@@ -479,7 +626,7 @@ describe("effektiveLieferantenMetadata — kein Eintrag geht verloren", () => {
     ])
     expect(res.quelle).toBe("varianten")
     expect(parseLieferanten(res.metadata)).toEqual([
-      { name: "HBIEU", url: null, artikelnummer: "10379" },
+      { name: "HBIEU", url: null, artikelnummer: "10379", land: null },
     ])
     expect(res.zusammenfuehrung).toMatchObject({
       vonVarianten: 1,
@@ -614,6 +761,31 @@ describe("validateNachschubMetadata", () => {
     expect(validateNachschubMetadata({ reorder_point: "abc" })).toHaveLength(1)
     expect(validateNachschubMetadata({ reorder_point: 0 })).toEqual([])
   })
+
+  it("Land: feste Codes, leer und null passieren — Freitext wird geblockt", () => {
+    expect(
+      validateNachschubMetadata({ suppliers: [{ name: "X", country: "DE" }] })
+    ).toEqual([])
+    expect(
+      validateNachschubMetadata({ suppliers: [{ name: "X", country: "ch" }] })
+    ).toEqual([])
+    expect(
+      validateNachschubMetadata({ suppliers: [{ name: "X", country: null }] })
+    ).toEqual([])
+    expect(
+      validateNachschubMetadata({ suppliers: [{ name: "X", country: "" }] })
+    ).toEqual([])
+    // Freitext würde die Einheitlichkeit zerstören — «DE», «de» und
+    // «Deutschland» nebeneinander wären nicht mehr überfliegbar.
+    expect(
+      validateNachschubMetadata({
+        suppliers: [{ name: "X", country: "Deutschland" }],
+      })
+    ).toEqual([expect.stringContaining("country")])
+    expect(
+      validateNachschubMetadata({ suppliers: [{ name: "X", country: 42 }] })
+    ).toEqual([expect.stringContaining("country")])
+  })
 })
 
 describe("sammleNachschubMetadataFehler — deckt auch Batch-Routen ab", () => {
@@ -704,6 +876,26 @@ describe("validateNachschubBody (Middleware)", () => {
     const { res, next } = aufruf({ title: "Neuer Titel" })
     expect(next).toHaveBeenCalled()
     expect(res.status).not.toHaveBeenCalled()
+  })
+
+  it("weist ein Land ausserhalb der festen Auswahl mit 400 ab", () => {
+    const { res, next } = aufruf({
+      metadata: { suppliers: [{ name: "X", country: "Deutschland" }] },
+    })
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({
+      message: expect.stringContaining("country"),
+    })
+    expect(next).not.toHaveBeenCalled()
+  })
+
+  it("lässt ein Land aus der festen Auswahl passieren", () => {
+    const { next } = aufruf({
+      metadata: lieferantenFormularMetadata({ brand: "Gizeh" }, [
+        lieferant({ country: "DE" }),
+      ]),
+    })
+    expect(next).toHaveBeenCalled()
   })
 
   it("lässt gültige Nachschubdaten passieren", () => {
