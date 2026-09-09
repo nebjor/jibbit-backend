@@ -125,7 +125,14 @@ module.exports = defineConfig({
       options: {
         providers: [
           {
-            resolve: '@medusajs/medusa/file-local',
+            // Eigener Provider, der vom offiziellen local-Provider ERBT und
+            // nur eines dazutut: hochgeladene Bilder werden vor dem Ablegen
+            // verkleinert und neu kodiert (Vorgabe: max. 2000 px, AVIF).
+            // Nicht-Bilder, animierte GIFs und alles, was sich nicht sauber
+            // konvertieren laesst, landet unveraendert auf der Platte —
+            // ein Upload geht dadurch NIE verloren.
+            // Grundsaetze und Details: src/modules/optimized-file/service.ts
+            resolve: './src/modules/optimized-file',
             id: 'local',
             options: {
               upload_dir: uploadDir,
@@ -135,6 +142,14 @@ module.exports = defineConfig({
               // Ordner verschwinden.
               private_upload_dir: uploadDir,
               backend_url: fileBackendUrl,
+              // Bildoptimierung beim Upload. Jede Variable ist optional und
+              // hat eine vernuenftige Vorgabe (avif / Format-Default / 2000).
+              // UPLOAD_IMAGE_FORMAT=off schaltet die Optimierung ganz ab.
+              // WICHTIG: Werte muessen auch in docker-compose.yml unter
+              // environment: stehen, sonst erreichen sie den Container nie.
+              image_format: process.env.UPLOAD_IMAGE_FORMAT,
+              image_quality: process.env.UPLOAD_IMAGE_QUALITY,
+              image_max_dimension: process.env.UPLOAD_IMAGE_MAX_DIMENSION,
             },
           },
         ],

@@ -121,6 +121,16 @@ services:
       # backend/medusa-config.ts.
       MEDUSA_UPLOAD_DIR: /app/static
 
+      # Bildoptimierung beim Upload (backend/src/modules/optimized-file).
+      # Alle drei optional — leer heisst: avif, Format-Standardqualitaet,
+      # max. 2000 px Kantenlaenge. UPLOAD_IMAGE_FORMAT=off schaltet ab.
+      # Diese Zeilen sind Pflicht, obwohl die Werte optional sind: Compose
+      # reicht NUR weiter, was hier unter environment: steht — ein Wert nur
+      # in der .env erreicht den Container nie, und der Fehler bleibt still.
+      UPLOAD_IMAGE_FORMAT: ${UPLOAD_IMAGE_FORMAT:-}
+      UPLOAD_IMAGE_QUALITY: ${UPLOAD_IMAGE_QUALITY:-}
+      UPLOAD_IMAGE_MAX_DIMENSION: ${UPLOAD_IMAGE_MAX_DIMENSION:-}
+
       # Nur fuer einen lokalen Mailfaenger. Bei NODE_ENV=production ignoriert
       # der SMTP-Provider den Schalter hart.
       SMTP_ALLOW_INSECURE: ${SMTP_ALLOW_INSECURE:-}
