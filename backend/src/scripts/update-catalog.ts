@@ -33,10 +33,11 @@
  *     import-catalog.ts): nur wenn der Katalog einen Wert hat und er
  *     abweicht. Fehlende Katalogwerte löschen nie einen Wert in Medusa.
  *   - Meldebestand/Lieferanten (Nachschubsteuerung): NIE. Die pflegt der
- *     Betreiber laufend im Admin (Widget «Nachschub» an der Produktseite,
- *     variant.metadata.reorder_point/.suppliers) — dieses Script fasst die
- *     Varianten-Metadaten gar nicht mehr an, damit ein Katalog-Lauf seine
- *     Eingaben nicht überschreiben kann.
+ *     Betreiber laufend im Admin (Widget «Nachschub» an der Produktseite;
+ *     Lieferanten je Produkt in product.metadata.suppliers, Meldebestand je
+ *     Variante in variant.metadata.reorder_point) — alle metadata-Updates
+ *     dieses Scripts werden gemerged geschrieben, damit ein Katalog-Lauf
+ *     seine Eingaben nicht überschreiben kann.
  *   - Preise: die Basispreise (price_list_id=null) der Variante werden als
  *     Ganzes mit den Staffeln aus dem Katalog abgeglichen und bei Abweichung
  *     ersetzt. Preislisten-Preise (Aktionen) bleiben unberührt — der

@@ -3,6 +3,10 @@
  *
  * Zeigt alle Varianten auf oder unter ihrem Meldebestand, die dringendsten
  * zuerst, jeweils mit Lieferant und dem Klick auf dessen Produktseite.
+ * Die Lieferanten kommen vom PRODUKT (product.metadata.suppliers, mit
+ * Rückfall auf Alt-Einträge der Varianten) — hier stehen Varianten
+ * verschiedener Produkte nebeneinander, darum bleibt die Angabe je Zeile
+ * sichtbar.
  *
  * WICHTIG: eine leere Liste ist KEINE Entwarnung. Varianten ohne
  * Bestandsführung oder ohne Meldebestand können gar nicht überwacht werden —
@@ -56,9 +60,9 @@ const NachschubSeite = () => {
         <Heading level="h1">Nachschub</Heading>
         <Text size="small" leading="compact" className="text-ui-fg-subtle">
           Varianten auf oder unter ihrem Meldebestand — die dringendsten
-          zuerst. Meldebestand und Lieferanten werden an der Produktseite im
-          Abschnitt «Nachschub» gepflegt, der Bestand über die Lagerbestände
-          der Variante.
+          zuerst. Gepflegt wird an der Produktseite im Abschnitt «Nachschub»:
+          die Lieferanten einmal für das ganze Produkt, der Meldebestand je
+          Variante; der Bestand über die Lagerbestände der Variante.
         </Text>
       </div>
 

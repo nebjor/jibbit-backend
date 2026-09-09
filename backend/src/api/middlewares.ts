@@ -30,8 +30,9 @@ async function validateAddress(
 }
 
 /**
- * Nachschubdaten (variant.metadata.reorder_point / .suppliers) beim
- * Speichern über die Admin-API prüfen.
+ * Nachschubdaten (product.metadata.suppliers, variant.metadata.reorder_point
+ * und Alt-suppliers an Varianten) beim Speichern über die Admin-API prüfen —
+ * der rekursive Body-Scan greift auf Produkt- wie Variantenebene.
  *
  * Das Widget «Nachschub» prüft dieselben Regeln schon im Formular — aber
  * wer die Admin-API direkt anspricht, umgeht das Formular. Die
