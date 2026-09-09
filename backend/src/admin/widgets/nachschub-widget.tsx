@@ -40,6 +40,7 @@ import {
   IconButton,
   Input,
   Label,
+  Select,
   StatusBadge,
   Table,
   Text,
@@ -50,6 +51,7 @@ import { useState } from "react"
 
 import {
   istFaellig,
+  LIEFERANT_LAENDER,
   LieferantEingabe,
   lieferantenEingabeAusMetadata,
   lieferantenFormularMetadata,
@@ -68,6 +70,13 @@ import {
   zeilenAusProdukt,
 } from "../lib/nachschub-daten"
 import { sdk } from "../lib/sdk"
+
+/**
+ * Platzhalter-Wert der Länderauswahl für «nicht gepflegt» — Radix Select
+ * erlaubt kein leeres value. Wird vor dem Speichern wieder zu "" (und in
+ * der metadata zu null): unbekannt bleibt unbekannt.
+ */
+const KEIN_LAND = "—"
 
 const ZeilenStatus = ({ zeile }: { zeile: NachschubZeile }) => {
   if (zeile.bestand === null) {
@@ -211,7 +220,9 @@ const LieferantenBearbeiten = ({ product }: { product: ProduktMitMetadata }) => 
                 Gilt für alle Varianten dieses Produkts. Der erste Eintrag
                 ist der Hauptlieferant — mit den Pfeilen lässt sich die
                 Reihenfolge ändern. Die Adresse der Produktseite muss mit
-                http:// oder https:// beginnen.
+                http:// oder https:// beginnen. Das Land zeigt auf einen
+                Blick, ob bestellt (Schweiz) oder importiert wird — bei
+                Import kommen Zoll, Einfuhrsteuer und Lieferzeit dazu.
               </Text>
             </div>
 
@@ -273,6 +284,31 @@ const LieferantenBearbeiten = ({ product }: { product: ProduktMitMetadata }) => 
                   placeholder="Artikelnummer beim Lieferanten (optional)"
                   aria-label={`Lieferant ${i + 1}: Artikelnummer`}
                 />
+                {/* Feste Auswahl statt Freitext: «DE», «de» und «Deutschland»
+                    nebeneinander wären beim Überfliegen nichts mehr wert.
+                    «—» = nicht gepflegt (Radix erlaubt kein leeres value). */}
+                <Select
+                  value={l.country || KEIN_LAND}
+                  onValueChange={(wert) =>
+                    setzeLieferant(i, "country", wert === KEIN_LAND ? "" : wert)
+                  }
+                >
+                  <Select.Trigger
+                    aria-label={`Lieferant ${i + 1}: Land des Lieferanten`}
+                  >
+                    <Select.Value placeholder="Land des Lieferanten (optional)" />
+                  </Select.Trigger>
+                  <Select.Content>
+                    <Select.Item value={KEIN_LAND}>
+                      Land nicht gepflegt
+                    </Select.Item>
+                    {LIEFERANT_LAENDER.map((land) => (
+                      <Select.Item key={land.code} value={land.code}>
+                        {land.label}
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select>
               </div>
             ))}
 
@@ -282,7 +318,7 @@ const LieferantenBearbeiten = ({ product }: { product: ProduktMitMetadata }) => 
               onClick={() =>
                 setLieferanten((alt) => [
                   ...alt,
-                  { name: "", url: "", article_number: "" },
+                  { name: "", url: "", article_number: "", country: "" },
                 ])
               }
             >
