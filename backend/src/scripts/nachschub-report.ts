@@ -19,9 +19,13 @@
  * überwacht werden und wie viele nicht überwachbar sind.
  *
  * Der Bericht liest NUR und schreibt nie in die Datenbank. Gepflegt werden
- * die Daten im Admin: Meldebestand und Lieferanten im Widget «Nachschub»
- * an der Produktseite (variant.metadata.reorder_point/.suppliers), der
- * Bestand über Medusas Lagerbestände an der Variante.
+ * die Daten im Admin, im Widget «Nachschub» an der Produktseite: die
+ * Lieferanten einmal fürs ganze Produkt (product.metadata.suppliers), der
+ * Meldebestand je Variante (variant.metadata.reorder_point), der Bestand
+ * über Medusas Lagerbestände an der Variante. Alt-Einträge, die noch je
+ * Variante liegen (variant.metadata.suppliers), liest der Bericht als
+ * Rückfallebene weiter — zusammengeführt über die Varianten — und meldet
+ * die Übernahme im Log.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs"
@@ -33,6 +37,7 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { toCsv, Cell } from "./galaxus-common"
 import { parseScriptArgs } from "./script-args"
 import {
+  effektiveLieferantenMetadata,
   istFaellig,
   nachDringlichkeit,
   nachschubUebersicht,
@@ -47,9 +52,11 @@ import {
  * Summe (stocked - reserved) über alle Levels; ohne manage_inventory oder
  * ohne Inventory-Item bleibt der Bestand null ("nicht überwachbar").
  */
-export async function loadNachschubZeilen(
-  container: MedusaContainer
-): Promise<NachschubZeile[]> {
+export async function loadNachschubZeilen(container: MedusaContainer): Promise<{
+  zeilen: NachschubZeile[]
+  /** Protokoll: Produkte, deren Lieferanten noch aus Alt-Einträgen der Varianten stammen. */
+  uebernahmen: string[]
+}> {
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
   const { data: products } = await query.graph({
@@ -57,6 +64,7 @@ export async function loadNachschubZeilen(
     fields: [
       "id",
       "title",
+      "metadata",
       "variants.id",
       "variants.title",
       "variants.sku",
@@ -80,7 +88,28 @@ export async function loadNachschubZeilen(
   }
 
   const zeilen: NachschubZeile[] = []
+  const uebernahmen: string[] = []
   for (const p of products as any[]) {
+    // Lieferanten einmal je PRODUKT — vom Produkt, oder (Alt-Daten) aus den
+    // Varianten zusammengeführt. Die Übernahme wird protokolliert.
+    const quelle = effektiveLieferantenMetadata(
+      p.metadata ?? null,
+      (p.variants ?? []).map((v: any) => v.metadata ?? null)
+    )
+    const lieferanten = parseLieferanten(quelle.metadata)
+    if (quelle.quelle === "varianten" && quelle.zusammenfuehrung) {
+      const z = quelle.zusammenfuehrung
+      uebernahmen.push(
+        `${p.title}: ${z.suppliers.length} Lieferant(en) aus ` +
+          `${z.vonVarianten} Variante(n) übernommen` +
+          (z.duplikateEntfernt
+            ? `, ${z.duplikateEntfernt} exakte(s) Doppel entfernt`
+            : "") +
+          (z.unterschiedlich
+            ? " — die Varianten führten UNTERSCHIEDLICHE Listen, alle Einträge bleiben erhalten"
+            : "")
+      )
+    }
     for (const v of p.variants ?? []) {
       let bestand: number | null = null
       if (v.manage_inventory) {
@@ -102,23 +131,33 @@ export async function loadNachschubZeilen(
         productId: p.id,
         bestand,
         meldebestand: parseMeldebestand(v.metadata ?? null),
-        lieferanten: parseLieferanten(v.metadata ?? null),
+        lieferanten,
       })
     }
   }
-  return zeilen
+  return { zeilen, uebernahmen }
 }
 
 export default async function nachschubReport({ container, args }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const opts = parseScriptArgs(args)
 
-  const zeilen = await loadNachschubZeilen(container)
+  const { zeilen, uebernahmen } = await loadNachschubZeilen(container)
   if (!zeilen.length) {
     logger.warn(
       "Keine Varianten in der Datenbank — zuerst import-catalog.ts laufen lassen."
     )
     return
+  }
+
+  if (uebernahmen.length) {
+    // Alt-Daten: die Lieferanten dieser Produkte liegen noch je Variante.
+    // Der Bericht liest sie zusammengeführt weiter; ans Produkt wandern sie
+    // beim nächsten Speichern im Admin (Produktseite, Abschnitt «Nachschub»).
+    logger.info("— Lieferanten aus Alt-Einträgen der Varianten übernommen —")
+    for (const hinweis of uebernahmen) {
+      logger.info(`  ${hinweis}`)
+    }
   }
 
   const u = nachschubUebersicht(zeilen)
@@ -161,7 +200,8 @@ export default async function nachschubReport({ container, args }: ExecArgs) {
     )
     logger.warn(
       "  Nachpflegen im Admin: Bestand über die Lagerbestände der Variante, " +
-        "Meldebestand und Lieferanten im Widget «Nachschub» an der Produktseite."
+        "Meldebestand (je Variante) und Lieferanten (je Produkt) im Widget " +
+        "«Nachschub» an der Produktseite."
     )
   } else {
     logger.info(`  Alle ${u.gesamt} Varianten werden überwacht.`)

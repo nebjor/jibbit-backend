@@ -9,21 +9,29 @@
  *   2. Grenzfall: Bestand GENAU auf dem Meldebestand ist fällig.
  *   3. Eine leere Fällig-Liste ist keine Entwarnung — die Zählung der nicht
  *      überwachbaren Varianten muss stimmen (heute: alle 35).
- *   4. Die metadata der Variante wird beim Speichern als GANZES geschrieben —
- *      fremde Schlüssel (units_per_pack, pack_type, …) müssen den
- *      Speichervorgang überleben.
+ *   4. Die metadata wird beim Speichern als GANZES geschrieben — fremde
+ *      Schlüssel müssen den Speichervorgang überleben: am Produkt z.B.
+ *      brand (Galaxus-Anbindung), an der Variante ean, weight_g,
+ *      units_per_pack, ….
+ *   5. Lieferanten hängen am PRODUKT (product.metadata.suppliers), der
+ *      Meldebestand an der VARIANTE (variant.metadata.reorder_point).
+ *      Alt-Einträge je Variante gelten als Rückfallebene weiter und gehen
+ *      NIE stillschweigend verloren (effektiveLieferantenMetadata).
  */
 
 import { readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 
 import {
+  effektiveLieferantenMetadata,
+  fuehreVariantenLieferantenZusammen,
   isSafeSupplierUrl,
   istFaellig,
   LieferantEingabe,
   lieferantenEingabeAusMetadata,
+  lieferantenFormularMetadata,
   meldebestandEingabeAusMetadata,
-  nachschubFormularMetadata,
+  meldebestandFormularMetadata,
   nachschubUebersicht,
   NachschubZeile,
   parseLieferanten,
@@ -321,20 +329,71 @@ describe("pruefeLieferantenEingabe — die Adressprüfung beim Speichern", () =>
   })
 })
 
-describe("nachschubFormularMetadata — die gefährlichste Stelle", () => {
+describe("meldebestandFormularMetadata — Varianten-metadata, die gefährlichste Stelle", () => {
   it("LÄSST FREMDE SCHLÜSSEL STEHEN: metadata wird als Ganzes geschrieben", () => {
-    // units_per_pack & Co. stammen aus der Odoo-Migration. Gingen sie beim
-    // Speichern im Widget verloren, wäre der Grundpreis auf der
-    // Produktseite kaputt — deshalb wird IMMER gemergt geschrieben.
-    const res = nachschubFormularMetadata(
-      { units_per_pack: 60, pack_type: "display", irgendwas: { tief: true } },
-      { meldebestand: "10", lieferanten: [lieferant()] }
+    // ean/weight_g braucht die Galaxus-Anbindung, units_per_pack & Co.
+    // stammen aus der Odoo-Migration. Gingen sie beim Speichern im Widget
+    // verloren, wären Galaxus-Export und Grundpreis kaputt — deshalb wird
+    // IMMER gemergt geschrieben.
+    const res = meldebestandFormularMetadata(
+      {
+        ean: "7611234567890",
+        weight_g: 24,
+        units_per_pack: 60,
+        pack_type: "display",
+        irgendwas: { tief: true },
+      },
+      "10"
     )
     expect(res).toEqual({
+      ean: "7611234567890",
+      weight_g: 24,
       units_per_pack: 60,
       pack_type: "display",
       irgendwas: { tief: true },
       reorder_point: 10,
+    })
+  })
+
+  it("leerer Meldebestand leert den Schlüssel (nicht 0, nicht NaN)", () => {
+    const res = meldebestandFormularMetadata(
+      { reorder_point: 10, ean: "761", units_per_pack: 1 },
+      ""
+    )
+    expect(res.reorder_point).toBeNull()
+    expect(res.ean).toBe("761")
+    expect(parseMeldebestand(res)).toBeNull()
+  })
+
+  it("fasst die Lieferanten NICHT an — auch Alt-Einträge nicht", () => {
+    // Das Räumen der Alt-Einträge ist ein bewusster, eigener Schritt beim
+    // Speichern der Produkt-Lieferanten — nie ein Nebeneffekt des
+    // Meldebestands.
+    const res = meldebestandFormularMetadata(
+      { suppliers: [{ name: "Alt", url: "https://alt.example.ch/p" }] },
+      "3"
+    )
+    expect(res.suppliers).toEqual([
+      { name: "Alt", url: "https://alt.example.ch/p" },
+    ])
+  })
+
+  it("trimmt den Meldebestand", () => {
+    expect(meldebestandFormularMetadata(null, " 7 ")).toEqual({
+      reorder_point: 7,
+    })
+  })
+})
+
+describe("lieferantenFormularMetadata — Produkt-metadata, ebenso gefährlich", () => {
+  it("LÄSST FREMDE SCHLÜSSEL STEHEN: brand braucht die Galaxus-Anbindung", () => {
+    const res = lieferantenFormularMetadata(
+      { brand: "Gizeh", irgendwas: { tief: true } },
+      [lieferant()]
+    )
+    expect(res).toEqual({
+      brand: "Gizeh",
+      irgendwas: { tief: true },
       suppliers: [
         {
           name: "Grosshandel A",
@@ -346,39 +405,150 @@ describe("nachschubFormularMetadata — die gefährlichste Stelle", () => {
   })
 
   it("Entfernen des letzten Lieferanten leert sauber — kein kaputter Eintrag", () => {
-    const res = nachschubFormularMetadata(
+    const res = lieferantenFormularMetadata(
       {
-        units_per_pack: 1,
+        brand: "Gizeh",
         suppliers: [{ name: "Alt", url: "https://alt.example.ch/p" }],
       },
-      { meldebestand: "5", lieferanten: [] }
+      []
     )
     expect(res.suppliers).toBeNull()
-    expect(res.units_per_pack).toBe(1)
+    expect(res.brand).toBe("Gizeh")
     // Die Leser sehen danach schlicht «kein Lieferant gepflegt»:
     expect(parseLieferanten(res)).toEqual([])
   })
 
-  it("leerer Meldebestand leert den Schlüssel (nicht 0, nicht NaN)", () => {
-    const res = nachschubFormularMetadata(
-      { reorder_point: 10, units_per_pack: 1 },
-      { meldebestand: "", lieferanten: [lieferant()] }
+  it("räumt mit leerer Liste die ALT-Einträge einer Variante, ohne ihre übrigen Schlüssel anzufassen", () => {
+    // Genau so hebt das Widget die Lieferanten ans Produkt: die Liste ans
+    // Produkt schreiben, dann je Variante mit leerer Liste räumen.
+    const res = lieferantenFormularMetadata(
+      {
+        ean: "7611234567890",
+        weight_g: 24,
+        reorder_point: 5,
+        suppliers: [{ name: "Alt", url: "https://alt.example.ch/p" }],
+      },
+      []
     )
-    expect(res.reorder_point).toBeNull()
-    expect(parseMeldebestand(res)).toBeNull()
+    expect(res).toEqual({
+      ean: "7611234567890",
+      weight_g: 24,
+      reorder_point: 5,
+      suppliers: null,
+    })
   })
 
   it("trimmt und normalisiert: leere URL/Artikelnummer werden null", () => {
-    const res = nachschubFormularMetadata(null, {
-      meldebestand: " 7 ",
-      lieferanten: [
-        { name: "  B  ", url: "  ", article_number: "" },
-      ],
-    })
+    const res = lieferantenFormularMetadata(null, [
+      { name: "  B  ", url: "  ", article_number: "" },
+    ])
     expect(res).toEqual({
-      reorder_point: 7,
       suppliers: [{ name: "B", url: null, article_number: null }],
     })
+  })
+})
+
+// ─── Alt-Daten: Varianten-Lieferanten auf die Produktebene heben ──
+
+describe("effektiveLieferantenMetadata — kein Eintrag geht verloren", () => {
+  const hbieu = { name: "HBIEU", url: null, article_number: "10379" }
+
+  it("die Produktliste gewinnt, sobald sie existiert — auch eine leere", () => {
+    const produkt = { brand: "Gizeh", suppliers: [hbieu] }
+    const res = effektiveLieferantenMetadata(produkt, [
+      { suppliers: [{ name: "Anders", url: "https://x.example.ch/p" }] },
+    ])
+    expect(res.quelle).toBe("produkt")
+    expect(res.metadata).toBe(produkt)
+
+    // Leere Liste am Produkt = der Betreiber hat alle Lieferanten entfernt.
+    const leer = effektiveLieferantenMetadata({ suppliers: [] }, [
+      { suppliers: [hbieu] },
+    ])
+    expect(leer.quelle).toBe("produkt")
+    expect(parseLieferanten(leer.metadata)).toEqual([])
+  })
+
+  it("DER FALL AUS DEM BETRIEB: ein an der Variante erfasster Lieferant bleibt sichtbar", () => {
+    // Der Betreiber hat «HBIEU · 10379» an der Variante «1 Heftchen»
+    // erfasst, bevor die Lieferanten ans Produkt wanderten. Der Eintrag
+    // muss ohne erneute Eingabe auf Produktebene erscheinen.
+    const res = effektiveLieferantenMetadata({ brand: "Gizeh" }, [
+      { reorder_point: 5, suppliers: [hbieu] },
+      { reorder_point: 2 },
+    ])
+    expect(res.quelle).toBe("varianten")
+    expect(parseLieferanten(res.metadata)).toEqual([
+      { name: "HBIEU", url: null, artikelnummer: "10379" },
+    ])
+    expect(res.zusammenfuehrung).toMatchObject({
+      vonVarianten: 1,
+      duplikateEntfernt: 0,
+      unterschiedlich: false,
+    })
+  })
+
+  it("ohne jegliche Lieferanten: Quelle produkt, leere Liste", () => {
+    const res = effektiveLieferantenMetadata({ brand: "Gizeh" }, [
+      { reorder_point: 5 },
+      null,
+    ])
+    expect(res.quelle).toBe("produkt")
+    expect(parseLieferanten(res.metadata)).toEqual([])
+  })
+})
+
+describe("fuehreVariantenLieferantenZusammen — nachvollziehbare Zusammenführung", () => {
+  const a = { name: "Grosshandel A", url: "https://a.example.ch/p", article_number: "A-1" }
+  const b = { name: "Grosshandel B", url: "https://b.example.ch/p", article_number: null }
+
+  it("identische Listen mehrerer Varianten werden EINE Liste (kein Konflikt)", () => {
+    const res = fuehreVariantenLieferantenZusammen([
+      { suppliers: [a, b] },
+      { suppliers: [a, b] },
+    ])
+    expect(res.suppliers).toEqual([a, b])
+    expect(res.vonVarianten).toBe(2)
+    expect(res.duplikateEntfernt).toBe(2)
+    expect(res.unterschiedlich).toBe(false)
+  })
+
+  it("unterschiedliche Listen: Vereinigungsmenge in Reihenfolge des ersten Vorkommens, Konflikt markiert", () => {
+    // Lieber einen Eintrag zu viel zeigen als einen stillschweigend
+    // verwerfen — die Entscheidung trifft der Betreiber beim Speichern.
+    const res = fuehreVariantenLieferantenZusammen([
+      { suppliers: [a] },
+      { suppliers: [b, a] },
+    ])
+    expect(res.suppliers).toEqual([a, b])
+    expect(res.unterschiedlich).toBe(true)
+    // Der Hauptlieferant der ERSTEN gepflegten Variante bleibt vorn.
+    expect(res.suppliers[0]).toEqual(a)
+  })
+
+  it("dedupliziert nur exakte Doppel (Name ohne Gross/Klein, Adresse, Artikelnummer)", () => {
+    const res = fuehreVariantenLieferantenZusammen([
+      { suppliers: [{ name: "HBIEU", article_number: "10379" }] },
+      { suppliers: [{ name: "hbieu", article_number: "10379" }] },
+      // andere Artikelnummer -> ein ECHT anderer Eintrag, bleibt erhalten
+      { suppliers: [{ name: "HBIEU", article_number: "99999" }] },
+    ])
+    expect(res.suppliers).toEqual([
+      { name: "HBIEU", article_number: "10379" },
+      { name: "HBIEU", article_number: "99999" },
+    ])
+    expect(res.duplikateEntfernt).toBe(1)
+  })
+
+  it("übersteht Müll in den Varianten-Metadaten", () => {
+    const res = fuehreVariantenLieferantenZusammen([
+      null,
+      undefined,
+      { suppliers: "kaputt" },
+      { suppliers: [null, 42, a] },
+    ])
+    expect(res.suppliers).toEqual([a])
+    expect(res.vonVarianten).toBe(1)
   })
 })
 
@@ -396,15 +566,19 @@ describe("validateNachschubMetadata", () => {
   })
 
   it("akzeptiert gültige Nachschubdaten (auch die Formular-Normalform)", () => {
+    // Produktebene: Lieferanten.
     expect(
       validateNachschubMetadata(
-        nachschubFormularMetadata(
-          { units_per_pack: 1 },
-          {
-            meldebestand: "10",
-            lieferanten: [lieferant(), lieferant({ url: "" })],
-          }
-        )
+        lieferantenFormularMetadata({ brand: "Gizeh" }, [
+          lieferant(),
+          lieferant({ url: "" }),
+        ])
+      )
+    ).toEqual([])
+    // Variantenebene: Meldebestand.
+    expect(
+      validateNachschubMetadata(
+        meldebestandFormularMetadata({ units_per_pack: 1 }, "10")
       )
     ).toEqual([])
   })
@@ -445,7 +619,10 @@ describe("validateNachschubMetadata", () => {
 describe("sammleNachschubMetadataFehler — deckt auch Batch-Routen ab", () => {
   const boese = { suppliers: [{ name: "Böse", url: "javascript:alert(1)" }] }
 
-  it("findet die metadata im direkten Varianten-Update", () => {
+  it("findet die metadata im direkten Produkt- oder Varianten-Update", () => {
+    // POST /admin/products/:id (metadata auf PRODUKTEBENE — dort liegen die
+    // Lieferanten jetzt) und POST /admin/products/:id/variants/:vid haben
+    // dieselbe Body-Form: { metadata: … } zuoberst.
     expect(sammleNachschubMetadataFehler({ metadata: boese })).toHaveLength(1)
   })
 
@@ -474,10 +651,10 @@ describe("sammleNachschubMetadataFehler — deckt auch Batch-Routen ab", () => {
     ).toEqual([])
     expect(
       sammleNachschubMetadataFehler({
-        metadata: nachschubFormularMetadata(null, {
-          meldebestand: "3",
-          lieferanten: [lieferant()],
-        }),
+        metadata: {
+          ...meldebestandFormularMetadata(null, "3"),
+          ...lieferantenFormularMetadata(null, [lieferant()]),
+        },
       })
     ).toEqual([])
   })
@@ -495,6 +672,9 @@ describe("validateNachschubBody (Middleware)", () => {
   }
 
   it("weist eine javascript:-Adresse mit 400 ab — kein next()", () => {
+    // Produktebene: POST /admin/products/:id mit metadata.suppliers — hier
+    // liegen die Lieferanten jetzt, die Middleware muss sie genauso
+    // abfangen wie früher an der Variante.
     const { res, next } = aufruf({
       metadata: { suppliers: [{ name: "Böse", url: "javascript:alert(1)" }] },
     })
@@ -505,6 +685,21 @@ describe("validateNachschubBody (Middleware)", () => {
     expect(next).not.toHaveBeenCalled()
   })
 
+  it("fängt Alt-suppliers an der VARIANTE weiterhin ab (eingebettet)", () => {
+    const { res, next } = aufruf({
+      variants: [
+        {
+          id: "v1",
+          metadata: {
+            suppliers: [{ name: "Böse", url: "javascript:alert(1)" }],
+          },
+        },
+      ],
+    })
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(next).not.toHaveBeenCalled()
+  })
+
   it("lässt einen Request ohne Nachschubdaten passieren", () => {
     const { res, next } = aufruf({ title: "Neuer Titel" })
     expect(next).toHaveBeenCalled()
@@ -512,12 +707,15 @@ describe("validateNachschubBody (Middleware)", () => {
   })
 
   it("lässt gültige Nachschubdaten passieren", () => {
-    const { next } = aufruf({
-      metadata: nachschubFormularMetadata(
-        { units_per_pack: 1 },
-        { meldebestand: "5", lieferanten: [lieferant()] }
-      ),
+    // Produkt-Update (Lieferanten) …
+    const produkt = aufruf({
+      metadata: lieferantenFormularMetadata({ brand: "Gizeh" }, [lieferant()]),
     })
-    expect(next).toHaveBeenCalled()
+    expect(produkt.next).toHaveBeenCalled()
+    // … und Varianten-Update (Meldebestand).
+    const variante = aufruf({
+      metadata: meldebestandFormularMetadata({ units_per_pack: 1 }, "5"),
+    })
+    expect(variante.next).toHaveBeenCalled()
   })
 })
