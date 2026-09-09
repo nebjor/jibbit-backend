@@ -1,10 +1,21 @@
 /**
  * Nachschubsteuerung — gemeinsame, reine Bausteine.
  *
- * Der Betreiber pflegt Meldebestand (reorder_point) und Bezugsquellen
- * (suppliers) je Variante direkt im Admin: im Widget «Nachschub» an der
- * Produktseite. Gespeichert wird über die Admin-API in die metadata der
- * Variante. Von dort lesen drei Abnehmer:
+ * Der Betreiber pflegt beides direkt im Admin, im Widget «Nachschub» an der
+ * Produktseite — aber auf ZWEI Ebenen:
+ *
+ *   - die Bezugsquellen (suppliers) am PRODUKT: er kauft ein Produkt beim
+ *     Grosshändler, die Bezugsquelle ist für alle Varianten dieselbe
+ *     (product.metadata.suppliers);
+ *   - den Meldebestand (reorder_point) je VARIANTE: der hängt am Bestand,
+ *     und der ist je Variante verschieden (variant.metadata.reorder_point).
+ *
+ * ALT-DATEN: früher lagen die suppliers je Variante
+ * (variant.metadata.suppliers). effektiveLieferantenMetadata() liest solche
+ * Einträge weiter als Rückfallebene und führt sie über die Varianten
+ * zusammen — nichts geht verloren, und beim nächsten Speichern im Admin
+ * wandern sie ans Produkt (das Widget räumt die Varianten-Schlüssel dabei
+ * ab). Von den Metadaten lesen drei Abnehmer:
  *
  *   - das Admin-Widget an der Produktseite (src/admin/widgets/nachschub-widget.tsx)
  *   - die Admin-Seite «Nachschub»          (src/admin/routes/nachschub/page.tsx)
@@ -30,8 +41,9 @@
  *      rel="noopener noreferrer".
  */
 
-/** Schlüssel in variant.metadata, unter denen die Nachschubdaten liegen. */
+/** Schlüssel in product.metadata: die Lieferantenliste des Produkts. */
 export const SUPPLIERS_KEY = "suppliers"
+/** Schlüssel in variant.metadata: der Meldebestand der Variante. */
 export const REORDER_POINT_KEY = "reorder_point"
 
 // ─── Adressprüfung ──────────────────────────────────────────────
@@ -57,7 +69,7 @@ export function isSafeSupplierUrl(url: unknown): url is string {
   return parsed.protocol === "http:" || parsed.protocol === "https:"
 }
 
-// ─── Lieferanten aus den Varianten-Metadaten lesen ──────────────
+// ─── Lieferanten aus den Metadaten lesen ────────────────────────
 
 export type Lieferant = {
   name: string
@@ -70,7 +82,8 @@ export type Lieferant = {
 }
 
 /**
- * variant.metadata.suppliers defensiv lesen. Einträge ohne Namen fallen weg;
+ * metadata.suppliers defensiv lesen (normal: die metadata des Produkts,
+ * oder das Ergebnis von effektiveLieferantenMetadata). Einträge ohne Namen fallen weg;
  * eine Adresse, die die Prüfung nicht besteht, wird zu url=null — der
  * Eintrag bleibt sichtbar (der Betreiber soll die kaputte Angabe sehen),
  * aber es entsteht nie ein Link daraus.
@@ -122,6 +135,121 @@ export function parseMeldebestand(
         ? Number(raw)
         : NaN
   return Number.isInteger(n) && n >= 0 ? n : null
+}
+
+// ─── Alt-Daten: Lieferanten von der Varianten- auf die Produktebene ──
+//
+// Früher lagen die suppliers je Variante. Solange das Produkt selbst noch
+// keine Lieferantenliste hat, gelten die Varianten-Einträge weiter — der
+// Betreiber muss nichts ein zweites Mal erfassen, und nichts verschwindet
+// stillschweigend. Beim nächsten Speichern im Admin wird die (ggf.
+// zusammengeführte) Liste ans Produkt geschrieben und von den Varianten
+// entfernt (lieferantenFormularMetadata mit leerer Liste).
+
+/** Ergebnis der Zusammenführung der Varianten-Lieferanten (Alt-Daten). */
+export type LieferantenZusammenfuehrung = {
+  /** Roh-Einträge in Reihenfolge des ersten Vorkommens (Variantenreihenfolge). */
+  suppliers: Record<string, unknown>[]
+  /** Wie viele Varianten Einträge beigesteuert haben. */
+  vonVarianten: number
+  /** Exakte Doppel (Name/Adresse/Artikelnummer gleich), die entfernt wurden. */
+  duplikateEntfernt: number
+  /**
+   * true, wenn die Varianten NICHT dieselbe Liste führten — dann ist die
+   * Zusammenführung eine echte Entscheidung (Vereinigungsmenge) und gehört
+   * im Admin bzw. im Bericht erwähnt.
+   */
+  unterschiedlich: boolean
+}
+
+/** Dedupliziert wird über Name (ohne Gross/Klein), Adresse und Artikelnummer. */
+function lieferantSchluessel(e: Record<string, unknown>): string {
+  const s = (v: unknown) => (typeof v === "string" ? v.trim() : "")
+  return JSON.stringify([
+    s(e.name).toLowerCase(),
+    s(e.url),
+    s(e.article_number),
+  ])
+}
+
+/**
+ * Die suppliers-Einträge mehrerer Varianten zu EINER Liste vereinigen:
+ * Reihenfolge des ersten Vorkommens (der Hauptlieferant der ersten
+ * gepflegten Variante bleibt Hauptlieferant), exakte Doppel fallen weg,
+ * unterschiedliche Einträge bleiben ALLE erhalten — lieber einen zu viel
+ * zeigen als einen stillschweigend verwerfen.
+ */
+export function fuehreVariantenLieferantenZusammen(
+  variantMetadatas: (Record<string, unknown> | null | undefined)[]
+): LieferantenZusammenfuehrung {
+  const suppliers: Record<string, unknown>[] = []
+  const gesehen = new Set<string>()
+  let vonVarianten = 0
+  let duplikateEntfernt = 0
+  const listen: string[] = []
+  for (const metadata of variantMetadatas) {
+    const raw = metadata?.[SUPPLIERS_KEY]
+    if (!Array.isArray(raw) || !raw.length) {
+      continue
+    }
+    vonVarianten++
+    const eintraege = raw.filter(
+      (e): e is Record<string, unknown> =>
+        !!e && typeof e === "object" && !Array.isArray(e)
+    )
+    listen.push(JSON.stringify(eintraege.map(lieferantSchluessel)))
+    for (const e of eintraege) {
+      const key = lieferantSchluessel(e)
+      if (gesehen.has(key)) {
+        duplikateEntfernt++
+        continue
+      }
+      gesehen.add(key)
+      suppliers.push(e)
+    }
+  }
+  return {
+    suppliers,
+    vonVarianten,
+    duplikateEntfernt,
+    unterschiedlich: new Set(listen).size > 1,
+  }
+}
+
+/** Woher die angezeigte Lieferantenliste stammt. */
+export type LieferantenQuelle = "produkt" | "varianten"
+
+/**
+ * Die massgebliche Lieferanten-metadata eines Produkts bestimmen:
+ *
+ *   - Führt das Produkt selbst eine suppliers-Liste, gilt sie — auch eine
+ *     leere (der Betreiber hat alle Lieferanten entfernt).
+ *   - Sonst greifen die Alt-Einträge der Varianten, zusammengeführt.
+ *
+ * Das Ergebnis lässt sich direkt an parseLieferanten() bzw.
+ * lieferantenEingabeAusMetadata() verfüttern.
+ */
+export function effektiveLieferantenMetadata(
+  productMetadata: Record<string, unknown> | null | undefined,
+  variantMetadatas: (Record<string, unknown> | null | undefined)[]
+): {
+  metadata: Record<string, unknown>
+  quelle: LieferantenQuelle
+  /** Nur beim Varianten-Rückfall gesetzt — fürs Protokoll im Admin/Bericht. */
+  zusammenfuehrung?: LieferantenZusammenfuehrung
+} {
+  if (Array.isArray(productMetadata?.[SUPPLIERS_KEY])) {
+    return { metadata: productMetadata ?? {}, quelle: "produkt" }
+  }
+  const zusammenfuehrung = fuehreVariantenLieferantenZusammen(variantMetadatas)
+  if (zusammenfuehrung.suppliers.length) {
+    return {
+      metadata: { [SUPPLIERS_KEY]: zusammenfuehrung.suppliers },
+      quelle: "varianten",
+      zusammenfuehrung,
+    }
+  }
+  return { metadata: productMetadata ?? {}, quelle: "produkt" }
 }
 
 // ─── Auswahl: was muss nachbestellt werden? ─────────────────────
@@ -204,12 +332,13 @@ export function nachschubUebersicht(
 
 // ─── Pflege im Admin: Formular-Bausteine ────────────────────────
 //
-// Das Widget «Nachschub» (Produktseite) bearbeitet Meldebestand und
-// Lieferanten je Variante. Diese Bausteine sind rein und getestet:
-// Rohwerte fürs Formular lesen, Eingaben prüfen, die metadata fürs
-// Speichern MERGEN — die Admin-API schreibt metadata als Ganzes, fremde
-// Schlüssel (units_per_pack, pack_type, …) müssen also mitkommen, sonst
-// sind sie nach dem Speichern weg.
+// Das Widget «Nachschub» (Produktseite) bearbeitet die Lieferanten fürs
+// ganze PRODUKT und den Meldebestand je VARIANTE. Diese Bausteine sind
+// rein und getestet: Rohwerte fürs Formular lesen, Eingaben prüfen, die
+// metadata fürs Speichern MERGEN — die Admin-API schreibt metadata als
+// Ganzes, fremde Schlüssel (am Produkt z.B. brand für die
+// Galaxus-Anbindung, an der Variante ean, weight_g, units_per_pack, …)
+// müssen also mitkommen, sonst sind sie nach dem Speichern weg.
 
 /** Eine Formularzeile im Widget — Rohtext, wie ihn der Betreiber eintippt. */
 export type LieferantEingabe = {
@@ -292,22 +421,41 @@ export function pruefeLieferantenEingabe(
 }
 
 /**
- * Die metadata fürs Speichern bauen — GEMERGT: alle fremden Schlüssel der
- * Variante bleiben erhalten, nur reorder_point und suppliers werden
- * gesetzt. Leere Eingaben leeren den jeweiligen Schlüssel sauber (null):
- * parseMeldebestand/parseLieferanten lesen null als «nicht gepflegt», und
- * null räumt den Wert auch dann ab, wenn die API metadata schlüsselweise
- * mergen sollte.
+ * Die VARIANTEN-metadata fürs Speichern des Meldebestands bauen — GEMERGT:
+ * alle fremden Schlüssel der Variante (ean, weight_g, units_per_pack, …)
+ * bleiben erhalten, nur reorder_point wird gesetzt. Eine leere Eingabe
+ * leert den Schlüssel sauber (null): parseMeldebestand liest null als
+ * «nicht gepflegt», und null räumt den Wert auch dann ab, wenn die API
+ * metadata schlüsselweise mergen sollte.
  */
-export function nachschubFormularMetadata(
+export function meldebestandFormularMetadata(
   existing: Record<string, unknown> | null | undefined,
-  eingabe: { meldebestand: string; lieferanten: LieferantEingabe[] }
+  meldebestand: string
 ): Record<string, unknown> {
   const metadata: Record<string, unknown> = { ...(existing ?? {}) }
-  const m = eingabe.meldebestand.trim()
+  const m = meldebestand.trim()
   metadata[REORDER_POINT_KEY] = m === "" ? null : Number(m)
-  metadata[SUPPLIERS_KEY] = eingabe.lieferanten.length
-    ? eingabe.lieferanten.map((l) => ({
+  return metadata
+}
+
+/**
+ * Die PRODUKT-metadata fürs Speichern der Lieferanten bauen — GEMERGT:
+ * alle fremden Schlüssel des Produkts (brand für die Galaxus-Anbindung, …)
+ * bleiben erhalten, nur suppliers wird gesetzt. Eine leere Liste leert den
+ * Schlüssel sauber (null).
+ *
+ * Dieselbe Funktion räumt mit leerer Liste auch die ALT-Einträge an einer
+ * VARIANTE ab, wenn das Widget die Lieferanten ans Produkt hebt — die
+ * übrigen Varianten-Schlüssel (ean, weight_g, reorder_point, …) bleiben
+ * dabei unangetastet.
+ */
+export function lieferantenFormularMetadata(
+  existing: Record<string, unknown> | null | undefined,
+  lieferanten: LieferantEingabe[]
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = { ...(existing ?? {}) }
+  metadata[SUPPLIERS_KEY] = lieferanten.length
+    ? lieferanten.map((l) => ({
         name: l.name.trim(),
         url: l.url.trim() || null,
         article_number: l.article_number.trim() || null,
@@ -321,6 +469,8 @@ export function nachschubFormularMetadata(
 /**
  * Nachschub-Schlüssel in einer metadata prüfen — die Server-Seite der
  * Formularprüfung: wer die Admin-API direkt anspricht, umgeht das Formular.
+ * Gilt für JEDE metadata im Body — die des Produkts (suppliers) genauso wie
+ * die der Varianten (reorder_point, Alt-suppliers).
  * Fremde Schlüssel werden nicht beanstandet; fehlen reorder_point und
  * suppliers ganz (oder sind null), gibt es nichts zu prüfen. Insbesondere
  * kommt so nie eine javascript:-Adresse in die Datenbank.
@@ -372,8 +522,9 @@ export function validateNachschubMetadata(metadata: unknown): string[] {
 /**
  * Einen Request-Body rekursiv nach metadata-Objekten absuchen und deren
  * Nachschub-Schlüssel prüfen. Deckt alle Admin-Produktrouten ab — Update
- * einer Variante, Batch-Varianten, Produkt anlegen/ändern mit
- * eingebetteten Varianten — ohne jede Route einzeln zu kennen.
+ * des Produkts (metadata.suppliers auf Produktebene), Update einer
+ * Variante, Batch-Varianten, Produkt anlegen/ändern mit eingebetteten
+ * Varianten — ohne jede Route einzeln zu kennen.
  */
 export function sammleNachschubMetadataFehler(
   body: unknown,
