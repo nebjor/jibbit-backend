@@ -13,7 +13,44 @@
 import { ArrowUpRightOnBox } from "@medusajs/icons"
 import { Button, Text, Tooltip } from "@medusajs/ui"
 
-import { isSafeSupplierUrl, Lieferant } from "../../lib/nachschub"
+import {
+  isSafeSupplierUrl,
+  istImportLand,
+  Lieferant,
+  lieferantLandKurz,
+  lieferantLandLabel,
+} from "../../lib/nachschub"
+
+/**
+ * Das Herkunftsland neben dem Namen — wie die Artikelnummer, aber mit
+ * Bedeutung fürs Auge: alles ausser der Schweiz ist ein IMPORT (Zoll,
+ * Einfuhrsteuer, längere Lieferzeit) und hebt sich dezent orange ab, damit
+ * es beim Überfliegen der Einkaufsliste sofort auffällt. Ohne gepflegtes
+ * Land erscheint NICHTS — unbekannt ist unbekannt und wird nie als
+ * «Schweiz» geraten.
+ */
+const LandZusatz = ({ land }: { land: Lieferant["land"] }) => {
+  if (!land) {
+    return null
+  }
+  if (istImportLand(land)) {
+    return (
+      <span
+        className="text-ui-tag-orange-text"
+        title={`Import aus ${lieferantLandLabel(land)} — Zoll, Einfuhrsteuer und längere Lieferzeit einplanen`}
+      >
+        {" "}
+        · {lieferantLandKurz(land)} (Import)
+      </span>
+    )
+  }
+  return (
+    <span className="text-ui-fg-subtle" title={lieferantLandLabel(land)}>
+      {" "}
+      · {lieferantLandKurz(land)}
+    </span>
+  )
+}
 
 export const LieferantLink = ({
   lieferant,
@@ -41,6 +78,7 @@ export const LieferantLink = ({
               · {lieferant.artikelnummer}
             </span>
           ) : null}
+          <LandZusatz land={lieferant.land} />
           <ArrowUpRightOnBox />
         </a>
       </Button>
@@ -51,6 +89,7 @@ export const LieferantLink = ({
     <span className="inline-flex items-center gap-x-1">
       <Text size="small" leading="compact">
         {lieferant.name}
+        <LandZusatz land={lieferant.land} />
       </Text>
       {lieferant.unsichereUrl ? (
         <Tooltip content={`Adresse nicht verlinkbar: «${lieferant.unsichereUrl}» — nur http/https ist erlaubt. An der Produktseite im Abschnitt «Nachschub» über «Bearbeiten» korrigieren.`}>

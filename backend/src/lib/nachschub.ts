@@ -69,6 +69,73 @@ export function isSafeSupplierUrl(url: unknown): url is string {
   return parsed.protocol === "http:" || parsed.protocol === "https:"
 }
 
+// ─── Herkunftsland des Lieferanten ──────────────────────────────
+//
+// Bestellt der Betreiber im Ausland (vor allem Deutschland), kommen
+// Einfuhrverzollung, Einfuhrsteuer und eine längere Lieferzeit dazu — er
+// muss also früher nachbestellen. Damit er das auf einen Blick sieht, ist
+// das Land eine FESTE Auswahl und kein Freitext: «DE», «de», «Deutschland»
+// und «BRD» nebeneinander wären nicht mehr überfliegbar. Gespeichert wird
+// der Code in suppliers[].country. Das Feld ist OPTIONAL — und unbekannt
+// bleibt unbekannt (null): es wird nie ein Land geraten, insbesondere
+// nicht «Schweiz».
+
+/**
+ * Die feste Länderauswahl: die Schweiz (Inland) und Deutschland (die
+ * Haupt-Importquelle) sind gesetzt; dazu die Nachbarländer Österreich,
+ * Frankreich und Italien sowie die Niederlande (dort sitzen viele
+ * Grosshändler der Branche). Alles Übrige läuft unter «anderes Land» —
+ * für den Zweck (Import ja/nein) reicht das, und die Auswahl bleibt kurz.
+ */
+export const LIEFERANT_LAENDER = [
+  { code: "CH", label: "Schweiz" },
+  { code: "DE", label: "Deutschland" },
+  { code: "AT", label: "Österreich" },
+  { code: "FR", label: "Frankreich" },
+  { code: "IT", label: "Italien" },
+  { code: "NL", label: "Niederlande" },
+  { code: "OTHER", label: "anderes Land" },
+] as const
+
+export type LieferantLand = (typeof LIEFERANT_LAENDER)[number]["code"]
+
+/**
+ * suppliers[].country defensiv lesen: nur Codes aus der festen Auswahl
+ * zählen (Gross/Kleinschreibung und Leerraum werden verziehen), alles
+ * andere ist «unbekannt» (null) — es wird NIE ein Land geraten.
+ */
+export function parseLieferantLand(raw: unknown): LieferantLand | null {
+  if (typeof raw !== "string") {
+    return null
+  }
+  const code = raw.trim().toUpperCase()
+  const eintrag = LIEFERANT_LAENDER.find((l) => l.code === code)
+  return eintrag ? eintrag.code : null
+}
+
+/** Anzeigename zum Code — für Formular und Bericht. */
+export function lieferantLandLabel(land: LieferantLand): string {
+  return LIEFERANT_LAENDER.find((l) => l.code === land)?.label ?? land
+}
+
+/**
+ * Kurzform für die Anzeige neben dem Lieferantennamen: der Code («DE»);
+ * nur das Sammelbecken bekommt Klartext — «OTHER» sagt dem Betreiber nichts.
+ */
+export function lieferantLandKurz(land: LieferantLand): string {
+  return land === "OTHER" ? "anderes Land" : land
+}
+
+/**
+ * Import = ein GEPFLEGTES Land, das nicht die Schweiz ist — dort kommen
+ * Zoll, Einfuhrsteuer und längere Lieferzeit dazu, das soll sich in den
+ * Ansichten abheben. Unbekannt (null) ist KEIN Import: nichts raten,
+ * nichts einfärben — unbekannt sieht anders aus als «Schweiz».
+ */
+export function istImportLand(land: LieferantLand | null): boolean {
+  return land !== null && land !== "CH"
+}
+
 // ─── Lieferanten aus den Metadaten lesen ────────────────────────
 
 export type Lieferant = {
@@ -79,6 +146,8 @@ export type Lieferant = {
   unsichereUrl?: string
   /** Artikelnummer beim Lieferanten. */
   artikelnummer: string | null
+  /** Herkunftsland (Code aus LIEFERANT_LAENDER) — null = nicht gepflegt. */
+  land: LieferantLand | null
 }
 
 /**
@@ -114,6 +183,7 @@ export function parseLieferanten(
       name,
       url: isSafeSupplierUrl(urlRaw) ? urlRaw : null,
       artikelnummer,
+      land: parseLieferantLand(e.country),
     }
     if (!lieferant.url && urlRaw) {
       lieferant.unsichereUrl = urlRaw
@@ -162,13 +232,19 @@ export type LieferantenZusammenfuehrung = {
   unterschiedlich: boolean
 }
 
-/** Dedupliziert wird über Name (ohne Gross/Klein), Adresse und Artikelnummer. */
+/**
+ * Dedupliziert wird über Name (ohne Gross/Klein), Adresse, Artikelnummer
+ * und Land — Einträge, die sich NUR im Land unterscheiden, bleiben beide
+ * erhalten (lieber einen zu viel zeigen als einen stillschweigend
+ * verwerfen; die Entscheidung trifft der Betreiber beim Speichern).
+ */
 function lieferantSchluessel(e: Record<string, unknown>): string {
   const s = (v: unknown) => (typeof v === "string" ? v.trim() : "")
   return JSON.stringify([
     s(e.name).toLowerCase(),
     s(e.url),
     s(e.article_number),
+    s(e.country).toUpperCase(),
   ])
 }
 
@@ -345,6 +421,8 @@ export type LieferantEingabe = {
   name: string
   url: string
   article_number: string
+  /** Länder-Code aus LIEFERANT_LAENDER — "" = nicht gepflegt. */
+  country: string
 }
 
 /**
@@ -370,6 +448,11 @@ export function lieferantenEingabeAusMetadata(
       url: typeof e.url === "string" ? e.url : "",
       article_number:
         typeof e.article_number === "string" ? e.article_number : "",
+      // Anders als bei der URL gibt es hier kein Freitextfeld, in dem eine
+      // kaputte Angabe zur Korrektur erscheinen könnte — die Auswahl kennt
+      // nur die festen Codes. Ein unbekannter Wert wird darum als «nicht
+      // gepflegt» geladen; gültige Codes überleben auch kleingeschrieben.
+      country: parseLieferantLand(e.country) ?? "",
     })
   }
   return eintraege
@@ -416,6 +499,14 @@ export function pruefeLieferantenEingabe(
           `(«${url}» ist keine).`
       )
     }
+    // Das Formular bietet nur die feste Auswahl an — die Prüfung greift,
+    // falls ein Aufrufer die Bausteine einmal anders füttert.
+    if (l.country.trim() && parseLieferantLand(l.country) === null) {
+      fehler.push(
+        `${wo}: Land muss aus der festen Auswahl stammen ` +
+          `(«${l.country}» kennt sie nicht) — oder leer bleiben.`
+      )
+    }
   })
   return fehler
 }
@@ -459,6 +550,9 @@ export function lieferantenFormularMetadata(
         name: l.name.trim(),
         url: l.url.trim() || null,
         article_number: l.article_number.trim() || null,
+        // Normalisiert auf den Code der festen Auswahl; leer = nicht
+        // gepflegt (null) — es wird nie ein Land geraten.
+        country: parseLieferantLand(l.country),
       }))
     : null
   return metadata
@@ -512,6 +606,17 @@ export function validateNachschubMetadata(metadata: unknown): string[] {
         }
         if (e.article_number != null && typeof e.article_number !== "string") {
           fehler.push(`${wo}: article_number muss ein Text sein`)
+        }
+        if (
+          e.country != null &&
+          e.country !== "" &&
+          parseLieferantLand(e.country) === null
+        ) {
+          fehler.push(
+            `${wo}: country muss einer der Codes ` +
+              `${LIEFERANT_LAENDER.map((l) => l.code).join("/")} sein ` +
+              `(ist ${JSON.stringify(e.country)})`
+          )
         }
       })
     }

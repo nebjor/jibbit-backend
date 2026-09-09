@@ -39,12 +39,29 @@ import { parseScriptArgs } from "./script-args"
 import {
   effektiveLieferantenMetadata,
   istFaellig,
+  istImportLand,
+  Lieferant,
+  lieferantLandKurz,
   nachDringlichkeit,
   nachschubUebersicht,
   parseLieferanten,
   parseMeldebestand,
   NachschubZeile,
 } from "../lib/nachschub"
+
+/**
+ * Das Herkunftsland fürs Terminal und die CSV: der Code («DE»), bei allem
+ * ausser der Schweiz mit dem Zusatz IMPORT — da kommen Zoll, Einfuhrsteuer
+ * und längere Lieferzeit dazu, das soll beim Überfliegen sofort auffallen.
+ * Ohne gepflegtes Land: «Land?» — unbekannt ist unbekannt und wird nie als
+ * Schweiz geraten.
+ */
+function landText(land: Lieferant["land"]): string {
+  if (!land) {
+    return "Land?"
+  }
+  return istImportLand(land) ? `${lieferantLandKurz(land)} IMPORT` : land
+}
 
 /**
  * Alle Varianten mit Bestand, Meldebestand und Lieferanten aus der Datenbank
@@ -169,7 +186,7 @@ export default async function nachschubReport({ container, args }: ExecArgs) {
   for (const z of u.faellig) {
     const haupt = z.lieferanten[0]
     const lieferant = haupt
-      ? `${haupt.name}` +
+      ? `${haupt.name} [${landText(haupt.land)}]` +
         (haupt.artikelnummer ? ` (Art. ${haupt.artikelnummer})` : "") +
         (haupt.url ? ` ${haupt.url}` : " — keine gültige Adresse") +
         (z.lieferanten.length > 1
@@ -232,6 +249,7 @@ export default async function nachschubReport({ container, args }: ExecArgs) {
       "Meldebestand",
       "Fehlmenge",
       "Lieferant",
+      "Land",
       "LieferantenArtikelNr",
       "Link",
       "WeitereLieferanten",
@@ -255,6 +273,9 @@ export default async function nachschubReport({ container, args }: ExecArgs) {
         // Link-Spalte — sie würde beim Anklicken im Admin Code ausführen.
         hinweise.push("Lieferanten-Adresse ungültig (nur http/https erlaubt)")
       }
+      if (haupt && istImportLand(haupt.land)) {
+        hinweise.push("Import — Zoll, Einfuhrsteuer und Lieferzeit einplanen")
+      }
       return {
         Status: status,
         Sku: z.sku,
@@ -267,11 +288,18 @@ export default async function nachschubReport({ container, args }: ExecArgs) {
             ? Math.max(0, z.meldebestand - z.bestand)
             : null,
         Lieferant: haupt?.name ?? null,
+        // Land nur, wenn gepflegt — eine leere Zelle heisst «unbekannt»,
+        // nie «Schweiz».
+        Land: haupt ? (haupt.land ? landText(haupt.land) : null) : null,
         LieferantenArtikelNr: haupt?.artikelnummer ?? null,
         Link: haupt?.url ?? null,
         WeitereLieferanten: z.lieferanten
           .slice(1)
-          .map((l) => `${l.name}${l.url ? ` ${l.url}` : ""}`)
+          .map(
+            (l) =>
+              `${l.name}${l.land ? ` [${landText(l.land)}]` : ""}` +
+              `${l.url ? ` ${l.url}` : ""}`
+          )
           .join(" | "),
         Hinweis: hinweise.join("; "),
       }
