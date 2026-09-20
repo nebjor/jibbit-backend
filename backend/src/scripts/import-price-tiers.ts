@@ -1,13 +1,24 @@
 /**
  * Importiert Mengenstaffeln aus dem Odoo-Export in die Medusa-Preise.
  *
+ * PROBELAUF IST DER NORMALFALL — ohne das Wort `schreiben` wird nur
+ * angezeigt (Hintergrund: script-args.ts):
+ *
  *   node scripts/odoo-export.mjs            # erzeugt odoo-export/tiers.json
  *   cd backend
  *   npx medusa exec ./src/scripts/import-price-tiers.ts \
- *       ../odoo-export/tiers.json "pricelist=Public Pricelist" dry-run
+ *     ../odoo-export/tiers.json \
+ *     "pricelist=Public Pricelist"
+ *
+ * Schreiben — `schreiben` als ERSTES Argument gleich nach dem Script-Pfad:
+ *
+ *   npx medusa exec ./src/scripts/import-price-tiers.ts schreiben \
+ *     ../odoo-export/tiers.json \
+ *     "pricelist=Public Pricelist"
  *
  * Argumente OHNE Bindestrich-Präfix — `medusa exec` lehnt unbekannte Optionen
- * ab, siehe script-args.ts.
+ * ab, siehe script-args.ts. Unbekannte oder vertippte Argumente brechen den
+ * Lauf ab, bevor etwas gelesen oder geschrieben wird.
  *
  * Optionen:
  *   pricelist=<name>   nur diese Odoo-Preisliste importieren (sonst: alle,
@@ -15,7 +26,8 @@
  *   currency=<code>    Zielwährung in Medusa, Default chf
  *   round=<schritt>    Rundungsschritt, Default 0.05 (Schweizer Preisoptik).
  *                      round=0.01 für rappengenaue Preise.
- *   dry-run            nur anzeigen, nichts schreiben
+ *   schreiben          wirklich schreiben. Ohne dieses Wort: Probelauf.
+ *   dry-run            ausdrücklicher Probelauf — ohne Wirkung, bleibt erlaubt
  *
  * WICHTIG — Beträge sind Dezimalzahlen, nicht Rappen. CHF 27.00 === 27.
  * (Gleiche Konvention wie seed.ts.)
@@ -40,7 +52,7 @@ import {
   collapseEqual,
   roundTo,
 } from "./pricing-helpers"
-import { parseScriptArgs } from "./script-args"
+import { applyHint, parseScriptArgs, resolveRunMode } from "./script-args"
 
 // Historische Importpfade weiterbedienen: roundTo/collapseEqual wohnten
 // zuerst hier und werden von import-catalog.ts von hier bezogen. Die
@@ -98,6 +110,17 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
 
   const opts = parseScriptArgs(args)
 
+  // Modus und Argumente ZUERST — ohne `schreiben` bleibt alles ein Probelauf.
+  const mode = resolveRunMode(
+    opts,
+    { values: ["pricelist", "currency", "round"], file: ".json" },
+    logger
+  )
+  if (!mode) {
+    return
+  }
+  const { dryRun } = mode
+
   const file = opts.file(".json")
   if (!file) {
     logger.error("Pfad zu tiers.json fehlt.")
@@ -107,7 +130,6 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
   const pricelistFilter = opts.value("pricelist")
   const currency = (opts.value("currency") ?? "chf").toLowerCase()
   const step = Number(opts.value("round") ?? String(ROUND_DEFAULT))
-  const dryRun = opts.flag("dry-run")
 
   const raw: ExportEntry[] = JSON.parse(readFileSync(resolve(file), "utf8"))
 
@@ -312,6 +334,7 @@ export default async function importPriceTiers({ container, args }: ExecArgs) {
       logger.info(`  … und ${preview.size - 10} weitere`)
     }
     logger.info(`Würde ${payload.length} Varianten aktualisieren.`)
+    logger.info(applyHint(args))
     return
   }
 

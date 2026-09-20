@@ -71,14 +71,42 @@ läuft dasselbe über `docker compose exec medusa npx medusa exec
   `https://…/static/…` erfüllen das (siehe `docs/produktbilder.md`,
   `import-product-images.ts`).
 
-Dann einspielen (idempotent, `dry-run` zeigt vorher jede Änderung):
+Dann einspielen (idempotent). Probelauf ist der Normalfall — ohne das Wort
+`schreiben` zeigt das Script nur jede Änderung Feld für Feld:
 
     cd backend
-    npx medusa exec ./src/scripts/update-catalog.ts ../data/catalog.json \
+    npx medusa exec ./src/scripts/update-catalog.ts \
+      ../data/catalog.json \
       extra=../data/catalog-extra.json \
       content=../data/product-content.json \
-      inventory=../data/inventory.json \
-      dry-run
+      inventory=../data/inventory.json
+
+Anwenden — `schreiben` als erstes Argument gleich nach dem Script-Pfad:
+
+    cd backend
+    npx medusa exec ./src/scripts/update-catalog.ts schreiben \
+      ../data/catalog.json \
+      extra=../data/catalog-extra.json \
+      content=../data/product-content.json \
+      inventory=../data/inventory.json
+
+Nur die GTINs auf dem Server (Container, kompiliert) — `nur=gtin` fasst
+weder Preise noch Texte noch Bestand an:
+
+    docker compose exec medusa npx medusa exec \
+      ./src/scripts/update-catalog.js \
+      /app/data/catalog.json nur=gtin \
+      extra=/app/data/catalog-extra.json
+
+    docker compose exec medusa npx medusa exec \
+      ./src/scripts/update-catalog.js schreiben \
+      /app/data/catalog.json nur=gtin \
+      extra=/app/data/catalog-extra.json
+
+Die Befehle sind bewusst in kurze Zeilen mit `\` gebrochen: ein langer
+Einzeiler, den das Terminal beim Einfügen umbricht, wird von der Shell als
+zwei Befehle ausgeführt. Deshalb hängt das Schreiben auch nicht mehr am
+letzten Wort der Zeile (siehe `backend/src/scripts/script-args.ts`).
 
 Beide Import-Skripte validieren die EANs (8/12/13/14 Ziffern, GS1-Prüfziffer,
 keine Duplikate) und brechen bei Fehlern ab, bevor etwas geschrieben wird.

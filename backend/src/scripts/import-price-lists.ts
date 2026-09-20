@@ -20,20 +20,27 @@
  * Vorher:
  *   node scripts/jibbit-shop-prices.mjs            # erzeugt data/price-lists.json
  *
- * Dann:
+ * Dann — PROBELAUF IST DER NORMALFALL, ohne das Wort `schreiben` wird nur
+ * angezeigt (Hintergrund: script-args.ts):
  *   cd backend
  *   npx medusa exec ./src/scripts/import-price-lists.ts \
- *       ../data/price-lists.json dry-run
+ *     ../data/price-lists.json
+ *
+ * Schreiben — `schreiben` als ERSTES Argument gleich nach dem Script-Pfad:
+ *   npx medusa exec ./src/scripts/import-price-lists.ts schreiben \
+ *     ../data/price-lists.json
  *
  * Argumente OHNE Bindestrich-Präfix — `medusa exec` lehnt unbekannte
- * Optionen ab, siehe script-args.ts.
+ * Optionen ab, siehe script-args.ts. Unbekannte oder vertippte Argumente
+ * brechen den Lauf ab, bevor etwas gelesen oder geschrieben wird.
  *
  * Optionen:
  *   catalog=<pfad>   catalog.json (Staffeln); Default: neben price-lists.json
  *   title=<name>     Titel der Preisliste, Default "Aktionspreise jibbit.ch"
  *   currency=<code>  Zielwährung, Default chf
  *   round=<schritt>  Rundung, Default 0.05 (Schweizer Preisoptik)
- *   dry-run          nur anzeigen, nichts schreiben
+ *   schreiben        wirklich schreiben. Ohne dieses Wort: Probelauf.
+ *   dry-run          ausdrücklicher Probelauf — ohne Wirkung, bleibt erlaubt
  *
  * Idempotent: die Preisliste wird über ihren Titel wiedergefunden. Ein
  * zweiter Lauf mit unveränderten Daten schreibt nichts; geänderte Daten
@@ -77,7 +84,7 @@ import {
   buildImportPlan,
 } from "./price-list-mapping"
 import { PriceInput, ROUND_DEFAULT, samePriceRows } from "./pricing-helpers"
-import { parseScriptArgs } from "./script-args"
+import { applyHint, parseScriptArgs, resolveRunMode } from "./script-args"
 
 const TITLE_DEFAULT = "Aktionspreise jibbit.ch"
 const BATCH = 50
@@ -106,6 +113,17 @@ export default async function importPriceLists({ container, args }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const opts = parseScriptArgs(args)
 
+  // Modus und Argumente ZUERST — ohne `schreiben` bleibt alles ein Probelauf.
+  const mode = resolveRunMode(
+    opts,
+    { values: ["catalog", "title", "currency", "round"], file: ".json" },
+    logger
+  )
+  if (!mode) {
+    return
+  }
+  const { dryRun } = mode
+
   const file = opts.file(".json")
   if (!file) {
     logger.error("Pfad zu price-lists.json fehlt.")
@@ -119,7 +137,6 @@ export default async function importPriceLists({ container, args }: ExecArgs) {
   const title = opts.value("title") ?? TITLE_DEFAULT
   const currency = (opts.value("currency") ?? "chf").toLowerCase()
   const step = Number(opts.value("round") ?? String(ROUND_DEFAULT))
-  const dryRun = opts.flag("dry-run")
 
   const shopFile: PriceListsFile = JSON.parse(readFileSync(priceListsPath, "utf8"))
   const catalog: CatalogProduct[] = JSON.parse(readFileSync(catalogPath, "utf8"))
@@ -419,6 +436,7 @@ export default async function importPriceLists({ container, args }: ExecArgs) {
           `Aktion ${fmtTiers(p.tiers)}${state}`
       )
     }
+    logger.info(applyHint(args))
     return
   }
 

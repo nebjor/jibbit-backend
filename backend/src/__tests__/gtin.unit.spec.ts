@@ -196,10 +196,11 @@ describe("importCatalog (exec)", () => {
   const graphMock = jest.fn(async ({ entity }: { entity: string }) => ({
     data: entity === "product_category" ? [{ id: "pcat_1", name: "Papers" }] : [],
   }))
+  const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
   const container = {
     resolve: (key: string) => {
       if (key === "logger") {
-        return { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+        return logger
       }
       if (key === "query") {
         return { graph: graphMock }
@@ -232,7 +233,7 @@ describe("importCatalog (exec)", () => {
       product("OCB Rolls", [undefined]),
     ])
 
-    await importCatalog({ container, args: [path] } as any)
+    await importCatalog({ container, args: ["schreiben", path] } as any)
 
     expect(createProductsWorkflow).toHaveBeenCalledTimes(1)
     const { products } = (runMock.mock.calls[0] as any[])[0].input
@@ -256,7 +257,7 @@ describe("importCatalog (exec)", () => {
       product("RAW Rolls", [GTIN12]),
     ])
 
-    await importCatalog({ container, args: [path] } as any)
+    await importCatalog({ container, args: ["schreiben", path] } as any)
 
     // Was der Import nach variant.ean schreibt, ist genau das, was
     // loadVariantSnapshots als `ean` in den Snapshot übernimmt.
@@ -293,10 +294,39 @@ describe("importCatalog (exec)", () => {
       importCatalog({ container, args: [path, "dry-run"] } as any)
     ).rejects.toThrow(/Ungültige GTIN/)
     await expect(
-      importCatalog({ container, args: [path] } as any)
+      importCatalog({ container, args: ["schreiben", path] } as any)
     ).rejects.toThrow(/Greengo Rolls \/ Einzeln/)
 
     expect(graphMock).not.toHaveBeenCalled()
     expect(runMock).not.toHaveBeenCalled()
+  })
+
+  it("OHNE `schreiben` ist Probelauf — auch mit `dry-run` — und legt nichts an", async () => {
+    const path = write("probe.json", [product("Greengo Rolls", [GTIN8])])
+
+    for (const args of [[path], [path, "dry-run"], ["dry-run", path]]) {
+      jest.clearAllMocks()
+      await importCatalog({ container, args } as any)
+      expect(logger.info.mock.calls[0][0]).toMatch(/^MODUS: PROBELAUF/)
+      expect(logger.info.mock.calls.at(-1)![0]).toContain(`schreiben ${path}`)
+      expect(createProductsWorkflow).not.toHaveBeenCalled()
+      expect(runMock).not.toHaveBeenCalled()
+    }
+  })
+
+  it("unbekannte Argumente brechen ab, bevor irgendetwas gelesen wird", async () => {
+    const path = write("tippfehler.json", [product("Greengo Rolls", [GTIN8])])
+
+    for (const args of [
+      ["schreiben", path, "dryrun"],
+      ["schreiben", path, "stok=5"],
+      ["schreiben", "dry-run", path],
+    ]) {
+      jest.clearAllMocks()
+      await importCatalog({ container, args } as any)
+      expect(logger.error.mock.calls[0][0]).toMatch(/^ABBRUCH/)
+      expect(graphMock).not.toHaveBeenCalled()
+      expect(runMock).not.toHaveBeenCalled()
+    }
   })
 })
