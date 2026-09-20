@@ -1,0 +1,419 @@
+{
+  "_hinweis": [
+    "VORSCHLÄGE, KEINE DATEN. Lieferanten-Angaben von sunvi.de, nicht an der physischen Verpackung verifiziert – erst nach Prüfung an der Ware übernehmen.",
+    "Quelle: öffentliche Produktseiten von https://www.sunvi.de (JTL-Shop). Die GTIN steht als Microdata itemprop=\"gtin13\" und als sichtbare Zeile «GTIN:»; JSON-LD gibt es dort nicht. Seiten über sitemap_index.xml + Shopsuche (?qs=) gefunden.",
+    "Sunvi ist Grosshändler: Papers, Rolls und Papierfilter werden als Box/Display verkauft, die GTIN gehört dann sehr wahrscheinlich zum Gebinde, nicht zum Einzelheft. Solche Einträge haben jibbit_variante = Display-Variante oder null (jibbit führt nur «Einzeln»). Aktivkohlefilter (PURIZE, Kailar, dubi) verkauft Sunvi stückweise → Einzelpackungs-GTIN.",
+    "Sunvi beschriftet jede Nummer als gtin13, auch die 12-stelligen UPC-A von RAW. gtin_type ist hier nach Länge bestimmt. Alle Prüfziffern nach GS1 validiert (check_digit_valid).",
+    "Achtung Kailar: Sunvi zeigt für alle vier 65er-Farben dieselbe GTIN – nicht farbspezifisch, daher «niedrig».",
+    "Handles nach product-content.json / odoo-redirects.json (z. B. kailar-filter-5-9mm-…); gtin-candidates.json schreibt einzelne davon mit Punkt (5.9mm)."
+  ],
+  "_abgerufen_am": "2026-09-20",
+  "_quelle": "https://www.sunvi.de",
+  "eintraege": [
+    {
+      "sunvi_name": "PURIZE White, 50er Pack., Xtra Slim Size Ø 5,9mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "07701",
+      "url": "https://www.sunvi.de/PURIZE-White-50er-Pack-Xtra-Slim-Size-O-59mm-Aktivkohlefilter",
+      "gtin": "4260748410363",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (50 Filter); Sunvi verkauft stückweise",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 50er Packung",
+        "Menge Umkarton: Einzeln verpackt"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "purize-xtra-slim-white-50er-pack-5-9mm",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "hoch",
+      "begruendung": "Marke, Linie Xtra Slim ø5,9 mm, Farbe White und 50er-Pack decken sich; Sunvi verkauft die Einzelpackung, PURIZE-Präfix 4260748."
+    },
+    {
+      "sunvi_name": "PURIZE Weiß; 50er Pack; Super Slim Size Ø 5mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "77115",
+      "url": "https://www.sunvi.de/PURIZE-Weiss-50er-Pack-Super-Slim-Size-O-5mm-Aktivkohlefilter",
+      "gtin": "4260748413173",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (50 Filter); Display wäre 20 Stk.",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 1 Stück (50er Pack)",
+        "UVP (Einzelartikel): 7,95 Euro",
+        "Farbe: weiß",
+        "Menge Display/ Gebinde: 20 Stück",
+        "Motiv / Geschmack / Duftnote: PURIZE Weiß; 50er Pack; Super Slim Size Ø 5mm"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "purize-super-slim-white-o5mm",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "hoch",
+      "begruendung": "Super Slim ø5 mm, weiss, 50er-Pack – identisch; Seite nennt «1 Stück (50er Pack)»."
+    },
+    {
+      "sunvi_name": "PURIZE Weihnachtsedition, 50er Pack., Xtra Slim Size Ø 5,9mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "77020",
+      "url": "https://www.sunvi.de/PURIZE-Weihnachtsedition-50er-Pack-Xtra-Slim-Size-O-59mm-Aktivkohlefilter",
+      "gtin": "4260748412169",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (50 Filter)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 50er Packung",
+        "Menge Umkarton: Einzeln verpackt"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "purize-xtra-slim-xmas-o-6mm",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "mittel",
+      "begruendung": "Weihnachtsedition Xtra Slim ø5,9 mm 50er passt, aber PURIZE bringt jährlich neue XMAS-Designs; ob es dieselbe Auflage (und ein 50er-Pack) ist, am Pack prüfen."
+    },
+    {
+      "sunvi_name": "PURIZE White, 50er Pack., Regular Size 9mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "07664",
+      "url": "https://www.sunvi.de/PURIZE-White-50er-Pack-Regular-Size-9mm-Aktivkohlefilter",
+      "gtin": "4260748410653",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (50 Filter)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 50er Packung"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "purize-aktivkohlefilter-o-9mm",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "niedrig",
+      "begruendung": "jibbit nennt nur «ø 9 mm» ohne Farbe/Stückzahl; Sunvi führt 9 mm in White, Organic, Pink, Spy, Lilac, AllColour, short sowie als 50/100/250er. White 50er ist nur der wahrscheinlichste Kandidat."
+    },
+    {
+      "sunvi_name": "PURIZE Organic; 50er Pack. Regular Size 9mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "07726",
+      "url": "https://www.sunvi.de/PURIZE-Organic-50er-Pack-Regular-Size-9mm-Aktivkohlefilter",
+      "gtin": "4260748411384",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (50 Filter)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 50er Packung",
+        "Menge Umkarton: Einzeln verpackt",
+        "UVP (Einzelartikel): 8,90 Euro"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "purize-aktivkohlefilter-o-9mm",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "niedrig",
+      "begruendung": "Alternative zum vorigen Eintrag: Regular 9 mm «Organic» 50er. Nur eine der beiden kann stimmen – Farbe/Stückzahl am Pack klären."
+    },
+    {
+      "sunvi_name": "Kailar pink, Slim Size, 65er Pack, Ø 5,9mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "101603",
+      "url": "https://www.sunvi.de/Kailar-pink-Slim-Size-65er-Pack-O-59mm-Aktivkohlefilter",
+      "gtin": "4270000724510",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (65 Filter)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 65er Packung",
+        "UVP (Einzelartikel): 9,49 Euro",
+        "Farbe: pink"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "kailar-filter-5-9mm-65stk-pink",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "niedrig",
+      "begruendung": "Artikel passt exakt (pink, ø5,9 mm, 65er), ABER Sunvi zeigt dieselbe GTIN 4270000724510 bei pink, schwarz, weiss und ungebleicht – kann nicht für alle Farben stimmen (Sammel-/Platzhaltercode)."
+    },
+    {
+      "sunvi_name": "Kailar schwarz, Slim Size, 65er Pack, Ø 5,9mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "101601",
+      "url": "https://www.sunvi.de/Kailar-schwarz-Slim-Size-65er-Pack-O-59mm-Aktivkohlefilter",
+      "gtin": "4270000724510",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (65 Filter)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 65er Packung",
+        "UVP (Einzelartikel): 9,49 Euro"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "kailar-filter-5-9mm-65stk-schwarz",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "niedrig",
+      "begruendung": "Artikel passt exakt, aber die GTIN ist bei Sunvi für alle vier 65er-Farben identisch – nicht farbspezifisch, am Pack prüfen."
+    },
+    {
+      "sunvi_name": "Kailar weiß, Slim Size, 65er Pack, Ø 5,9mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "101602",
+      "url": "https://www.sunvi.de/Kailar-weiss-Slim-Size-65er-Pack-O-59mm-Aktivkohlefilter",
+      "gtin": "4270000724510",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (65 Filter)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 65er Packung",
+        "UVP (Einzelartikel): 9,49 Euro",
+        "Farbe: weiß"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "kailar-filter-5-9mm-65stk-weiss",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "niedrig",
+      "begruendung": "Artikel passt exakt, aber die GTIN ist bei Sunvi für alle vier 65er-Farben identisch – nicht farbspezifisch, am Pack prüfen."
+    },
+    {
+      "sunvi_name": "Kailar schwarz, Big Size, 100er Pack, Ø 9mm, Aktivkohlefilter",
+      "sunvi_artikelnr": "101616",
+      "url": "https://www.sunvi.de/Kailar-schwarz-Big-Size-100er-Pack-O-9mm-Aktivkohlefilter",
+      "gtin": "4262430130191",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelpackung (100er Tüte)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 100er Tüte",
+        "UVP (Einzelartikel): 14,99 Euro",
+        "Farbe: schwarz"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "kailar-filter-9mm-big-100-stk-schwarz",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "hoch",
+      "begruendung": "Kailar schwarz, Big Size ø9 mm, 100er – deckt sich vollständig; eigene GTIN (nicht der 65er-Sammelcode)."
+    },
+    {
+      "sunvi_name": "dubi Aktivkohlefilter ø7mm, 42 Stück im Beutel",
+      "sunvi_artikelnr": "16700",
+      "url": "https://www.sunvi.de/dubi-Aktivkohlefilter-o7mm-42-Stueck-im-Beutel",
+      "gtin": "9120089700019",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Einzelbeutel (42 Filter)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 42 Stück im Beutel",
+        "UVP (Einzelartikel): 10",
+        "Maße: ø7mm"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "dubi-aktivkohlefilter-o7mm",
+      "jibbit_variante": "Einzeln",
+      "vertrauen": "hoch",
+      "begruendung": "dubi ø7 mm, 42 Stück im Beutel – identisch mit jibbits Untertitel; Präfix 912 (GS1 Austria) passt zum Hersteller."
+    },
+    {
+      "sunvi_name": "RAW Classic King Size Black Slim, 50 Hefte je 32 Blatt",
+      "sunvi_artikelnr": "10145",
+      "url": "https://www.sunvi.de/RAW-Classic-King-Size-Black-Slim-50-Hefte-je-32-Blatt",
+      "gtin": "716165250326",
+      "gtin_type": "GTIN-12 (UPC-A)",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Display 50 Hefte je 32 Blatt",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 50 Hefte je 32 Blatt",
+        "Menge Display/ Gebinde: 50"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "raw-black-kss-papers",
+      "jibbit_variante": "Display (50 Stk.)",
+      "vertrauen": "mittel",
+      "begruendung": "RAW Black Classic King Size Slim, 50er-Display = jibbits Display-Grösse. Sunvi verkauft die Box, daher vermutlich Box-Code; bei RAW tragen Heft und Box verschiedene UPCs – NICHT für «Einzeln» verwenden."
+    },
+    {
+      "sunvi_name": "RAW Rolls Classic Slim 24 Rolls je 5 Meter",
+      "sunvi_artikelnr": "13042",
+      "url": "https://www.sunvi.de/raw-classic-rolls-slim-24-rolls-a-5-meter",
+      "gtin": "716165250142",
+      "gtin_type": "GTIN-12 (UPC-A)",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Display 24 Rolls je 5 m",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 24er Display"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "raw-classic-rolls-slim",
+      "jibbit_variante": null,
+      "vertrauen": "niedrig",
+      "begruendung": "Artikel passt (RAW Classic Rolls Slim 5 m), aber Sunvi listet das 24er-Display; die Einzelrolle hat laut gtin-candidates.json 716165280293. jibbit führt nur «Einzeln» → keine passende Variante, nur Referenz."
+    },
+    {
+      "sunvi_name": "OCB Rolls Schwarz Premium Slim 24 Rolls je 4 Meter",
+      "sunvi_artikelnr": "10104",
+      "url": "https://www.sunvi.de/ocb-rolls-slim-premium-24-rolls-a-4-meter",
+      "gtin": "3057067089247",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Display 24 Rolls je 4 m (Umkarton 10)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 24 Rollen je 4 Meter",
+        "Menge Umkarton: 10",
+        "UVP (Einzelartikel): 2,20 Euro"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "ocb-premium-rolls-slim",
+      "jibbit_variante": null,
+      "vertrauen": "niedrig",
+      "begruendung": "Artikel passt (OCB Premium/Schwarz Rolls Slim 4 m), aber 24er-Display; die Einzelrolle trägt eine GTIN-8 (Kandidat 30062092). jibbit führt nur «Einzeln» → nur Referenz."
+    },
+    {
+      "sunvi_name": "OCB kurz Schwarz Premium 25 Hefte je 100 Blatt",
+      "sunvi_artikelnr": "10106",
+      "url": "https://www.sunvi.de/ocb-schwarz-premium-kurz-25-hefte-a-100-blatt",
+      "gtin": "3057067096252",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Box 25 Hefte je 100 Blatt",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 25 Hefte je 100 Blatt",
+        "Menge Umkarton: 25"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "ocb-premium-kurz",
+      "jibbit_variante": null,
+      "vertrauen": "niedrig",
+      "begruendung": "OCB Schwarz Premium kurz 100 Blatt (Double Window) passt, Sunvi verkauft aber die 25er-Box; OCB-Einzelhefte tragen üblicherweise GTIN-8. Dieselbe Nummer steht bei derhollaender.ch auf «OCB Kurz Double Window» – Einheit (Heft vs. Box) am Karton klären."
+    },
+    {
+      "sunvi_name": "OCB KS Schwarz Premium Slim + Tips 32 Hefte je 32 Blatt",
+      "sunvi_artikelnr": "10125",
+      "url": "https://www.sunvi.de/ocb-schwarz-slim-filter-tips-32-hefte-a-32-blatt",
+      "gtin": "3057067331322",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Box 32 Hefte je 32 Blatt + Tips (Umkarton 24)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 32 Hefte je 32 Blatt",
+        "Menge Umkarton: 24"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "ocb-premium-kss-papers-mit-filter",
+      "jibbit_variante": null,
+      "vertrauen": "niedrig",
+      "begruendung": "OCB Schwarz Premium King Size Slim + Tips passt zum Artikel, aber Box-Einheit (32 Hefte); jibbit führt nur «Einzeln» → nur Referenz."
+    },
+    {
+      "sunvi_name": "OCB Rolls Organic Hemp Slim 24 Rolls je 4 Meter",
+      "sunvi_artikelnr": "10172",
+      "url": "https://www.sunvi.de/ocb-organic-hemp-slim-24-rolls-a-4-meter",
+      "gtin": "3057067323242",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Display 24 Rolls je 4 m (Umkarton 10)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 24 Rollen je 4 Meter",
+        "Menge Umkarton: 10"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "ocb-bio-slim-organic-hemp-rolls",
+      "jibbit_variante": null,
+      "vertrauen": "niedrig",
+      "begruendung": "OCB Organic Hemp Slim Rolls passt zum Artikel, aber 24er-Display; jibbit führt nur «Einzeln» → nur Referenz."
+    },
+    {
+      "sunvi_name": "OCB Filter Slim Organic Hemp 10 Beutel je 120 Filter",
+      "sunvi_artikelnr": "12010",
+      "url": "https://www.sunvi.de/ocb-organic-slim-filter-10-beutel-a-120-filter",
+      "gtin": "3057068104109",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Gebinde 10 Beutel je 120 Filter",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 10 Beutel je 120 Filter"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "ocb-slim-filter-bio-120-tips",
+      "jibbit_variante": null,
+      "vertrauen": "niedrig",
+      "begruendung": "OCB Slim Filter Organic Hemp 120er passt, aber Gebinde à 10 Beutel; jibbit führt nur «Einzeln» → nur Referenz."
+    },
+    {
+      "sunvi_name": "Zig-Zag Slim Filter 34 Beutel je 120 Filter",
+      "sunvi_artikelnr": "12007",
+      "url": "https://www.sunvi.de/zig-zag-slimfilter-34-beutel-a-120-filter",
+      "gtin": "3057068011346",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Display 34 Beutel je 120 Filter (Umkarton 8)",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 34 Beutel je 120 Filter",
+        "Menge Umkarton: 8",
+        "UVP (Einzelartikel): 1,10 Euro"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "zig-zag-slim-filter-6mm-120stk",
+      "jibbit_variante": "Display (34 Stk.)",
+      "vertrauen": "mittel",
+      "begruendung": "Zig-Zag Slim Filter 120er, 34er-Display = jibbits Display-Grösse; Präfix 305706 (Republic Technologies) passt. Vermutlich Display-Code – nicht für «Einzeln» verwenden."
+    },
+    {
+      "sunvi_name": "Smoking Regular Brown Double Window 25 Hefte 120 Blatt",
+      "sunvi_artikelnr": "14698",
+      "url": "https://www.sunvi.de/Smoking-Regular-Brown-Double-Window-25-Hefte-120-Blatt",
+      "gtin": "8414775014698",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Display 25 Hefte je 120 Blatt",
+      "sunvi_attribute": [
+        "Hersteller: Smoking",
+        "UVP (Einzelartikel): 0,90 Euro",
+        "EAN Display: 8414775014698",
+        "Menge Display/ Gebinde: 25 Blatt je 120 Blatt"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean); zusätzlich Attributzeile «EAN Display»",
+      "jibbit_handle": "smoking-brown-kurz-double-window",
+      "jibbit_variante": "Display (25 Stk.)",
+      "vertrauen": "hoch",
+      "begruendung": "Smoking Regular Brown Double Window; Sunvi weist die Nummer ausdrücklich als «EAN Display» aus, 25er-Display = jibbits Display. Blattzahl (120) am Heft gegenprüfen."
+    },
+    {
+      "sunvi_name": "Gizeh Black Extra Fine 20 Hefte je 100 Blatt",
+      "sunvi_artikelnr": "10138",
+      "url": "https://www.sunvi.de/gizeh-black-extra-fine-20-hefte-a-100-blatt",
+      "gtin": "4002604291101",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "sunvi_markup_property": "gtin13",
+      "einheit": "Box 20 Hefte je 100 Blatt",
+      "sunvi_attribute": [
+        "Inhalt / Menge: 20 Hefte je 100 Blatt",
+        "Menge Umkarton: 20",
+        "UVP (Einzelartikel): 1,20 Euro"
+      ],
+      "gefunden_in": "Produktseite: Microdata itemprop=\"gtin13\" + sichtbare Zeile «GTIN:» (li.product-ean)",
+      "jibbit_handle": "gizeh-dw-extra-fine",
+      "jibbit_variante": null,
+      "vertrauen": "niedrig",
+      "begruendung": "Gizeh Black Extra Fine 100 Blatt (Doppelheft) ist der plausible «DW Extra Fine», aber jibbit nennt weder «Black» noch Blattzahl, und Sunvi listet die 20er-Box; jibbit führt nur «Einzeln» → nur Referenz."
+    }
+  ],
+  "nicht_bei_sunvi": {
+    "_grund": "Weder in der Sitemap (9711 URLs) noch über die Shopsuche gefunden.",
+    "handles": [
+      "angel-slim-filters-6mm-120stk",
+      "elements-blue-rolls-sw",
+      "elements-king-slim-size-ultra-thin",
+      "greengo-unbleached-slim-rolls",
+      "raw-kristallglas-aschenbecher-darkside",
+      "raw-kristallglas-aschenbecher-rainbow",
+      "raw-kristallglas-aschenbecher-ruby",
+      "black-leaf-el-humeros-konische-huelsen-ks-100x",
+      "silikon-dose-o-22mm-hellgruen"
+    ],
+    "anmerkung": "Sunvi führt von Elements nur Cones, Tips Regular und Connoisseur Pink KSS+Tips; von Angel keine Filter; Greengo gar nicht; von RAW keine Glasaschenbecher."
+  }
+}

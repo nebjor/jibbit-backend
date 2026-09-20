@@ -1,0 +1,152 @@
+{
+  "_hinweis": [
+    "VORSCHLÄGE, KEINE DATEN. Die Codes stammen vom Lieferanten (shop.hemagnova.ch, eingeloggtes B2B-Konto) und sind NICHT an der physischen Verpackung geprüft. Erst nach Scan an der Ware in den Katalog übernehmen.",
+    "Hemag Nova verkauft ausschliesslich Gebinde (Display/Box/Stange). Die Seiten sagen nirgends, ob der Code zur Einzelpackung oder zum Gebinde gehört — es gibt kein VE-/Verpackungseinheit-Feld, nur «Inhalt» (= Stück pro Gebinde) und «EVP» (= Endverkaufspreis pro Einzelstück).",
+    "Indizien sprechen dafür, dass es GEBINDE-Codes sind: OCB-Einzelrollen tragen GTIN-8 (30062092 Premium, 30110496 Virgin laut gtin-candidates.json), Hemag zeigt für dieselben Artikel aber 13-stellige 3057067…-Codes. Deshalb ist das Vertrauen für die jibbit-Variante «Einzeln» überall niedrig, obwohl die Produktzuordnung selbst sicher ist.",
+    "Hemag führt zwei Attribute, «EAN» und «Barcode». Nur «EAN» landet im JSON-LD (gtin13). Manche Artikel haben nur eines, manche beide mit verschiedenen Nummern (z.B. Parisienne, OCB Virgin Rolls). Was die beiden Felder unterscheidet, ist auf der Seite nicht dokumentiert.",
+    "Alle Prüfziffern wurden nach GS1 (Modulo 10) validiert — alle gültig."
+  ],
+  "_abgerufen_am": "2026-09-20",
+  "_quelle": {
+    "shop": "https://shop.hemagnova.ch",
+    "bestellungen_gelesen": [
+      {
+        "bestellnummer": "90030067307",
+        "datum": "2025-12-11",
+        "url": "https://shop.hemagnova.ch/de/sales/order/view/order_id/59842/",
+        "positionen": 4
+      }
+    ],
+    "anzahl_bestellungen_im_konto": 1,
+    "bestellansicht_oder_rechnung_mit_ean": false,
+    "bemerkung": "Bestellhistorie (limit=50) zeigt genau eine Bestellung. Bestellansicht und Rechnungsansicht (#90040065680) listen nur Name, Art.-Nr., Preis, Menge — keine EAN. PDF-Druckansichten wurden nicht geöffnet."
+  },
+  "produkte": [
+    {
+      "lieferant_produktname": "Gizeh Black DW Extra Fine 20x100 Blatt",
+      "artikelnummer": "RB7321",
+      "url": "https://shop.hemagnova.ch/de/gizeh-black-dw-extra-fine-20x100-blatt.html",
+      "bestellt": { "menge": 10, "preis_chf_exkl_mwst": 16.5 },
+      "gtin": "4002604291101",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "weitere_codes": [],
+      "fundort": "Attributtabelle «Spezifikationen» (table.additional-attributes), Zeile «Barcode». Kein gtin im JSON-LD, keine Microdata.",
+      "verpackungseinheit": {
+        "gebinde_bei_hemag": "Box mit 20 Heftchen à 100 Blatt",
+        "seitenangaben": "Titel/Beschreibung: «Inhalt: 20 x 100 Blatt»; Spezifikation «Inhalt: 20 Blatt» (gemeint: 20 Stück); EVP CHF 2.40 (pro Heftchen); Breite 36mm, Typ Kurz, Gewicht 0.22 kg",
+        "gtin_gehoert_zu": "unklar — vermutlich Display (20er-Box)",
+        "begruendung": "Seite sagt es nicht. Web-Gegenprobe: eBay- und Tabakshop-Angebote mit diesem Code sind durchwegs die 20er-Box («20 x 100 Blatt»)."
+      },
+      "jibbit_match": {
+        "handle": "gizeh-dw-extra-fine",
+        "katalog_produkt": "Gizeh DW Extra Fine",
+        "variante": "Einzeln",
+        "vertrauen": "niedrig",
+        "begruendung": "Produkt passt sicher (Gizeh Black Double Window Extra Fine, einzige Gizeh-Position im Katalog), aber der Code gehört wahrscheinlich zur 20er-Box; jibbit führt nur die Variante «Einzeln». Heftchen im Lager scannen."
+      }
+    },
+    {
+      "lieferant_produktname": "OCB Bio Slim Organic Hemp Rolls (24)",
+      "artikelnummer": "RB7433",
+      "url": "https://shop.hemagnova.ch/de/ocb-bio-slim-organic-hemp-rolls-24.html",
+      "bestellt": { "menge": 10, "preis_chf_exkl_mwst": 20.9 },
+      "gtin": "3057067323242",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "weitere_codes": [],
+      "fundort": "JSON-LD Product «gtin13» UND Attributtabelle «Spezifikationen», Zeile «EAN» (identischer Wert).",
+      "verpackungseinheit": {
+        "gebinde_bei_hemag": "Display mit 24 Rollen",
+        "seitenangaben": "Inhalt: 24 Stk.; EVP CHF 2.60 (pro Rolle); Breite 44mm, Typ Rolls, ungebleicht Ja, Gewicht 0.25 kg",
+        "gtin_gehoert_zu": "unklar — vermutlich Display (24er-Box)",
+        "begruendung": "OCB-Einzelrollen tragen sonst GTIN-8 (30…); Händler im Web führen diesen 13-stelligen Code unter «1 x 24 Stück» / «24 x 4 m»."
+      },
+      "jibbit_match": {
+        "handle": "ocb-bio-slim-organic-hemp-rolls",
+        "katalog_produkt": "OCB Bio Slim Organic Hemp Rolls",
+        "variante": "Einzeln",
+        "vertrauen": "niedrig",
+        "begruendung": "Produkt passt sicher (Name identisch). Code ist aber sehr wahrscheinlich der des 24er-Displays; jibbit hat nur «Einzeln» (Mindestmenge 24). Für eine künftige Display-Variante wäre er ein guter Kandidat (dann: mittel). Einzelrolle scannen — erwartet wird eine GTIN-8."
+      }
+    },
+    {
+      "lieferant_produktname": "OCB Slim Filter Bio (10x120 Tips)",
+      "artikelnummer": "RB2223",
+      "url": "https://shop.hemagnova.ch/de/ocb-slim-filter-bio-10x120-tips.html",
+      "bestellt": { "menge": 5, "preis_chf_exkl_mwst": 9.55 },
+      "gtin": "3057068104109",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "weitere_codes": [],
+      "fundort": "Attributtabelle «Spezifikationen», Zeile «Barcode». Kein gtin im JSON-LD, keine Microdata.",
+      "verpackungseinheit": {
+        "gebinde_bei_hemag": "Pack mit 10 Beuteln à 120 Tips",
+        "seitenangaben": "Inhalt: 10 Stk.; EVP CHF 2.20 (pro Beutel); Material Watte, ungebleicht Ja, Gewicht 0.3 kg",
+        "gtin_gehoert_zu": "unklar — vermutlich Gebinde (10 Beutel)",
+        "begruendung": "Seite sagt es nicht. Italienische Händler führen den Code unter «confezione 10 bustine da 120 filtri»."
+      },
+      "jibbit_match": {
+        "handle": "ocb-slim-filter-bio-120-tips",
+        "katalog_produkt": "OCB Slim Filter Bio (120 Tips)",
+        "variante": "Einzeln",
+        "vertrauen": "niedrig",
+        "begruendung": "Produkt passt sicher (OCB Slim Bio, 120 Tips pro Beutel). Code gehört aber vermutlich zum 10er-Gebinde, jibbit verkauft den Einzelbeutel. Beutel scannen."
+      }
+    },
+    {
+      "lieferant_produktname": "Parisienne Authentique 6x25 gr. Beutel",
+      "artikelnummer": "RB8294",
+      "url": "https://shop.hemagnova.ch/de/parisienne-authentique-6x25-gr-beutel.html",
+      "bestellt": { "menge": 1, "preis_chf_exkl_mwst": 38.0 },
+      "gtin": "7612800211185",
+      "gtin_type": "GTIN-13",
+      "check_digit_valid": true,
+      "weitere_codes": [
+        {
+          "gtin": "8723900934313",
+          "gtin_type": "GTIN-13",
+          "check_digit_valid": true,
+          "fundort": "Attributtabelle, Zeile «Barcode» (abweichend von «EAN»)"
+        }
+      ],
+      "fundort": "JSON-LD Product «gtin13» UND Attributtabelle Zeile «EAN» = 7612800211185; zusätzlich Zeile «Barcode» = 8723900934313.",
+      "verpackungseinheit": {
+        "gebinde_bei_hemag": "Stange mit 6 Beuteln à 25 g",
+        "seitenangaben": "EVP CHF 7.20 (pro Beutel); Gewicht 0.34 kg; kein «Inhalt»-Attribut",
+        "gtin_gehoert_zu": "unklar — zwei verschiedene Codes, möglicherweise einer für den Beutel und einer für die 6er-Stange (oder alter/neuer Hersteller-Code: Präfix 761 = Schweiz, 87 = Niederlande)",
+        "begruendung": "Seite erklärt den Unterschied zwischen «EAN» und «Barcode» nicht."
+      },
+      "jibbit_match": {
+        "handle": null,
+        "katalog_produkt": null,
+        "variante": null,
+        "vertrauen": "niedrig",
+        "begruendung": "Kein Tabak in catalog.json / product-content.json — kein passendes jibbit-Produkt. Nur der Vollständigkeit halber erfasst."
+      }
+    }
+  ],
+  "_vergleichsproben": {
+    "_zweck": "Nicht bestellt. Zwei OCB-Rolls-Seiten wurden nur gelesen, um zu verstehen, ob Hemag Einzel- oder Gebinde-Codes führt.",
+    "proben": [
+      {
+        "lieferant_produktname": "OCB Premium Rolls Slim (24 Stk.)",
+        "artikelnummer": "RB743",
+        "url": "https://shop.hemagnova.ch/de/ocb-premium-rolls-slim-10x24.html",
+        "barcode": "3057067089247",
+        "check_digit_valid": true,
+        "bemerkung": "Einzelrolle laut gtin-candidates.json: 30062092 (GTIN-8). Hemag zeigt einen anderen, 13-stelligen Code → Gebinde-Code. Möglicher Kandidat für ein künftiges Display von «ocb-premium-rolls-slim» (ungeprüft; EVP auf der Seite mit CHF 39.00 offensichtlich falsch gepflegt)."
+      },
+      {
+        "lieferant_produktname": "OCB Slim Virgin Rolls Unbleached (24)",
+        "artikelnummer": "RB7434",
+        "url": "https://shop.hemagnova.ch/de/ocb-slim-virgin-rolls-unbleached-24.html",
+        "ean": "3057067341109",
+        "barcode": "3057067716242",
+        "check_digit_valid": true,
+        "bemerkung": "Einzelrolle laut gtin-candidates.json: 30110496 (GTIN-8). Hemag zeigt zwei andere 13-stellige Codes → beides keine Einzelrollen-Codes."
+      }
+    ]
+  },
+  "kein_gtin_gefunden": []
+}

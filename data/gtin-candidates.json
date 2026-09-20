@@ -1,0 +1,95 @@
+{
+  "_hinweis": [
+    "VORSCHLÄGE, KEINE DATEN. Nichts hier ist verifiziert — erst nach Prüfung an der Ware in den Katalog übernehmen.",
+    "Quelle: die öffentlichen JSON-LD-Blöcke von derhollaender.ch (73 Produktseiten der Kategorie papers-filter, geholt am 2026-09-20).",
+    "Eine GTIN gehört dem Hersteller, nicht dem Händler: führt jibbit denselben Artikel, ist es dieselbe Nummer. Falsch wird es, wenn es NICHT derselbe Artikel ist — und genau das entscheidet sich an Papiersorte, Länge und Stückzahl, nicht am Namen.",
+    "Alle Prüfziffern wurden nach GS1 validiert. Die 8-stelligen Codes sind echte GTIN-8 (Kleinpackungen), die 12-stelligen UPC-A (RAW ist eine US-Marke) — nichts davon ist abgeschnitten.",
+    "Der sichere Weg bleibt: EAN vom Karton im Lager abscannen. Das dauert pro Artikel Sekunden und ist zu 100% richtig."
+  ],
+  "_geprueft_am": null,
+  "_geprueft_von": null,
+
+  "uebernehmen": [
+    {
+      "handle": "greengo-unbleached-slim-rolls",
+      "variante": "Einzeln",
+      "gtin": "85966789",
+      "vertrauen": "hoch",
+      "quelle": "Greengo Slim Rolls, ungebleicht — CHF 2.00",
+      "begruendung": "Marke, Format und Ausführung decken sich vollständig."
+    },
+    {
+      "handle": "greengo-unbleached-slim-rolls",
+      "variante": "Display (24 Stk.)",
+      "gtin": "8595134501285",
+      "vertrauen": "hoch",
+      "quelle": "Greengo Slim Rolls, 1 Karton à 24 st — CHF 38.40",
+      "begruendung": "Gebindegrösse 24 stimmt mit unserem Display überein. Eigene GTIN je Gebinde ist korrekt — Einzelstück und Karton sind zwei Artikel."
+    },
+    {
+      "handle": "raw-classic-rolls-slim",
+      "variante": "Einzeln",
+      "gtin": "716165280293",
+      "vertrauen": "hoch",
+      "quelle": "Raw Rolls, King Size Slim, Classic, ungebleicht 5mtr — CHF 2.50",
+      "begruendung": "Unsere Beschreibung sagt «RAW Classic, 5 m pro Rolle, ungebleicht» — Länge und Ausführung sind identisch."
+    },
+    {
+      "handle": "ocb-premium-rolls-slim",
+      "variante": "Einzeln",
+      "gtin": "30062092",
+      "vertrauen": "mittel",
+      "quelle": "OCB Rolls Premium \"Black\" — CHF 2.00",
+      "begruendung": "OCB Premium ist die schwarze, gebleichte Linie; unsere Beschreibung sagt «4 m, gebleicht». Passt, aber die 4 m stehen beim Holländer nicht dabei — am Karton gegenprüfen."
+    }
+  ],
+
+  "nicht_uebernehmen": [
+    {
+      "handle": "smoking-brown-kurz-double-window",
+      "kandidat": "3057067096252",
+      "grund": "FALLE. Die Adresse beim Holländer heisst /smoking-brown-kurz-double-window/, das Produkt darunter heisst aber «OCB Kurz 'Double Window'» und trägt eine OCB-Nummer (Präfix 305706). Die Seite ist falsch beschriftet — wer nach Adresse zuordnet, bekommt die GTIN einer fremden Marke."
+    },
+    {
+      "handle": "smoking-brown-kurz-double-window",
+      "kandidat": "8414775013547",
+      "grund": "«Smoking Papers Brown ungebleicht» — echte Smoking-Nummer (Präfix 8414775), aber ohne «kurz»/Double Window. Vermutlich das Slim-Heftchen, nicht unseres."
+    },
+    {
+      "handle": "ocb-bio-slim-organic-hemp-rolls",
+      "kandidat": "30110496",
+      "grund": "Das ist OCB «Virgin» (ungebleicht), nicht OCB «Organic Hemp» (Bio-Hanf). Zwei verschiedene Linien desselben Herstellers."
+    },
+    {
+      "handle": "ocb-premium-kss-papers-mit-filter",
+      "kandidat": "30107014",
+      "grund": "«OCB Slim Premium Papers + Filter» — unseres ist King Size Slim. OCB führt beide Formate mit eigenen Nummern."
+    }
+  ],
+
+  "kein_kandidat": {
+    "_grund": "Diese Artikel führt derhollaender.ch nicht — die GTIN muss von der Ware oder vom Lieferanten kommen.",
+    "handles": [
+      "angel-slim-filters-6mm-120stk",
+      "dubi-aktivkohlefilter-o7mm",
+      "elements-blue-rolls-sw",
+      "elements-king-slim-size-ultra-thin",
+      "gizeh-dw-extra-fine",
+      "kailar-filter-5.9mm-65stk-pink",
+      "kailar-filter-5.9mm-65stk-schwarz",
+      "kailar-filter-5.9mm-65stk-weiss",
+      "kailar-filter-9mm-big-100stk-schwarz",
+      "ocb-premium-kurz",
+      "ocb-slim-filter-bio-120-tips",
+      "purize-aktivkohlefilter-9mm",
+      "purize-super-slim-white-5mm",
+      "purize-xtra-slim-white-50er-5.9mm",
+      "purize-xtra-slim-xmas-6mm",
+      "raw-black-kss-papers",
+      "raw-kristallglas-aschenbecher-darkside",
+      "raw-kristallglas-aschenbecher-rainbow",
+      "raw-kristallglas-aschenbecher-ruby",
+      "zig-zag-slim-filter-6mm-120stk"
+    ]
+  }
+}
