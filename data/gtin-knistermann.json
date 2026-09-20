@@ -1,0 +1,341 @@
+{
+  "_hinweis": [
+    "VORSCHLÄGE AUS LIEFERANTENDATEN, KEINE VERIFIZIERTEN DATEN. Die GTINs stammen von den Produktseiten des Grosshändlers Knistermann (shop.knistermann.de) und wurden noch NICHT an der physischen Verpackung geprüft. Erst nach Scan/Abgleich an der Ware ins Product-JSON-LD übernehmen.",
+    "Knistermann pflegt die Codes offensichtlich von Hand: 2 von 13 sind fehlerhaft erfasst (je eine Ziffer zu viel), 2 Farbvarianten teilen sich eine Nummer. Felder «auffaelligkeit» und «gtin_korrigiert_vorschlag» beachten — korrigierte Vorschläge stammen NICHT von Knistermann, sondern aus Ableitung + Websuche.",
+    "Alle Prüfziffern nach GS1 (Modulo 10) validiert; Fehlschläge sind markiert, nicht entfernt.",
+    "Einheit: «single» = Code gehört zur einzelnen Verkaufspackung (Beutel/Stück). Bei den Elements-Boxen ist offen, ob der Code zur Box oder zum Einzelheftchen bzw. zur Rolle gehört. Einzeln und Display brauchen je eine eigene GTIN."
+  ],
+  "_abgerufen_am": "2026-09-20",
+  "_quelle": "shop.knistermann.de (Shopware 5), Kundenkonto > Bestellungen: genau 1 Bestellung (Nr. 61334 vom 05.05.2026, 13 Positionen, Seite 1 von 1). Artikelnummern aus der Bestellübersicht; Produktseiten über die Shop-Suche nach Artikelnummer geöffnet (leitet direkt auf die Detailseite weiter, SKU jeweils gegengeprüft).",
+  "_geprueft_am": null,
+  "_geprueft_von": null,
+  "produkte": [
+    {
+      "knistermann_name": "PURIZE® Super Slim Size Aktivkohlefilter, ø 5mm, 50er Packung",
+      "artikelnummer": "PURIZE-098",
+      "url": "https://shop.knistermann.de/neuheiten/10430/purize-super-slim-size-aktivkohlefilter-oe-5mm-50er-packung",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 20,
+        "stueckpreis_netto_eur": "4,45 €"
+      },
+      "gtin": "4260748413166",
+      "gtin_type": "GTIN-13 (EAN-13)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin13\" content=\"4260748413166\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit bei Knistermann: 1 Pckg. = 1 Beutel à 50 Filter (wiederverschliessbarer ZIP-Beutel). Kein Display.",
+      "gewicht_laut_seite": "0.02 kg",
+      "jibbit_match": {
+        "handle": "purize-super-slim-white-o5mm",
+        "variante": "Einzeln",
+        "vertrauen": "mittel",
+        "begruendung": "Marke, ø 5 mm und 50er-Pack stimmen; Knistermann nennt aber keine Farbe, jibbit führt explizit «White» — Farbe am Beutel prüfen."
+      }
+    },
+    {
+      "knistermann_name": "dubi Aktivkohlefilter ø7mm, 42 Stück im Beutel",
+      "artikelnummer": "TIP-167",
+      "url": "https://shop.knistermann.de/raucherbedarf/filter/kohlefilter/8588/dubi-aktivkohlefilter-oe7mm-42-stueck-im-beutel",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 100,
+        "stueckpreis_netto_eur": "3,60 €"
+      },
+      "gtin": "91200089700019",
+      "gtin_type": "GTIN-14",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin14\" content=\"91200089700019\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Pckg. = 1 Beutel à 42 Filter. Kein Display.",
+      "gewicht_laut_seite": "0.04 kg",
+      "jibbit_match": {
+        "handle": "dubi-aktivkohlefilter-o7mm",
+        "variante": "Einzeln",
+        "vertrauen": "mittel",
+        "begruendung": "Artikel deckt sich vollständig (dubi ø7mm, 42 Stk.), aber der Code auf der Knistermann-Seite ist fehlerhaft erfasst — siehe gtin_korrigiert_vorschlag."
+      },
+      "auffaelligkeit": "Knistermann führt 14 Stellen (91200089700019) im Feld gtin14. Die Prüfziffer geht zufällig auf, aber Indikator 9 (= Artikel mit variablem Mass) ist für einen Filterbeutel unplausibel. Sehr wahrscheinlich Tippfehler (eine 0 zu viel): andere Händler (z.B. jointstore.de) führen für dubi ø7mm 42 Stk. die EAN-13 9120089700019 (Prüfziffer gültig, AT-Präfix 912).",
+      "gtin_korrigiert_vorschlag": "9120089700019",
+      "gtin_korrigiert_typ": "GTIN-13 (EAN-13)",
+      "gtin_korrigiert_check_digit_valid": true,
+      "gtin_korrigiert_quelle": "Websuche, https://www.jointstore.de/en/aktivkohlefilter/2353-dubi-superflow-activated-carbon-filter-o7mm-42-pcs-9120089700019.html — nicht von Knistermann"
+    },
+    {
+      "knistermann_name": "RAW Kristallglas Aschenbecher, ø ca. 11,5cm, Rainbow",
+      "artikelnummer": "AS-119-RW",
+      "url": "https://shop.knistermann.de/raucherbedarf/diverses-raucherzubehoer/aschenbecher-gluttoeter/9195/raw-kristallglas-aschenbecher-oe-ca.-11-5cm-rainbow",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 3,
+        "stueckpreis_netto_eur": "11,95 €"
+      },
+      "gtin": "716165299523",
+      "gtin_type": "GTIN-12 (UPC-A)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin12\" content=\"716165299523\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Stk., «einzeln in hochwertiger Geschenkverpackung».",
+      "gewicht_laut_seite": "0.55 kg",
+      "jibbit_match": {
+        "handle": "raw-kristallglas-aschenbecher-rainbow",
+        "variante": "Einzeln",
+        "vertrauen": "hoch",
+        "begruendung": "Identischer Artikel (RAW Kristallglas Rainbow, Einzelstück); HBI/RAW-Präfix 716165."
+      }
+    },
+    {
+      "knistermann_name": "Kailar Cellulose Aktivkohle-Filter Slim ø 5,9mm, 65 Tips/Beutel, weiß",
+      "artikelnummer": "TIP-162-WZ",
+      "url": "https://shop.knistermann.de/raucherbedarf/filter/kohlefilter/8575/kailar-cellulose-aktivkohle-filter-slim-oe-5-9mm-65-tips/beutel-weiss",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 20,
+        "stueckpreis_netto_eur": "3,99 €"
+      },
+      "gtin": "4270000724510",
+      "gtin_type": "GTIN-13 (EAN-13)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin13\" content=\"4270000724510\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Pckg. = 1 Beutel à 65 Tips.",
+      "gewicht_laut_seite": "0.03 kg",
+      "jibbit_match": {
+        "handle": "kailar-filter-5-9mm-65stk-weiss",
+        "variante": "Einzeln",
+        "vertrauen": "niedrig",
+        "begruendung": "Artikel passt, aber Knistermann zeigt für weiss UND schwarz dieselbe GTIN — höchstens eine Farbe kann stimmen. Am Beutel scannen."
+      },
+      "auffaelligkeit": "Gleiche GTIN 4270000724510 wie TIP-162-BK (schwarz). Websuche bestätigt nur «Kailar Cellulose Slim 5,9mm 65 Stk.», nicht die Farbe."
+    },
+    {
+      "knistermann_name": "Kailar Cellulose Aktivkohle-Filter Slim ø 5,9mm, 65 Tips/Beutel, schwarz",
+      "artikelnummer": "TIP-162-BK",
+      "url": "https://shop.knistermann.de/raucherbedarf/filter/kohlefilter/8574/kailar-cellulose-aktivkohle-filter-slim-oe-5-9mm-65-tips/beutel-schwarz",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 20,
+        "stueckpreis_netto_eur": "3,99 €"
+      },
+      "gtin": "4270000724510",
+      "gtin_type": "GTIN-13 (EAN-13)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin13\" content=\"4270000724510\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Pckg. = 1 Beutel à 65 Tips.",
+      "gewicht_laut_seite": "0.03 kg",
+      "jibbit_match": {
+        "handle": "kailar-filter-5-9mm-65stk-schwarz",
+        "variante": "Einzeln",
+        "vertrauen": "niedrig",
+        "begruendung": "Artikel passt, aber Knistermann zeigt für weiss UND schwarz dieselbe GTIN — höchstens eine Farbe kann stimmen. Am Beutel scannen."
+      },
+      "auffaelligkeit": "Gleiche GTIN 4270000724510 wie TIP-162-WZ (weiss)."
+    },
+    {
+      "knistermann_name": "PURIZE Aktivkohlefilter, XTRA Slim XMAS, ø 5,9mm, 50er Packung",
+      "artikelnummer": "PURIZE-021",
+      "url": "https://shop.knistermann.de/wieder-da/11502/purize-aktivkohlefilter-xtra-slim-xmas-oe-5-9mm-50er-packung",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 20,
+        "stueckpreis_netto_eur": "4,25 €"
+      },
+      "gtin": "4260748412169",
+      "gtin_type": "GTIN-13 (EAN-13)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin13\" content=\"4260748412169\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Pckg. = 1 Beutel à 50 Filter (XMAS-Edition).",
+      "gewicht_laut_seite": "0.08 kg",
+      "jibbit_match": {
+        "handle": "purize-xtra-slim-xmas-o-6mm",
+        "variante": "Einzeln",
+        "vertrauen": "hoch",
+        "begruendung": "XMAS-Edition, Xtra Slim ø 5,9 mm, 50er — deckt sich (jibbit-Katalog rundet auf ø 6 mm). PURIZE-Präfix 4260748."
+      }
+    },
+    {
+      "knistermann_name": "RAW Kristallglas Aschenbecher, ø ca. 11,5cm, Darkside",
+      "artikelnummer": "AS-119-GY",
+      "url": "https://shop.knistermann.de/raucherbedarf/diverses-raucherzubehoer/aschenbecher-gluttoeter/9194/raw-kristallglas-aschenbecher-oe-ca.-11-5cm-darkside",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 3,
+        "stueckpreis_netto_eur": "11,95 €"
+      },
+      "gtin": "716165299530",
+      "gtin_type": "GTIN-12 (UPC-A)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin12\" content=\"716165299530\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Stk., einzeln in Geschenkverpackung.",
+      "gewicht_laut_seite": "0.55 kg",
+      "jibbit_match": {
+        "handle": "raw-kristallglas-aschenbecher-darkside",
+        "variante": "Einzeln",
+        "vertrauen": "hoch",
+        "begruendung": "Identischer Artikel (RAW Kristallglas Darkside, Einzelstück); HBI/RAW-Präfix 716165."
+      }
+    },
+    {
+      "knistermann_name": "Silikon Schüssel, ø ca. 65mm",
+      "artikelnummer": "ZU-SI-24",
+      "url": "https://shop.knistermann.de/raucherbedarf/diverses-raucherzubehoer/silikon-zubehoer/9675/silikon-schuessel-oe-ca.-65mm",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 40,
+        "stueckpreis_netto_eur": "0,99 €"
+      },
+      "gtin": "4014663817505",
+      "gtin_type": "GTIN-13 (EAN-13)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin13\" content=\"4014663817505\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "unklar (4er-Set oder Einzelstück)",
+      "verpackungseinheit_info": "Verkauf nur in 4er-Schritten: «4 Stück im gemischten Set (Berechnung in Einzelstück – Mindestabnahmemenge 4 Stk. (=Set) oder in Vielfachen)». GTIN kann dem 4er-Set oder dem Einzelstück gehören; 4 Farben gemischt unter einer Nummer.",
+      "gewicht_laut_seite": "0.02 kg",
+      "jibbit_match": {
+        "handle": null,
+        "variante": null,
+        "vertrauen": "niedrig",
+        "begruendung": "Kein passendes Produkt in catalog.json / catalog-extra.json gefunden (Silikon Schüssel ø65mm ist bei jibbit nicht gelistet)."
+      }
+    },
+    {
+      "knistermann_name": "Silikon Dose, ca. ø 22mm, hellgrün",
+      "artikelnummer": "ZU-SI-33",
+      "url": "https://shop.knistermann.de/raucherbedarf/diverses-raucherzubehoer/silikon-zubehoer/11778/silikon-dose-ca.-oe-22mm-hellgruen",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 100,
+        "stueckpreis_netto_eur": "0,59 €"
+      },
+      "gtin": "0725844729039",
+      "gtin_type": "GTIN-13 (EAN-13)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin13\" content=\"0725844729039\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Stk.",
+      "gewicht_laut_seite": "0.02 kg",
+      "jibbit_match": {
+        "handle": "silikon-dose-o-22mm-hellgruen",
+        "variante": "Einzeln",
+        "vertrauen": "mittel",
+        "begruendung": "Artikel deckt sich (Silikon Dose ø22mm hellgrün; steht in catalog-extra.json). No-Name-Ware — prüfen, ob auf der Ware überhaupt ein Barcode ist."
+      },
+      "auffaelligkeit": "Knistermann führt 0725844729039 als gtin13; das ist der UPC-A 725844729039 mit führender Null (selbe Nummer, beide Schreibweisen gültig).",
+      "gtin_alternativ_schreibweise": "725844729039"
+    },
+    {
+      "knistermann_name": "RAW Kristallglas Aschenbecher Ruby",
+      "artikelnummer": "AS-157",
+      "url": "https://shop.knistermann.de/raucherbedarf/diverses-raucherzubehoer/aschenbecher-gluttoeter/11608/raw-kristallglas-aschenbecher-ruby",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 4,
+        "stueckpreis_netto_eur": "12,95 €"
+      },
+      "gtin": "716165310556",
+      "gtin_type": "GTIN-12 (UPC-A)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin12\" content=\"716165310556\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Stk., einzeln in Geschenkverpackung.",
+      "gewicht_laut_seite": "0.56 kg",
+      "jibbit_match": {
+        "handle": "raw-kristallglas-aschenbecher-ruby",
+        "variante": "Einzeln",
+        "vertrauen": "hoch",
+        "begruendung": "Identischer Artikel (RAW Kristallglas Ruby, Einzelstück); HBI/RAW-Präfix 716165."
+      }
+    },
+    {
+      "knistermann_name": "Elements King Size Ultra Thin Papier",
+      "artikelnummer": "ELE-PA-01",
+      "url": "https://shop.knistermann.de/raucherbedarf/papier/elements/elements-king-size-slim/4425/elements-king-size-ultra-thin-papier",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 3,
+        "stueckpreis_netto_eur": "15,90 €"
+      },
+      "gtin": "716165177821",
+      "gtin_type": "GTIN-12 (UPC-A)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin12\" content=\"716165177821\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "display (wahrscheinlich)",
+      "verpackungseinheit_info": "Verkaufseinheit bei Knistermann: 1 Box = 50 Heftchen à 33 Blatt, King Size 110x54mm. Die Seite sagt nicht, ob die GTIN zur Box oder zum Heftchen gehört; US-Grosshändler (mjwholesale.com) listen 716165177821 als «Elements Ultra Thin King Size Papers 50 Count per Display».",
+      "gewicht_laut_seite": null,
+      "jibbit_match": {
+        "handle": "elements-king-slim-size-ultra-thin",
+        "variante": "Box (50 Stk.)",
+        "vertrauen": "niedrig",
+        "begruendung": "Zwei offene Punkte: (1) Der bestellte Knistermann-Artikel ist King Size (breit, 110x54mm, 33 Blatt); jibbit nennt das Produkt «King Slim Size», 32 Blatt — Format am Heftchen klären (Knistermann führt King Size Slim als eigenen Artikel). (2) Der Code gehört vermutlich zur 50er-Box, nicht zum Einzelheftchen. Nicht für die Variante «Einzeln» verwenden."
+      },
+      "auffaelligkeit": "Format-Abweichung King Size vs. King Size Slim zwischen Knistermann-Bestellung und jibbit-Katalog."
+    },
+    {
+      "knistermann_name": "Elements BLUE Rolls SW",
+      "artikelnummer": "ELE-RL-04",
+      "url": "https://shop.knistermann.de/raucherbedarf/papier/elements/elements-rolls/6349/elements-blue-rolls-sw",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 3,
+        "stueckpreis_netto_eur": "14,40 €"
+      },
+      "gtin": "716165251200",
+      "gtin_type": "GTIN-12 (UPC-A)",
+      "check_digit_valid": true,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin12\" content=\"716165251200\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "unklar (Box oder Einzelrolle)",
+      "verpackungseinheit_info": "Verkaufseinheit bei Knistermann: 1 Box = 24 Rollen à ca. 5 m, Single Wide. Die Seite sagt nicht, ob die GTIN zur Box oder zur Rolle gehört.",
+      "gewicht_laut_seite": "0.18 kg",
+      "jibbit_match": {
+        "handle": "elements-blue-rolls-sw",
+        "variante": "Box (24 Stk.)",
+        "vertrauen": "niedrig",
+        "begruendung": "Artikel deckt sich (Elements BLUE Rolls SW, 5 m, 24er Box), aber unklar ob Box- oder Rollen-Code. Am Karton und an der Rolle scannen; Einzeln und Box brauchen zwei verschiedene GTINs."
+      }
+    },
+    {
+      "knistermann_name": "PURIZE Aktivkohlefilter, ø 9mm, 50er Packung",
+      "artikelnummer": "PURIZE-002",
+      "url": "https://shop.knistermann.de/raucherbedarf/filter/kohlefilter/5830/purize-aktivkohlefilter-oe-9mm-50er-packung",
+      "bestellung": {
+        "nummer": "61334",
+        "datum": "2026-05-05",
+        "menge": 10,
+        "stueckpreis_netto_eur": "4,25 €"
+      },
+      "gtin": "42660748410653",
+      "gtin_type": "GTIN-14",
+      "check_digit_valid": false,
+      "fundstelle": "Microdata auf der Produktdetailseite: <meta itemprop=\"gtin14\" content=\"42660748410653\"> im Product-Schema. Kein JSON-LD, keine sichtbare EAN-Zeile, keine Eigenschaften-Tabelle auf der Seite.",
+      "einheit": "single",
+      "verpackungseinheit_info": "Verkaufseinheit: 1 Pckg. = 1 Beutel à 50 Filter, Regular ø 9 mm.",
+      "gewicht_laut_seite": "0.09 kg",
+      "jibbit_match": {
+        "handle": "purize-aktivkohlefilter-o-9mm",
+        "variante": "Einzeln",
+        "vertrauen": "mittel",
+        "begruendung": "Artikel deckt sich, aber der Knistermann-Code ist ungültig erfasst — siehe gtin_korrigiert_vorschlag. Farbe der 9mm-Filter nennt Knistermann nicht (PURIZE vergibt je Farbe eigene GTINs)."
+      },
+      "auffaelligkeit": "Knistermann führt 42660748410653 (14 Stellen, Feld gtin14) — GS1-Prüfziffer UNGÜLTIG. Sehr wahrscheinlich Tippfehler (eine 6 zu viel): 4260748410653 ist eine gültige EAN-13, trägt das PURIZE-Präfix 4260748 der beiden anderen PURIZE-Artikel und wird von visionofhemp.ch für «Purize Filter Regular» geführt.",
+      "gtin_korrigiert_vorschlag": "4260748410653",
+      "gtin_korrigiert_typ": "GTIN-13 (EAN-13)",
+      "gtin_korrigiert_check_digit_valid": true,
+      "gtin_korrigiert_quelle": "Ableitung (1 Ziffer entfernt) + Websuche, https://www.visionofhemp.ch/shop/en/active-charcoal-filter/7596-purize-filter-regular.html — nicht von Knistermann"
+    }
+  ]
+}
