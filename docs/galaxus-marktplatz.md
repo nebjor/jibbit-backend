@@ -80,8 +80,8 @@ Dann einspielen (idempotent, `dry-run` zeigt vorher jede Änderung):
       inventory=../data/inventory.json \
       dry-run
 
-Beide Import-Skripte validieren die EANs (8–14 Ziffern, keine Duplikate) und
-brechen bei Fehlern ab, bevor etwas geschrieben wird.
+Beide Import-Skripte validieren die EANs (8/12/13/14 Ziffern, GS1-Prüfziffer,
+keine Duplikate) und brechen bei Fehlern ab, bevor etwas geschrieben wird.
 
 ### 3. Exporte erzeugen
 
