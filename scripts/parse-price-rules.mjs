@@ -338,7 +338,10 @@ const tiersPath = isAbsolute(OUT_DIR)
 const catalogPath = tiersPath.replace(/tiers\.json$/, "catalog.json")
 
 console.log("\nNächster Schritt — Produkte anlegen (aus backend/):")
-console.log(`  npx medusa exec ./src/scripts/import-catalog.ts ${catalogPath} dry-run`)
+console.log(`  npx medusa exec ./src/scripts/import-catalog.ts ${catalogPath}`)
 console.log("\nPreise später aktualisieren:")
-console.log(`  npx medusa exec ./src/scripts/import-price-tiers.ts ${tiersPath} dry-run`)
-console.log("\n(Argumente ohne '--' — medusa exec lehnt unbekannte Optionen ab.)")
+console.log(`  npx medusa exec ./src/scripts/import-price-tiers.ts ${tiersPath}`)
+console.log(
+  "\n(Probelauf ist der Normalfall — zum Schreiben 'schreiben' als erstes " +
+    "Argument nach dem Script-Pfad. Argumente ohne '--'.)"
+)

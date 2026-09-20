@@ -13,7 +13,7 @@ import {
   odooPartnerIdOf,
   type ClaimDecision,
 } from "../lib/odoo-login-claim"
-import { parseScriptArgs } from "./script-args"
+import { applyHint, parseScriptArgs, resolveRunMode } from "./script-args"
 
 /**
  * Aus Odoo übernommene Kundinnen und Kunden anmeldefähig machen.
@@ -61,11 +61,20 @@ import { parseScriptArgs } from "./script-args"
  *
  * ─── AUFRUF ───────────────────────────────────────────────────────────────
  *
- *   npx medusa exec ./src/scripts/prepare-odoo-logins.ts
- *   npx medusa exec ./src/scripts/prepare-odoo-logins.ts kunden.json dry-run
- *   npx medusa exec ./src/scripts/prepare-odoo-logins.ts invite
+ * PROBELAUF IST DER NORMALFALL — ohne das Wort `schreiben` wird nur gezählt,
+ * keine Anmeldung angelegt und keine Einladung verschickt:
  *
+ *   npx medusa exec ./src/scripts/prepare-odoo-logins.ts
+ *   npx medusa exec ./src/scripts/prepare-odoo-logins.ts kunden.json
+ *
+ * Anwenden — `schreiben` als ERSTES Argument gleich nach dem Script-Pfad:
+ *
+ *   npx medusa exec ./src/scripts/prepare-odoo-logins.ts schreiben
+ *   npx medusa exec ./src/scripts/prepare-odoo-logins.ts schreiben invite
+ *
+ * `dry-run` bleibt als ausdrücklicher Probelauf erlaubt (ohne Wirkung).
  * Argumente ohne Bindestrich — siehe die Erklärung in script-args.ts.
+ * Unbekannte oder vertippte Argumente brechen den Lauf ab.
  */
 
 interface OdooCustomer {
@@ -123,8 +132,15 @@ function unguessablePassword(): string {
 export default async function prepareOdooLogins({ container, args }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const parsed = parseScriptArgs(args)
+
+  // Modus und Argumente ZUERST — ohne `schreiben` bleibt alles ein Probelauf.
+  const mode = resolveRunMode(parsed, { flags: ["invite"], file: ".json" }, logger)
+  if (!mode) {
+    return
+  }
+  const { dryRun } = mode
+
   const file = parsed.file(".json")
-  const dryRun = parsed.flag("dry-run")
   const invite = parsed.flag("invite")
 
   const authService = container.resolve(Modules.AUTH)
@@ -335,8 +351,11 @@ export default async function prepareOdooLogins({ container, args }: ExecArgs) {
     `[odoo] ${counts.claim} übernommen, ${counts.link} verknüpft, ${counts.create} neu angelegt, ` +
       `${counts.skip} bereits anmeldefähig, ${counts.conflict} Konflikte, ` +
       `${ungueltig} ohne gültige Adresse, ${failed} fehlgeschlagen` +
-      `${dryRun ? " (dry-run, nichts geschrieben)" : ""}.`,
+      `${dryRun ? " (Probelauf, nichts geschrieben)" : ""}.`,
   )
+  if (dryRun) {
+    logger.info(applyHint(args))
+  }
 
   if (counts.conflict > 0) {
     logger.warn(

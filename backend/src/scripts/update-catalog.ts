@@ -4,16 +4,49 @@
  * Betreiber weder eine Beschreibung nachtragen noch einen Preis ändern noch
  * einen Bestand setzen, ohne die Datenbank zu leeren.
  *
+ * PROBELAUF IST DER NORMALFALL. Ohne das Wort `schreiben` zeigt das Script
+ * nur Feld für Feld, was es täte (Hintergrund: script-args.ts):
+ *
  *   cd backend
- *   npx medusa exec ./src/scripts/update-catalog.ts ../data/catalog.json \
+ *   npx medusa exec ./src/scripts/update-catalog.ts \
+ *     ../data/catalog.json \
  *     extra=../data/catalog-extra.json \
  *     content=../data/product-content.json \
- *     inventory=../data/inventory.json \
- *     dry-run
+ *     inventory=../data/inventory.json
+ *
+ * Anwenden — `schreiben` als ERSTES Argument gleich nach dem Script-Pfad,
+ * damit ein abgeschnittener Befehl es nie verliert:
+ *
+ *   npx medusa exec ./src/scripts/update-catalog.ts schreiben \
+ *     ../data/catalog.json \
+ *     extra=../data/catalog-extra.json \
+ *     content=../data/product-content.json \
+ *     inventory=../data/inventory.json
+ *
+ * Im Container (kompiliert, daher .js) — kurze Zeilen mit `\` am Ende, damit
+ * der Befehl das Einfügen in ein umbrechendes Terminal übersteht:
+ *
+ *   docker compose exec medusa npx medusa exec \
+ *     ./src/scripts/update-catalog.js \
+ *     /app/data/catalog.json nur=gtin \
+ *     extra=/app/data/catalog-extra.json
  *
  * Argumente OHNE Bindestrich-Präfix — `medusa exec` lehnt unbekannte Optionen
- * ab, siehe script-args.ts.
+ * ab, siehe script-args.ts. Unbekannte oder vertippte Argumente brechen den
+ * Lauf ab, bevor etwas gelesen oder geschrieben wird.
  *
+ *   schreiben        Änderungen wirklich schreiben. Ohne dieses Wort:
+ *                    Probelauf. Steht in jeder Anleitung zuerst, wird aber an
+ *                    jeder Stelle angenommen.
+ *   dry-run          ausdrücklicher Probelauf — seit der Probelauf der
+ *                    Normalfall ist, ohne Wirkung; bleibt erlaubt.
+ *   nur=<bereich>    nur EINEN Bereich planen und schreiben:
+ *                      gtin     variant.ean (samt Aufräumen von upc/barcode)
+ *                      preise   Basispreise/Staffeln
+ *                      inhalt   subtitle/description (braucht content=)
+ *                      bestand  Bestand (braucht inventory=)
+ *                    Ohne nur= läuft alles, dazu Gewicht und Marke — die
+ *                    beiden gehören zu keinem Einzelbereich.
  *   <pfad>.json      Pflicht: catalog.json (Preise/Staffeln, wie beim Import)
  *   extra=<pfad>     weiterer Katalog im selben Format; überschreibt je
  *                    Handle Einträge aus catalog.json (z.B. catalog-extra.json
@@ -23,7 +56,6 @@
  *                    übersprungen; eine Zahl (auch 0) schaltet
  *                    manage_inventory ein und setzt den Bestand am ersten
  *                    Lagerort.
- *   dry-run          nur anzeigen, nichts schreiben — Feld für Feld
  *   round=<step>     Rundung wie import-catalog.ts, Default 0.05
  *
  * Was das Script anfasst — und was nicht:
@@ -44,12 +76,16 @@
  *     Pricing-Service ersetzt beim Update nur Preise mit price_list_id=null.
  *   - GTIN: trägt die Katalog-Variante ein `gtin`, wird variant.ean gesetzt
  *     — jede Länge (8/12/13/14), dieselbe Spalte wie das Katalogfeld `ean`
- *     oben, siehe gtin.ts — nur bei Abweichung. upc/barcode fasst das Script
- *     nie an. Ohne `gtin` und `ean` im Katalog bleibt variant.ean
- *     unangetastet: was im Admin gepflegt wurde, überschreibt ein leeres
- *     Katalogfeld nie. Ungültige oder doppelte Nummern brechen den Lauf ab,
- *     bevor etwas geschrieben wird; `gtin` und `ean` derselben Variante
- *     müssen gleich lauten.
+ *     oben, siehe gtin.ts — nur bei Abweichung. Ohne `gtin` und `ean` im
+ *     Katalog bleibt variant.ean unangetastet: was im Admin gepflegt wurde,
+ *     überschreibt ein leeres Katalogfeld nie. Ungültige oder doppelte
+ *     Nummern brechen den Lauf ab, bevor etwas geschrieben wird; `gtin` und
+ *     `ean` derselben Variante müssen gleich lauten.
+ *   - upc/barcode: werden nie GESETZT, aber aufgeräumt. Steht dort exakt die
+ *     Katalog-GTIN der Variante — ein früherer Stand dieses Scripts verteilte
+ *     die Nummern nach Länge auf ean/upc/barcode —, wird das Feld geleert,
+ *     weil die Nummer jetzt in ean steht. Jeder ANDERE Wert bleibt stehen:
+ *     in barcode darf der Betreiber eigene Hauscodes führen.
  *   - Bestand: siehe inventory=. Varianten ohne Inventory-Item bekommen eines
  *     (samt Link), fehlende Levels werden angelegt, abweichende gesetzt.
  *   - Titel, Handle, Kategorien, Bilder: nie. Produkte, die in Medusa fehlen,
@@ -79,10 +115,34 @@ import {
   slugify,
   validateCatalogData,
 } from "./import-catalog"
-import { parseScriptArgs } from "./script-args"
+import { applyHint, parseScriptArgs, resolveRunMode } from "./script-args"
 
 const CURRENCY = "chf"
 const ROUND_DEFAULT = 0.05
+
+// ─── Bereich (nur=) ─────────────────────────────────────────────
+
+/**
+ * Die Bereiche, auf die sich ein Lauf mit `nur=` beschränken lässt. Gewicht
+ * und Marke gehören zu keinem davon — sie laufen nur im Gesamtlauf mit.
+ */
+export const SCOPES = ["gtin", "preise", "inhalt", "bestand"] as const
+export type CatalogScope = (typeof SCOPES)[number]
+
+/** `nur=gtin` -> "gtin"; ohne Argument null (= alles); sonst ein Fehlertext. */
+export function parseScope(
+  raw: string | undefined
+): { scope: CatalogScope | null } | { error: string } {
+  if (raw === undefined) {
+    return { scope: null }
+  }
+  if ((SCOPES as readonly string[]).includes(raw)) {
+    return { scope: raw as CatalogScope }
+  }
+  return {
+    error: `nur=${raw} kenne ich nicht — erlaubt: ${SCOPES.join(", ")}`,
+  }
+}
 
 // ─── Eingabedateien ─────────────────────────────────────────────
 
@@ -130,6 +190,9 @@ export type ExistingVariant = {
   sku: string | null
   /** GTIN/EAN — optional, weil ältere Aufrufer das Feld nicht laden. */
   ean?: string | null
+  /** Nur gelesen, um eine dorthin verirrte Katalog-GTIN aufzuräumen. */
+  upc?: string | null
+  barcode?: string | null
   /** Gramm — optional, weil ältere Aufrufer das Feld nicht laden. */
   weight?: number | null
   manage_inventory: boolean
@@ -176,6 +239,13 @@ export type VariantDataPlan = {
   update: {
     ean?: string
     weight?: number
+    /**
+     * Nur `null` — diese Felder werden geleert, nie gesetzt. `null` (nicht
+     * undefined) ist Absicht: upsertWithReplace wirft undefined per
+     * JSON-Roundtrip weg, null landet als SQL NULL in der Spalte.
+     */
+    upc?: null
+    barcode?: null
   }
 }
 
@@ -277,8 +347,12 @@ export function planCatalogUpdate(input: {
   content: ContentEntry[]
   inventory: InventoryEntry[]
   step: number
+  /** `nur=`-Bereich; null/ohne = alles samt Gewicht und Marke. */
+  scope?: CatalogScope | null
 }): CatalogUpdatePlan {
   const { existing, catalog, content, inventory, step } = input
+  const scope = input.scope ?? null
+  const covers = (s: CatalogScope) => scope === null || scope === s
 
   const contentByHandle = new Map(content.map((c) => [c.handle, c]))
   const existingByHandle = new Map(existing.map((p) => [p.handle, p]))
@@ -325,7 +399,7 @@ export function planCatalogUpdate(input: {
     // hat und es abweicht. Nie einen vorhandenen Text mit leer überschreiben.
     const c = contentByHandle.get(handle)
     for (const field of ["subtitle", "description"] as const) {
-      const want = c?.[field]
+      const want = covers("inhalt") ? c?.[field] : undefined
       if (want && want !== (product[field] ?? "")) {
         productPlan.update[field] = want
         productPlan.changes.push({
@@ -340,7 +414,7 @@ export function planCatalogUpdate(input: {
     // metadata wird gemerged geschrieben, damit andere Schlüssel überleben.
     const haveBrand =
       typeof product.metadata?.brand === "string" ? product.metadata.brand : ""
-    if (entry.brand && entry.brand !== haveBrand) {
+    if (scope === null && entry.brand && entry.brand !== haveBrand) {
       productPlan.update.metadata = {
         ...(product.metadata ?? {}),
         brand: entry.brand,
@@ -371,7 +445,7 @@ export function planCatalogUpdate(input: {
       // Länge, siehe gtin.ts); die Validierung garantiert, dass sie gleich
       // lauten, wenn beide dastehen.
       const dataUpdate: VariantDataPlan["update"] = {}
-      const wantEan = catalogEan(variant)
+      const wantEan = covers("gtin") ? catalogEan(variant) : undefined
       if (wantEan != null && wantEan !== (existingVariant.ean ?? null)) {
         dataUpdate.ean = wantEan
         productPlan.changes.push({
@@ -380,7 +454,24 @@ export function planCatalogUpdate(input: {
           after: wantEan,
         })
       }
+      // Aufräumen: ein früherer Stand verteilte die GTIN nach Länge auf
+      // upc/barcode. Steht dort EXAKT die Nummer, die jetzt in ean steht
+      // oder gleich dorthin kommt, wird das Feld geleert. Jeder andere Wert
+      // (Hauscode im barcode) bleibt unangetastet.
+      if (wantEan != null) {
+        for (const field of ["upc", "barcode"] as const) {
+          if (existingVariant[field] === wantEan) {
+            dataUpdate[field] = null
+            productPlan.changes.push({
+              field: `${sku} ${field}`,
+              before: wantEan,
+              after: "(leer, steht jetzt in ean)",
+            })
+          }
+        }
+      }
       if (
+        scope === null &&
         variant.weight_g != null &&
         variant.weight_g !== (existingVariant.weight ?? null)
       ) {
@@ -400,6 +491,10 @@ export function planCatalogUpdate(input: {
           sku,
           update: dataUpdate,
         })
+      }
+
+      if (!covers("preise")) {
+        continue
       }
 
       // Wie import-catalog.ts: eine Staffel, die nicht bei 1 beginnt, lässt
@@ -447,7 +542,7 @@ export function planCatalogUpdate(input: {
 
   // Bestand: quantity=null heisst "noch nicht gezählt" — Variante bleibt
   // unangetastet. Eine Zahl schaltet die Bestandsführung ein.
-  for (const item of inventory) {
+  for (const item of covers("bestand") ? inventory : []) {
     if (item.quantity === null || item.quantity === undefined) {
       continue
     }
@@ -489,13 +584,49 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
 
   const opts = parseScriptArgs(args)
 
+  // Modus und Argumente ZUERST: ohne `schreiben` ist alles Weitere ein
+  // Probelauf, und ein unbekanntes Argument bricht ab, bevor eine Datei
+  // gelesen oder die Datenbank gefragt wird.
+  const mode = resolveRunMode(
+    opts,
+    {
+      values: ["extra", "content", "inventory", "round", "nur"],
+      file: ".json",
+    },
+    logger
+  )
+  if (!mode) {
+    return
+  }
+  const { dryRun } = mode
+
+  const scoped = parseScope(opts.value("nur"))
+  if ("error" in scoped) {
+    logger.error(`ABBRUCH — ${scoped.error}. Nichts wurde geändert.`)
+    return
+  }
+  const { scope } = scoped
+  logger.info(
+    scope
+      ? `BEREICH: nur ${scope} — alles andere bleibt unangetastet`
+      : "BEREICH: alles (Inhalt, Marke, GTIN, Gewicht, Preise, Bestand)"
+  )
+
   const file = opts.file(".json")
   if (!file) {
     logger.error("Pfad zu catalog.json fehlt.")
     return
   }
 
-  const dryRun = opts.flag("dry-run")
+  // Ein Bereich ohne seine Datei täte still nichts — lieber laut sagen.
+  const needs = { inhalt: "content", bestand: "inventory" } as const
+  if ((scope === "inhalt" || scope === "bestand") && !opts.value(needs[scope])) {
+    logger.error(
+      `ABBRUCH — nur=${scope} braucht ${needs[scope]}=<pfad>. Nichts wurde geändert.`
+    )
+    return
+  }
+
   const step = Number(opts.value("round") ?? String(ROUND_DEFAULT))
 
   const readJson = <T>(path: string): T =>
@@ -541,6 +672,8 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       "variants.id",
       "variants.sku",
       "variants.ean",
+      "variants.upc",
+      "variants.barcode",
       "variants.weight",
       "variants.manage_inventory",
       "variants.prices.amount",
@@ -563,6 +696,8 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       id: v.id,
       sku: v.sku ?? null,
       ean: v.ean ?? null,
+      upc: v.upc ?? null,
+      barcode: v.barcode ?? null,
       weight: v.weight == null ? null : Number(v.weight),
       manage_inventory: !!v.manage_inventory,
       prices: (v.prices ?? []).map((pr: any) => ({
@@ -578,7 +713,14 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
     })),
   }))
 
-  const plan = planCatalogUpdate({ existing, catalog, content, inventory, step })
+  const plan = planCatalogUpdate({
+    existing,
+    catalog,
+    content,
+    inventory,
+    step,
+    scope,
+  })
 
   // Bestand: Ist-Levels nachschlagen, um create/update/none zu entscheiden.
   let locationId: string | null = null
@@ -705,6 +847,7 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
 
   if (dryRun) {
     logger.info("— Probelauf, es wurde nichts geschrieben —")
+    logger.info(applyHint(args))
     return
   }
 
@@ -742,7 +885,10 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
         })),
       },
     })
-    logger.info(`${dataUpdates.length} Varianten-Stammdaten (EAN/Gewicht) gesetzt.`)
+    logger.info(
+      `${dataUpdates.length} Varianten-Stammdaten (GTIN/Gewicht) gesetzt, ` +
+        `verirrte upc/barcode geleert.`
+    )
   }
 
   const manageUpdates = plan.inventory.filter((i) => i.set_manage_inventory)

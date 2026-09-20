@@ -61,13 +61,15 @@ node scripts/jibbit-shop-prices.mjs
 # 2. Daten in den Container bringen (wie beim Katalog):
 docker compose cp ./data medusa:/app/data
 
-# 3. Probelauf — zeigt Zuordnung, Preise und was fehlt:
+# 3. Probelauf (der Normalfall) — zeigt Zuordnung, Preise und was fehlt:
 docker compose exec medusa npx medusa exec \
-  ./src/scripts/import-price-lists.js /app/data/price-lists.json dry-run
+  ./src/scripts/import-price-lists.js \
+  /app/data/price-lists.json
 
-# 4. Ernstfall:
+# 4. Ernstfall — `schreiben` als erstes Argument nach dem Script-Pfad:
 docker compose exec medusa npx medusa exec \
-  ./src/scripts/import-price-lists.js /app/data/price-lists.json
+  ./src/scripts/import-price-lists.js schreiben \
+  /app/data/price-lists.json
 ```
 
 Erwartung bei diesem Datenstand (August 2026): 20 Odoo-Preise, alle 20
