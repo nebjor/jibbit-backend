@@ -1,7 +1,7 @@
 /**
- * gtin.ts — GS1-Prüfziffer, Zuordnung auf Medusas native Spalten, und dass
- * import-catalog.ts an einer falschen Nummer laut scheitert, statt sie
- * anzulegen.
+ * gtin.ts — GS1-Prüfziffer, Ablage in variant.ean (jede Länge, damit der
+ * Galaxus-Export die Nummer sieht), und dass import-catalog.ts an einer
+ * falschen Nummer laut scheitert, statt sie anzulegen.
  *
  * Die Workflows aus core-flows sind gemockt, wie in update-catalog.unit.spec.ts.
  */
@@ -20,14 +20,17 @@ jest.mock("@medusajs/medusa/core-flows", () => ({
 
 import { createProductsWorkflow } from "@medusajs/medusa/core-flows"
 
+import { buildGalaxusExport, VariantSnapshot } from "../scripts/galaxus-common"
 import {
   assertCatalogGtins,
-  gtinFieldFor,
-  gtinFields,
+  catalogEan,
   isValidGtin,
   validateCatalogGtins,
 } from "../scripts/gtin"
-import importCatalog, { CatalogProduct } from "../scripts/import-catalog"
+import importCatalog, {
+  CatalogProduct,
+  validateCatalogData,
+} from "../scripts/import-catalog"
 
 const GTIN8 = "85966789"
 const GTIN12 = "716165280293"
@@ -92,18 +95,18 @@ describe("isValidGtin", () => {
 
 // ─── Zuordnung ──────────────────────────────────────────────────
 
-describe("gtinFields", () => {
-  it("GTIN-13 -> ean, GTIN-12 -> upc, GTIN-8 und GTIN-14 -> barcode", () => {
-    expect(gtinFieldFor(GTIN13)).toBe("ean")
-    expect(gtinFieldFor(GTIN12)).toBe("upc")
-    expect(gtinFieldFor(GTIN8)).toBe("barcode")
-    expect(gtinFieldFor(GTIN14)).toBe("barcode")
-    expect(gtinFields(GTIN13)).toEqual({ ean: GTIN13 })
+describe("catalogEan", () => {
+  it("jede Länge geht nach variant.ean — gtin und ean zielen auf dieselbe Spalte", () => {
+    for (const gtin of [GTIN8, GTIN12, GTIN13, GTIN14]) {
+      expect(catalogEan({ gtin })).toBe(gtin)
+      expect(catalogEan({ ean: gtin })).toBe(gtin)
+      expect(catalogEan({ gtin, ean: gtin })).toBe(gtin)
+    }
   })
 
-  it("ohne GTIN wird kein Feld gesetzt", () => {
-    expect(gtinFields(undefined)).toEqual({})
-    expect(gtinFields(null)).toEqual({})
+  it("ohne Nummer wird nichts gesetzt", () => {
+    expect(catalogEan({})).toBeUndefined()
+    expect(catalogEan({ gtin: null, ean: null })).toBeUndefined()
   })
 })
 
@@ -131,7 +134,7 @@ describe("validateCatalogGtins", () => {
     expect(validateCatalogGtins([broken])).toHaveLength(1)
   })
 
-  it("meldet doppelt vergebene Nummern — die Spalten sind unique", () => {
+  it("meldet doppelt vergebene Nummern — die Spalte ist unique", () => {
     const errors = validateCatalogGtins([
       product("Greengo", [GTIN13]),
       product("Anderes", [GTIN13]),
@@ -158,6 +161,25 @@ describe("validateCatalogGtins", () => {
     const errors = validateCatalogGtins([other, product("Greengo", [GTIN13])])
     expect(errors).toHaveLength(1)
     expect(errors[0]).toContain("Anderes / Einzeln")
+  })
+
+  it("das Galaxus-Feld ean wird genauso streng geprüft wie gtin", () => {
+    const withEan = (ean: string) => {
+      const p = product("Greengo", [undefined])
+      p.variants[0].ean = ean
+      return [p]
+    }
+    for (const ean of [GTIN8, GTIN12, GTIN13, GTIN14]) {
+      expect(validateCatalogData(withEan(ean))).toEqual([])
+    }
+    // Falsche Prüfziffer, Platzhalter und die Zwischenlängen 9–11, die
+    // «8–14 Ziffern» durchliesse, Galaxus aber keinem Artikel zuordnen kann.
+    for (const ean of ["8595134501286", "85966780", "0000000000000", "1234567890"]) {
+      const errors = validateCatalogData(withEan(ean))
+      expect(errors).toHaveLength(1)
+      expect(errors[0]).toContain("Greengo (Einzeln)")
+      expect(errors[0]).toContain(ean)
+    }
   })
 
   it("assertCatalogGtins wirft mit allen Fehlern auf einmal", () => {
@@ -203,10 +225,10 @@ describe("importCatalog (exec)", () => {
     jest.clearAllMocks()
   })
 
-  it("legt die GTIN in der nativen Spalte an, nicht in metadata", async () => {
+  it("legt jede GTIN in variant.ean an — nicht in upc, barcode oder metadata", async () => {
     const path = write("ok.json", [
       product("Greengo Rolls", [GTIN8, GTIN13]),
-      product("RAW Rolls", [GTIN12]),
+      product("RAW Rolls", [GTIN12, GTIN14]),
       product("OCB Rolls", [undefined]),
     ])
 
@@ -214,25 +236,54 @@ describe("importCatalog (exec)", () => {
 
     expect(createProductsWorkflow).toHaveBeenCalledTimes(1)
     const { products } = (runMock.mock.calls[0] as any[])[0].input
-    const pick = (v: any) => ({ ean: v.ean, upc: v.upc, barcode: v.barcode })
-    expect(products[0].variants.map(pick)).toEqual([
-      { ean: undefined, upc: undefined, barcode: GTIN8 },
-      { ean: GTIN13, upc: undefined, barcode: undefined },
-    ])
-    expect(pick(products[1].variants[0])).toEqual({
-      ean: undefined,
-      upc: GTIN12,
-      barcode: undefined,
-    })
-    expect(pick(products[2].variants[0])).toEqual({
-      ean: undefined,
-      upc: undefined,
-      barcode: undefined,
-    })
+    const eans = (p: any) => p.variants.map((v: any) => v.ean)
+    expect(eans(products[0])).toEqual([GTIN8, GTIN13])
+    expect(eans(products[1])).toEqual([GTIN12, GTIN14])
+    expect(eans(products[2])).toEqual([undefined])
+    for (const v of products.flatMap((p: any) => p.variants)) {
+      expect(v).not.toHaveProperty("upc")
+      expect(v).not.toHaveProperty("barcode")
+    }
     expect(products[0].variants[0].metadata).toEqual({
       units_per_pack: 1,
       pack_type: "single",
     })
+  })
+
+  it("der Galaxus-Export sieht auch GTIN-8 und GTIN-12 — er liest nur variant.ean", async () => {
+    const path = write("galaxus.json", [
+      product("Greengo Rolls", [GTIN8]),
+      product("RAW Rolls", [GTIN12]),
+    ])
+
+    await importCatalog({ container, args: [path] } as any)
+
+    // Was der Import nach variant.ean schreibt, ist genau das, was
+    // loadVariantSnapshots als `ean` in den Snapshot übernimmt.
+    const { products } = (runMock.mock.calls[0] as any[])[0].input
+    const snapshots: VariantSnapshot[] = products.map((p: any) => ({
+      handle: p.handle,
+      productTitle: p.title,
+      variantTitle: p.variants[0].title,
+      status: "published",
+      sku: p.variants[0].sku,
+      ean: p.variants[0].ean ?? null,
+      weightG: 20,
+      brand: "Marke",
+      category: "Papers",
+      subtitle: null,
+      description: "Beschreibung.",
+      imageUrls: ["https://api.jibbit.ch/static/bild.jpg"],
+      price: 2,
+      stock: 5,
+      unitsPerPack: 1,
+    }))
+
+    const out = buildGalaxusExport(snapshots)
+    expect(out.ausgeschlossen).toEqual([])
+    expect(out.exportiert).toBe(2)
+    expect(out.productData).toContain(`;${GTIN8};`)
+    expect(out.productData).toContain(`;${GTIN12};`)
   })
 
   it("bricht bei einer ungültigen GTIN laut ab, bevor irgendetwas passiert", async () => {
