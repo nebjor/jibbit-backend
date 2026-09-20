@@ -307,12 +307,12 @@ describe("planCatalogUpdate", () => {
     expect(plan.products).toHaveLength(0)
   })
 
-  it("plant die GTIN in die passende native Spalte — und nur bei Abweichung", () => {
+  it("plant jede GTIN nach variant.ean — auch GTIN-8 und GTIN-12, und nur bei Abweichung", () => {
     const withGtin: CatalogProduct = {
       ...angel,
       variants: [
-        { ...angel.variants[0], gtin: "85966789" }, // GTIN-8 -> barcode
-        { ...angel.variants[1], gtin: "8595134501285" }, // GTIN-13 -> ean
+        { ...angel.variants[0], gtin: "85966789" }, // GTIN-8
+        { ...angel.variants[1], gtin: "716165280293" }, // GTIN-12
       ],
     }
     const plan = planCatalogUpdate({
@@ -322,15 +322,20 @@ describe("planCatalogUpdate", () => {
     })
     expect(plan.products).toHaveLength(1)
     expect(plan.products[0].variantPrices).toHaveLength(0)
-    expect(plan.products[0].variantGtins).toEqual([
-      { variant_id: "var_1", sku: angelSkuEA, field: "barcode", gtin: "85966789" },
-      { variant_id: "var_2", sku: angelSkuD, field: "ean", gtin: "8595134501285" },
+    // Dieselbe Spalte, die galaxus-common.ts liest — nie upc/barcode.
+    expect(plan.products[0].variantData).toEqual([
+      { variant_id: "var_1", sku: angelSkuEA, update: { ean: "85966789" } },
+      { variant_id: "var_2", sku: angelSkuD, update: { ean: "716165280293" } },
+    ])
+    expect(plan.products[0].changes.map((c) => c.field)).toEqual([
+      `${angelSkuEA} ean`,
+      `${angelSkuD} ean`,
     ])
 
     // Danach ist der Zustand gleich — zweiter Lauf plant nichts mehr.
     const after = existingAngel()
-    after.variants[0].barcode = "85966789"
-    after.variants[1].ean = "8595134501285"
+    after.variants[0].ean = "85966789"
+    after.variants[1].ean = "716165280293"
     const second = planCatalogUpdate({
       ...base,
       catalog: [withGtin],
@@ -339,7 +344,7 @@ describe("planCatalogUpdate", () => {
     expect(second.products).toHaveLength(0)
   })
 
-  it("plant eine GTIN-13 nur einmal, wenn gtin und ean dasselbe sagen", () => {
+  it("plant eine Nummer nur einmal, wenn gtin und ean dasselbe sagen", () => {
     const both: CatalogProduct = {
       ...angel,
       variants: [
@@ -352,8 +357,9 @@ describe("planCatalogUpdate", () => {
       catalog: [both],
       existing: [existingAngel()],
     })
-    expect(plan.products[0].variantGtins).toHaveLength(1)
-    expect(plan.products[0].variantData).toHaveLength(0)
+    expect(plan.products[0].variantData).toEqual([
+      { variant_id: "var_1", sku: angelSkuEA, update: { ean: "8595134501285" } },
+    ])
     expect(plan.products[0].changes).toHaveLength(1)
   })
 
@@ -608,7 +614,7 @@ describe("updateCatalog (exec)", () => {
 
     expect(updateProductVariantsWorkflow).toHaveBeenCalledTimes(1)
     expect(runMock).toHaveBeenCalledWith({
-      input: { product_variants: [{ id: "var_1", upc: "716165280293" }] },
+      input: { product_variants: [{ id: "var_1", ean: "716165280293" }] },
     })
   })
 
