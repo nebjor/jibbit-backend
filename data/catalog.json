@@ -52,6 +52,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "9120089700019",
         "tiers": [
           {
             "min_quantity": 1,
@@ -208,6 +209,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "85966789",
         "tiers": [
           {
             "min_quantity": 1,
@@ -240,6 +242,7 @@
         "label": "Display (24 Stk.)",
         "pack_type": "display",
         "units_per_pack": 24,
+        "gtin": "8595134501285",
         "tiers": [
           {
             "min_quantity": 1,
@@ -352,6 +355,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "4262430130191",
         "tiers": [
           {
             "min_quantity": 1,
@@ -596,6 +600,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "4260748410363",
         "tiers": [
           {
             "min_quantity": 1,
@@ -624,6 +629,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "4260748412169",
         "tiers": [
           {
             "min_quantity": 1,
@@ -697,6 +703,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "716165280293",
         "tiers": [
           {
             "min_quantity": 1,
@@ -735,6 +742,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "716165299530",
         "tiers": [
           {
             "min_quantity": 1,
@@ -753,6 +761,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "716165299523",
         "tiers": [
           {
             "min_quantity": 1,
@@ -771,6 +780,7 @@
         "label": "Einzeln",
         "pack_type": "single",
         "units_per_pack": 1,
+        "gtin": "716165310556",
         "tiers": [
           {
             "min_quantity": 1,
@@ -811,6 +821,7 @@
         "label": "Display (25 Stk.)",
         "pack_type": "display",
         "units_per_pack": 25,
+        "gtin": "8414775014698",
         "tiers": [
           {
             "min_quantity": 1,
