@@ -1,0 +1,3052 @@
+{
+  "_hinweis": [
+    "Bestandsaufnahme aller Artikel von jibbit.ch als Arbeitsliste für fehlende GTINs im Product-JSON-LD. Generiert, nicht von Hand pflegen.",
+    "gtin_status: «vorhanden» = steht in catalog.json/catalog-extra.json; «vorschlag» = unverifizierter Kandidat aus einer der Dateien unter gtin_quelldateien (gtin-candidates/-knistermann/-hemagnova/-sunvi; erst nach Scan an der Ware übernehmen; gtin_vorschlag = der mit dem höchsten Vertrauen, gtin_vorschlaege_alle = alle, gtin_quellenlage = einig/Konflikt); «fehlt» = keine Nummer bekannt.",
+    "Einzelpackung und Display/Box tragen in aller Regel VERSCHIEDENE GTINs — jede Variante zählt einzeln.",
+    "Lieferant «Knistermann (vermutet)» ist eine Ableitung aus dem Markennamen, kein Beleg."
+  ],
+  "_abgerufen_am": "2026-09-20",
+  "_quellen": {
+    "live": "https://jibbit.ch — sitemap.xml (33 Produkt-URLs) + /shop, /shop/page/2 (20 + 13 Karten; Seite 3 wiederholt Seite 2) in de_CH, en, fr_CH, it; alle 33 Produktseiten (DE) einzeln per GET; Varianten-/Verfügbarkeitsinfo über den öffentlichen Endpunkt /website_sale/get_combination_info (35 Aufrufe).",
+    "test_storefront": "https://test.jibbit.ch/sitemap.xml (27 Produkt-URLs), alle 27 Produktseiten per GET (JSON-LD + Varianten aus dem Seiten-Payload).",
+    "repo": [
+      "data/catalog.json",
+      "data/catalog-extra.json",
+      "data/inventory.json (SKUs)",
+      "data/odoo-redirects.json (Handles)",
+      "data/gtin-candidates.json",
+      "data/gtin-knistermann.json",
+      "data/gtin-hemagnova.json",
+      "data/gtin-sunvi.json"
+    ]
+  },
+  "zusammenfassung": {
+    "live_odoo_templates": 33,
+    "live_logische_produkte": 28,
+    "live_verkaufbare_einheiten": 35,
+    "catalog_json_produkte": 26,
+    "catalog_extra_zusaetzliche_produkte": 2,
+    "katalog_produkte_gesamt": 28,
+    "varianten_gesamt": 35,
+    "gtin_vorhanden": 3,
+    "gtin_vorschlag": 22,
+    "gtin_fehlt": 10,
+    "gtin_vorschlag_nach_vertrauen": {
+      "hoch": 9,
+      "niedrig": 8,
+      "mittel": 5
+    },
+    "live_nicht_im_katalog": [],
+    "katalog_nicht_live": [],
+    "live_nur_in_catalog_extra": [
+      "Black Leaf El Humeros Konische Hülsen KS 100x",
+      "Silikon Dose ø 22mm hellgrün"
+    ],
+    "test_storefront_produkte": 27
+  },
+  "live_markup": {
+    "jsonld_bloecke": 0,
+    "microdata_itemtypes": [
+      "http://schema.org/Product",
+      "http://schema.org/Offer"
+    ],
+    "microdata_itemprops": [
+      "name",
+      "url",
+      "image",
+      "offers",
+      "price",
+      "priceCurrency",
+      "listPrice"
+    ],
+    "einheitlich_auf_allen_seiten": true,
+    "fehlt_fuer_rich_results": [
+      "brand",
+      "sku",
+      "gtin",
+      "availability",
+      "description"
+    ]
+  },
+  "produkte": [
+    {
+      "handle": "angel-slim-filters-6mm-120stk",
+      "name": "Angel Slim Filters 6mm 120stk",
+      "marke": "Angel",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 13,
+        "url": "https://jibbit.ch/shop/angel-slim-filters-6mm-120stk-13",
+        "name_de": "Angel Slim Filters 6mm 120stk",
+        "namen_en_fr_it": [
+          "Angel Slim Filters"
+        ],
+        "interne_referenz": null,
+        "untertitel": "Angel Drehfilter Slim, 6mm, Beutel á 120 Filter",
+        "staffel_text": "Anzahl Preis 1 CHF 1.40 12+ CHF 1.30 34+ CHF 1.20",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/13/image_1024?unique=fc579d2"
+      },
+      "test_storefront": {
+        "handle": "angel-slim-filters-6mm-120stk",
+        "url": "https://test.jibbit.ch/products/angel-slim-filters-6mm-120stk",
+        "name": "Angel Slim Filters 6mm",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Display (34 Stk.) = CHF 40.8",
+          "Einzeln = CHF 1.4"
+        ]
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «Angel Slim Filters» statt «Angel Slim Filters 6mm 120stk»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "ANG-SLI-FIL-6MM-120-EA",
+          "katalog_preis_ab_1_chf": 1.4,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "Odoo-Variante (Attribut «Menge»)",
+            "odoo_template_id": 13,
+            "odoo_product_id": 72,
+            "url": "https://jibbit.ch/shop/angel-slim-filters-6mm-120stk-13",
+            "name": "Angel Slim Filters 6mm 120stk (Einzel)",
+            "preis_chf": 1.4,
+            "streichpreis_chf": 2.1,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ5YWJ0BX13890PMH5Y",
+            "preis_chf": 1.4,
+            "in_stock": true
+          },
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        },
+        {
+          "titel": "Display (34 Stk.)",
+          "pack_type": "display",
+          "units_per_pack": 34,
+          "sku": "ANG-SLI-FIL-6MM-120-D34",
+          "katalog_preis_ab_1_chf": 40.8,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "Odoo-Variante (Attribut «Menge» = «Display (34 Stk)»)",
+            "odoo_template_id": 13,
+            "odoo_product_id": 73,
+            "url": "https://jibbit.ch/shop/angel-slim-filters-6mm-120stk-13",
+            "name": "Angel Slim Filters 6mm 120stk (Display (34 Stk))",
+            "preis_chf": 40.8,
+            "streichpreis_chf": null,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ5VEVNMJ4D79MQASAY",
+            "preis_chf": 40.8,
+            "in_stock": true
+          },
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        }
+      ]
+    },
+    {
+      "handle": "dubi-aktivkohlefilter-o7mm",
+      "name": "dubi Aktivkohlefilter ø7mm",
+      "marke": "dubi",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 49,
+        "url": "https://jibbit.ch/shop/dubi-aktivkohlefilter-7mm-49",
+        "name_de": "dubi Aktivkohlefilter ø7mm",
+        "namen_en_fr_it": [
+          "dubi Aktivkohlefilter ø7mm"
+        ],
+        "interne_referenz": null,
+        "untertitel": "42 Stück im Beutel",
+        "staffel_text": "Anzahl Preis 1 CHF 7.90 4+ CHF 7.40 8+ CHF 7.30 16+ CHF 7.20",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/49/image_1024?unique=0355630"
+      },
+      "test_storefront": {
+        "handle": "dubi-aktivkohlefilter-o7mm",
+        "url": "https://test.jibbit.ch/products/dubi-aktivkohlefilter-o7mm",
+        "name": "dubi Aktivkohlefilter ø7mm",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 7.5"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "DUB-AKT-O7M-EA",
+          "katalog_preis_ab_1_chf": 7.5,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 49,
+            "odoo_product_id": 49,
+            "url": "https://jibbit.ch/shop/dubi-aktivkohlefilter-7mm-49",
+            "name": "dubi Aktivkohlefilter ø7mm",
+            "preis_chf": 7.5,
+            "streichpreis_chf": 7.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 89
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ6JJRT35KGJY9PQYJ7",
+            "preis_chf": 7.5,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "9120089700019",
+            "quelle_datei": "data/gtin-sunvi.json",
+            "quelle": "sunvi.de 16700 — dubi Aktivkohlefilter ø7mm, 42 Stück im Beutel",
+            "einheit_laut_quelle": "Einzelbeutel (42 Filter)",
+            "vertrauen": "hoch",
+            "hinweis": "dubi ø7 mm, 42 Stück im Beutel – identisch mit jibbits Untertitel; Präfix 912 (GS1 Austria) passt zum Hersteller.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": "2 Quellen einig: 9120089700019",
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "9120089700019",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 16700 — dubi Aktivkohlefilter ø7mm, 42 Stück im Beutel",
+              "einheit_laut_quelle": "Einzelbeutel (42 Filter)",
+              "vertrauen": "hoch",
+              "hinweis": "dubi ø7 mm, 42 Stück im Beutel – identisch mit jibbits Untertitel; Präfix 912 (GS1 Austria) passt zum Hersteller.",
+              "pruefziffer_gueltig": true
+            },
+            {
+              "gtin": "91200089700019",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de TIP-167 — dubi Aktivkohlefilter ø7mm, 42 Stück im Beutel",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "mittel",
+              "hinweis": "Artikel deckt sich vollständig (dubi ø7mm, 42 Stk.), aber der Code auf der Knistermann-Seite ist fehlerhaft erfasst — siehe gtin_korrigiert_vorschlag.",
+              "auffaelligkeit": "Knistermann führt 14 Stellen (91200089700019) im Feld gtin14. Die Prüfziffer geht zufällig auf, aber Indikator 9 (= Artikel mit variablem Mass) ist für einen Filterbeutel unplausibel. Sehr wahrscheinlich Tippfehler (eine 0 zu viel): andere Händler (z.B. jointstore.de) führen für dubi ø7mm 42 Stk. die EAN-13 9120089700019 (Prüfziffer gültig, AT-Präfix 912).",
+              "gtin_korrigiert_vorschlag": "9120089700019",
+              "gtin_korrigiert_quelle": "Websuche, https://www.jointstore.de/en/aktivkohlefilter/2353-dubi-superflow-activated-carbon-filter-o7mm-42-pcs-9120089700019.html — nicht von Knistermann",
+              "pruefziffer_gueltig": true,
+              "gtin_korrigiert_pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "elements-blue-rolls-sw",
+      "name": "Elements BLUE Rolls SW",
+      "marke": "Elements",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 58,
+        "url": "https://jibbit.ch/shop/elements-blue-rolls-sw-58",
+        "name_de": "Elements BLUE Rolls SW",
+        "namen_en_fr_it": [
+          "Elements BLUE Rolls SW"
+        ],
+        "interne_referenz": null,
+        "untertitel": "Ultra Thin Papers",
+        "staffel_text": "Anzahl Preis Total 1 CHF 1.70 CHF 1.70 10+ CHF 1.60 CHF 16 24+ CHF 1.40 CHF 33.60",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/58/image_1024?unique=2d41be0"
+      },
+      "test_storefront": {
+        "handle": "elements-blue-rolls-sw",
+        "url": "https://test.jibbit.ch/products/elements-blue-rolls-sw",
+        "name": "Elements BLUE Rolls SW",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.7",
+          "Box (24 Stk.) = CHF 33.6"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "ELE-BLU-ROL-SW-EA",
+          "katalog_preis_ab_1_chf": 1.7,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 58,
+            "odoo_product_id": 58,
+            "url": "https://jibbit.ch/shop/elements-blue-rolls-sw-58",
+            "name": "Elements BLUE Rolls SW",
+            "preis_chf": 1.7,
+            "streichpreis_chf": 2,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ6VXCMC9MBHMJDK707",
+            "preis_chf": 1.7,
+            "in_stock": true
+          },
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        },
+        {
+          "titel": "Box (24 Stk.)",
+          "pack_type": "box",
+          "units_per_pack": 24,
+          "sku": "ELE-BLU-ROL-SW-BX24",
+          "katalog_preis_ab_1_chf": 33.6,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt (Display/Box-Seite)",
+            "odoo_template_id": 59,
+            "odoo_product_id": 59,
+            "url": "https://jibbit.ch/shop/box-24x-elements-blue-rolls-sw-59",
+            "name": "Box: 24x Elements BLUE Rolls SW",
+            "preis_chf": 33.6,
+            "streichpreis_chf": 38.4,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": -1
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ6W75933K7WE13PKQA",
+            "preis_chf": 33.6,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "716165251200",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de ELE-RL-04 — Elements BLUE Rolls SW",
+            "einheit_laut_quelle": "unklar (Box oder Einzelrolle)",
+            "vertrauen": "niedrig",
+            "hinweis": "Artikel deckt sich (Elements BLUE Rolls SW, 5 m, 24er Box), aber unklar ob Box- oder Rollen-Code. Am Karton und an der Rolle scannen; Einzeln und Box brauchen zwei verschiedene GTINs.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "716165251200",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de ELE-RL-04 — Elements BLUE Rolls SW",
+              "einheit_laut_quelle": "unklar (Box oder Einzelrolle)",
+              "vertrauen": "niedrig",
+              "hinweis": "Artikel deckt sich (Elements BLUE Rolls SW, 5 m, 24er Box), aber unklar ob Box- oder Rollen-Code. Am Karton und an der Rolle scannen; Einzeln und Box brauchen zwei verschiedene GTINs.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "elements-king-slim-size-ultra-thin",
+      "name": "Elements King Slim Size Ultra Thin",
+      "marke": "Elements",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 56,
+        "url": "https://jibbit.ch/shop/elements-king-slim-size-ultra-thin-56",
+        "name_de": "Elements King Slim Size Ultra Thin",
+        "namen_en_fr_it": [
+          "Elements King Size Ultra Thin"
+        ],
+        "interne_referenz": null,
+        "untertitel": "Ultra Thin Papers",
+        "staffel_text": "Anzahl Preis 1 CHF 0.85 50+ CHF 0.76",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/56/image_1024?unique=c57537b"
+      },
+      "test_storefront": {
+        "handle": null,
+        "hinweis": "nicht in test.jibbit.ch/sitemap.xml"
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «Elements King Size Ultra Thin» statt «Elements King Slim Size Ultra Thin»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "ELE-KIN-SLI-SIZ-ULT-THI-EA",
+          "katalog_preis_ab_1_chf": 0.85,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 56,
+            "odoo_product_id": 56,
+            "url": "https://jibbit.ch/shop/elements-king-slim-size-ultra-thin-56",
+            "name": "Elements King Slim Size Ultra Thin",
+            "preis_chf": 0.85,
+            "streichpreis_chf": 0.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": null,
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        },
+        {
+          "titel": "Box (50 Stk.)",
+          "pack_type": "box",
+          "units_per_pack": 50,
+          "sku": "ELE-KIN-SLI-SIZ-ULT-THI-BX50",
+          "katalog_preis_ab_1_chf": 38,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt (Display/Box-Seite)",
+            "odoo_template_id": 57,
+            "odoo_product_id": 57,
+            "url": "https://jibbit.ch/shop/box-50x-elements-king-slim-size-ultra-thin-57",
+            "name": "Box: 50x Elements King Slim Size Ultra Thin",
+            "preis_chf": 38,
+            "streichpreis_chf": 40,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": null,
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "716165177821",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de ELE-PA-01 — Elements King Size Ultra Thin Papier",
+            "einheit_laut_quelle": "display (wahrscheinlich)",
+            "vertrauen": "niedrig",
+            "hinweis": "Zwei offene Punkte: (1) Der bestellte Knistermann-Artikel ist King Size (breit, 110x54mm, 33 Blatt); jibbit nennt das Produkt «King Slim Size», 32 Blatt — Format am Heftchen klären (Knistermann führt King Size Slim als eigenen Artikel). (2) Der Code gehört vermutlich zur 50er-Box, nicht zum Einzelheftchen. Nicht für die Variante «Einzeln» verwenden.",
+            "auffaelligkeit": "Format-Abweichung King Size vs. King Size Slim zwischen Knistermann-Bestellung und jibbit-Katalog.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "716165177821",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de ELE-PA-01 — Elements King Size Ultra Thin Papier",
+              "einheit_laut_quelle": "display (wahrscheinlich)",
+              "vertrauen": "niedrig",
+              "hinweis": "Zwei offene Punkte: (1) Der bestellte Knistermann-Artikel ist King Size (breit, 110x54mm, 33 Blatt); jibbit nennt das Produkt «King Slim Size», 32 Blatt — Format am Heftchen klären (Knistermann führt King Size Slim als eigenen Artikel). (2) Der Code gehört vermutlich zur 50er-Box, nicht zum Einzelheftchen. Nicht für die Variante «Einzeln» verwenden.",
+              "auffaelligkeit": "Format-Abweichung King Size vs. King Size Slim zwischen Knistermann-Bestellung und jibbit-Katalog.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "gizeh-dw-extra-fine",
+      "name": "Gizeh DW Extra Fine",
+      "marke": "Gizeh",
+      "lieferant": {
+        "name": "Hemag Nova",
+        "grundlage": "belegt: Position in Hemag-Nova-Bestellung 90030067307 vom 2025-12-11 (gtin-hemagnova.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 61,
+        "url": "https://jibbit.ch/shop/gizeh-dw-extra-fine-61",
+        "name_de": "Gizeh DW Extra Fine",
+        "namen_en_fr_it": [
+          "Gizeh DW Extra Fine (Kopie)"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": "Anzahl Preis 1 CHF 1.70 10+ CHF 1.60 20+ CHF 1.40 40+ CHF 1.35 120+ CHF 1.25",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/61/image_1024?unique=77f22d5"
+      },
+      "test_storefront": {
+        "handle": "gizeh-dw-extra-fine",
+        "url": "https://test.jibbit.ch/products/gizeh-dw-extra-fine",
+        "name": "Gizeh DW Extra Fine",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.7"
+        ]
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «Gizeh DW Extra Fine (Kopie)» statt «Gizeh DW Extra Fine»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [
+        {
+          "gtin": "4002604291101",
+          "quelle_datei": "data/gtin-sunvi.json",
+          "quelle": "sunvi.de 10138 — Gizeh Black Extra Fine 20 Hefte je 100 Blatt",
+          "einheit_laut_quelle": "Box 20 Hefte je 100 Blatt",
+          "vertrauen": "niedrig",
+          "hinweis": "Gizeh Black Extra Fine 100 Blatt (Doppelheft) ist der plausible «DW Extra Fine», aber jibbit nennt weder «Black» noch Blattzahl, und Sunvi listet die 20er-Box; jibbit führt nur «Einzeln» → nur Referenz.",
+          "pruefziffer_gueltig": true
+        }
+      ],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "GIZ-DW-EXT-FIN-EA",
+          "katalog_preis_ab_1_chf": 1.7,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 61,
+            "odoo_product_id": 61,
+            "url": "https://jibbit.ch/shop/gizeh-dw-extra-fine-61",
+            "name": "Gizeh DW Extra Fine",
+            "preis_chf": 1.7,
+            "streichpreis_chf": 1.8,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": -20
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ7CADJ0TY9774YVMEA",
+            "preis_chf": 1.7,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "4002604291101",
+            "quelle_datei": "data/gtin-hemagnova.json",
+            "quelle": "shop.hemagnova.ch RB7321 — Gizeh Black DW Extra Fine 20x100 Blatt",
+            "einheit_laut_quelle": "unklar — vermutlich Display (20er-Box)",
+            "vertrauen": "niedrig",
+            "hinweis": "Produkt passt sicher (Gizeh Black Double Window Extra Fine, einzige Gizeh-Position im Katalog), aber der Code gehört wahrscheinlich zur 20er-Box; jibbit führt nur die Variante «Einzeln». Heftchen im Lager scannen.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "4002604291101",
+              "quelle_datei": "data/gtin-hemagnova.json",
+              "quelle": "shop.hemagnova.ch RB7321 — Gizeh Black DW Extra Fine 20x100 Blatt",
+              "einheit_laut_quelle": "unklar — vermutlich Display (20er-Box)",
+              "vertrauen": "niedrig",
+              "hinweis": "Produkt passt sicher (Gizeh Black Double Window Extra Fine, einzige Gizeh-Position im Katalog), aber der Code gehört wahrscheinlich zur 20er-Box; jibbit führt nur die Variante «Einzeln». Heftchen im Lager scannen.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "greengo-unbleached-slim-rolls",
+      "name": "Greengo Unbleached Slim Rolls",
+      "marke": "Greengo",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 24,
+        "url": "https://jibbit.ch/shop/greengo-unbleached-slim-rolls-24",
+        "name_de": "Greengo Unbleached Slim Rolls",
+        "namen_en_fr_it": [
+          "Greengo Unbleached Slim Rolls"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": "Anzahl Preis Total 10+ CHF 1.85 CHF 18.50 24+ (Box) CHF 1.40 CHF 33.60 48+ (2x Box) CHF 1.35 CHF 64.80 120+ (5x Box) CHF 1.30 CHF 156",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/24/image_1024?unique=a137057"
+      },
+      "test_storefront": {
+        "handle": "greengo-unbleached-slim-rolls",
+        "url": "https://test.jibbit.ch/products/greengo-unbleached-slim-rolls",
+        "name": "Greengo Unbleached Slim Rolls",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.95",
+          "Display (24 Stk.) = CHF 33.6"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "GRE-UNB-SLI-ROL-EA",
+          "katalog_preis_ab_1_chf": 1.95,
+          "katalog_gtin": "85966789",
+          "katalog_gtin_pruefziffer_gueltig": true,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": "data/gtin-candidates.json",
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 24,
+            "odoo_product_id": 24,
+            "url": "https://jibbit.ch/shop/greengo-unbleached-slim-rolls-24",
+            "name": "Greengo Unbleached Slim Rolls",
+            "preis_chf": 1.95,
+            "streichpreis_chf": 2.5,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ8MD9YXGZ22Q2WFQ52",
+            "preis_chf": 1.95,
+            "in_stock": true
+          },
+          "gtin_status": "vorhanden",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "85966789",
+              "quelle_datei": "data/gtin-candidates.json",
+              "quelle": "derhollaender.ch — Greengo Slim Rolls, ungebleicht — CHF 2.00",
+              "vertrauen": "hoch",
+              "hinweis": "Marke, Format und Ausführung decken sich vollständig.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        },
+        {
+          "titel": "Display (24 Stk.)",
+          "pack_type": "display",
+          "units_per_pack": 24,
+          "sku": "GRE-UNB-SLI-ROL-D24",
+          "katalog_preis_ab_1_chf": 33.6,
+          "katalog_gtin": "8595134501285",
+          "katalog_gtin_pruefziffer_gueltig": true,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": "data/gtin-candidates.json",
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt (Display/Box-Seite)",
+            "odoo_template_id": 31,
+            "odoo_product_id": 31,
+            "url": "https://jibbit.ch/shop/display-24x-greengo-unbleached-slim-rolls-31",
+            "name": "Display: 24x Greengo Unbleached Slim Rolls",
+            "preis_chf": 33.6,
+            "streichpreis_chf": 45.6,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ88QHZQTZF7Y2TJX80",
+            "preis_chf": 33.6,
+            "in_stock": true
+          },
+          "gtin_status": "vorhanden",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "8595134501285",
+              "quelle_datei": "data/gtin-candidates.json",
+              "quelle": "derhollaender.ch — Greengo Slim Rolls, 1 Karton à 24 st — CHF 38.40",
+              "vertrauen": "hoch",
+              "hinweis": "Gebindegrösse 24 stimmt mit unserem Display überein. Eigene GTIN je Gebinde ist korrekt — Einzelstück und Karton sind zwei Artikel.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "kailar-filter-5-9mm-65stk-pink",
+      "name": "Kailar Filter 5.9mm 65stk pink",
+      "marke": "Kailar",
+      "lieferant": {
+        "name": "Knistermann (vermutet)",
+        "grundlage": "nur aus Marke/Name abgeleitet — Artikel steht NICHT in Bestellung 61334"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 27,
+        "url": "https://jibbit.ch/shop/kailar-filter-5-9mm-65stk-pink-27",
+        "name_de": "Kailar Filter 5.9mm 65stk pink",
+        "namen_en_fr_it": [
+          "Kailar Filter 5.9mm 65stk pink"
+        ],
+        "interne_referenz": null,
+        "untertitel": "Kailar Aktivkohlefilter",
+        "staffel_text": "Anzahl Preis 1 CHF 8.50 5+ CHF 8.30 10+ CHF 8.10",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/27/image_1024?unique=0b4fc2c"
+      },
+      "test_storefront": {
+        "handle": "kailar-filter-5-9mm-65stk-pink",
+        "url": "https://test.jibbit.ch/products/kailar-filter-5-9mm-65stk-pink",
+        "name": "Kailar Filter 5.9mm 65stk pink",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 8.5"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "KAI-FIL-5-9MM-65S-PIN-EA",
+          "katalog_preis_ab_1_chf": 8.5,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 27,
+            "odoo_product_id": 27,
+            "url": "https://jibbit.ch/shop/kailar-filter-5-9mm-65stk-pink-27",
+            "name": "Kailar Filter 5.9mm 65stk pink",
+            "preis_chf": 8.5,
+            "streichpreis_chf": 8.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ94WKYF79J50P0ZMSJ",
+            "preis_chf": 8.5,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "4270000724510",
+            "quelle_datei": "data/gtin-sunvi.json",
+            "quelle": "sunvi.de 101603 — Kailar pink, Slim Size, 65er Pack, Ø 5,9mm, Aktivkohlefilter",
+            "einheit_laut_quelle": "Einzelpackung (65 Filter)",
+            "vertrauen": "niedrig",
+            "hinweis": "Artikel passt exakt (pink, ø5,9 mm, 65er), ABER Sunvi zeigt dieselbe GTIN 4270000724510 bei pink, schwarz, weiss und ungebleicht – kann nicht für alle Farben stimmen (Sammel-/Platzhaltercode).",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "4270000724510",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 101603 — Kailar pink, Slim Size, 65er Pack, Ø 5,9mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (65 Filter)",
+              "vertrauen": "niedrig",
+              "hinweis": "Artikel passt exakt (pink, ø5,9 mm, 65er), ABER Sunvi zeigt dieselbe GTIN 4270000724510 bei pink, schwarz, weiss und ungebleicht – kann nicht für alle Farben stimmen (Sammel-/Platzhaltercode).",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "kailar-filter-5-9mm-65stk-schwarz",
+      "name": "Kailar Filter 5.9mm 65stk schwarz",
+      "marke": "Kailar",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 26,
+        "url": "https://jibbit.ch/shop/kailar-filter-5-9mm-65stk-schwarz-26",
+        "name_de": "Kailar Filter 5.9mm 65stk schwarz",
+        "namen_en_fr_it": [
+          "Kailar Filer 5.9mm 65stk schwarz"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": "Anzahl Preis 1 CHF 8.50 5+ CHF 8.30 10+ CHF 8.10",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/26/image_1024?unique=5b40015"
+      },
+      "test_storefront": {
+        "handle": "kailar-filter-5-9mm-65stk-schwarz",
+        "url": "https://test.jibbit.ch/products/kailar-filter-5-9mm-65stk-schwarz",
+        "name": "Kailar Filter 5.9mm 65stk schwarz",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 8.5"
+        ]
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «Kailar Filer 5.9mm 65stk schwarz» statt «Kailar Filter 5.9mm 65stk schwarz»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "KAI-FIL-5-9MM-65S-SCH-EA",
+          "katalog_preis_ab_1_chf": 8.5,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 26,
+            "odoo_product_id": 26,
+            "url": "https://jibbit.ch/shop/kailar-filter-5-9mm-65stk-schwarz-26",
+            "name": "Kailar Filter 5.9mm 65stk schwarz",
+            "preis_chf": 8.5,
+            "streichpreis_chf": 8.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ9YC1VWZ8P1S4DDG0T",
+            "preis_chf": 8.5,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "4270000724510",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de TIP-162-BK — Kailar Cellulose Aktivkohle-Filter Slim ø 5,9mm, 65 Tips/Beutel, schwarz",
+            "einheit_laut_quelle": "single",
+            "vertrauen": "niedrig",
+            "hinweis": "Artikel passt, aber Knistermann zeigt für weiss UND schwarz dieselbe GTIN — höchstens eine Farbe kann stimmen. Am Beutel scannen.",
+            "auffaelligkeit": "Gleiche GTIN 4270000724510 wie TIP-162-WZ (weiss).",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": "2 Quellen einig: 4270000724510",
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "4270000724510",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de TIP-162-BK — Kailar Cellulose Aktivkohle-Filter Slim ø 5,9mm, 65 Tips/Beutel, schwarz",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "niedrig",
+              "hinweis": "Artikel passt, aber Knistermann zeigt für weiss UND schwarz dieselbe GTIN — höchstens eine Farbe kann stimmen. Am Beutel scannen.",
+              "auffaelligkeit": "Gleiche GTIN 4270000724510 wie TIP-162-WZ (weiss).",
+              "pruefziffer_gueltig": true
+            },
+            {
+              "gtin": "4270000724510",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 101601 — Kailar schwarz, Slim Size, 65er Pack, Ø 5,9mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (65 Filter)",
+              "vertrauen": "niedrig",
+              "hinweis": "Artikel passt exakt, aber die GTIN ist bei Sunvi für alle vier 65er-Farben identisch – nicht farbspezifisch, am Pack prüfen.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "kailar-filter-5-9mm-65stk-weiss",
+      "name": "Kailar Filter 5.9mm 65stk weiss",
+      "marke": "Kailar",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 11,
+        "url": "https://jibbit.ch/shop/kailar-filter-5-9mm-65stk-weiss-11",
+        "name_de": "Kailar Filter 5.9mm 65stk weiss",
+        "namen_en_fr_it": [
+          "(COMING SOON)"
+        ],
+        "interne_referenz": null,
+        "untertitel": "Kailar Aktivkohlefilter",
+        "staffel_text": "Anzahl Preis 1 CHF 8.50 5+ CHF 8.30 10+ CHF 8.10",
+        "coming_soon_platzhalter": "nur Name der EN/FR/IT-Seiten lautet «(COMING SOON)»; DE-Seite ist ein normales, kaufbares Produkt",
+        "bild": "https://jibbit.ch/web/image/product.template/11/image_1024?unique=9bb55e6"
+      },
+      "test_storefront": {
+        "handle": "kailar-filter-5-9mm-65stk-weiss",
+        "url": "https://test.jibbit.ch/products/kailar-filter-5-9mm-65stk-weiss",
+        "name": "Kailar Filter 5.9mm 65stk weiss",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 8.5"
+        ]
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «(COMING SOON)» statt «Kailar Filter 5.9mm 65stk weiss»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "KAI-FIL-5-9MM-65S-WEI-EA",
+          "katalog_preis_ab_1_chf": 8.5,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 11,
+            "odoo_product_id": 11,
+            "url": "https://jibbit.ch/shop/kailar-filter-5-9mm-65stk-weiss-11",
+            "name": "Kailar Filter 5.9mm 65stk weiss",
+            "preis_chf": 8.5,
+            "streichpreis_chf": 8.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ9JJ6HR1F9XE3JNAA7",
+            "preis_chf": 8.5,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "4270000724510",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de TIP-162-WZ — Kailar Cellulose Aktivkohle-Filter Slim ø 5,9mm, 65 Tips/Beutel, weiß",
+            "einheit_laut_quelle": "single",
+            "vertrauen": "niedrig",
+            "hinweis": "Artikel passt, aber Knistermann zeigt für weiss UND schwarz dieselbe GTIN — höchstens eine Farbe kann stimmen. Am Beutel scannen.",
+            "auffaelligkeit": "Gleiche GTIN 4270000724510 wie TIP-162-BK (schwarz). Websuche bestätigt nur «Kailar Cellulose Slim 5,9mm 65 Stk.», nicht die Farbe.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": "2 Quellen einig: 4270000724510",
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "4270000724510",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de TIP-162-WZ — Kailar Cellulose Aktivkohle-Filter Slim ø 5,9mm, 65 Tips/Beutel, weiß",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "niedrig",
+              "hinweis": "Artikel passt, aber Knistermann zeigt für weiss UND schwarz dieselbe GTIN — höchstens eine Farbe kann stimmen. Am Beutel scannen.",
+              "auffaelligkeit": "Gleiche GTIN 4270000724510 wie TIP-162-BK (schwarz). Websuche bestätigt nur «Kailar Cellulose Slim 5,9mm 65 Stk.», nicht die Farbe.",
+              "pruefziffer_gueltig": true
+            },
+            {
+              "gtin": "4270000724510",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 101602 — Kailar weiß, Slim Size, 65er Pack, Ø 5,9mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (65 Filter)",
+              "vertrauen": "niedrig",
+              "hinweis": "Artikel passt exakt, aber die GTIN ist bei Sunvi für alle vier 65er-Farben identisch – nicht farbspezifisch, am Pack prüfen.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "kailar-filter-9mm-big-100-stk-schwarz",
+      "name": "Kailar Filter 9mm BIG 100 stk schwarz",
+      "marke": "Kailar",
+      "lieferant": {
+        "name": "Knistermann (vermutet)",
+        "grundlage": "nur aus Marke/Name abgeleitet — Artikel steht NICHT in Bestellung 61334"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 29,
+        "url": "https://jibbit.ch/shop/kailar-filter-9mm-big-100-stk-schwarz-29",
+        "name_de": "Kailar Filter 9mm BIG 100 stk schwarz",
+        "namen_en_fr_it": [
+          "Kailar Filter 9mm BIG 100 stk schwarz"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": null,
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/29/image_1024?unique=73b0e88"
+      },
+      "test_storefront": {
+        "handle": "kailar-filter-9mm-big-100-stk-schwarz",
+        "url": "https://test.jibbit.ch/products/kailar-filter-9mm-big-100-stk-schwarz",
+        "name": "Kailar Filter 9mm BIG 100 stk schwarz",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 15.9"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "KAI-FIL-9MM-BIG-100-STK-EA",
+          "katalog_preis_ab_1_chf": 15.9,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 29,
+            "odoo_product_id": 29,
+            "url": "https://jibbit.ch/shop/kailar-filter-9mm-big-100-stk-schwarz-29",
+            "name": "Kailar Filter 9mm BIG  100 stk schwarz",
+            "preis_chf": 15.9,
+            "streichpreis_chf": 16.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJ9WJ3BB6AGKZDZGKB6",
+            "preis_chf": 15.9,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "4262430130191",
+            "quelle_datei": "data/gtin-sunvi.json",
+            "quelle": "sunvi.de 101616 — Kailar schwarz, Big Size, 100er Pack, Ø 9mm, Aktivkohlefilter",
+            "einheit_laut_quelle": "Einzelpackung (100er Tüte)",
+            "vertrauen": "hoch",
+            "hinweis": "Kailar schwarz, Big Size ø9 mm, 100er – deckt sich vollständig; eigene GTIN (nicht der 65er-Sammelcode).",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "4262430130191",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 101616 — Kailar schwarz, Big Size, 100er Pack, Ø 9mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (100er Tüte)",
+              "vertrauen": "hoch",
+              "hinweis": "Kailar schwarz, Big Size ø9 mm, 100er – deckt sich vollständig; eigene GTIN (nicht der 65er-Sammelcode).",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "ocb-bio-slim-organic-hemp-rolls",
+      "name": "OCB Bio Slim Organic Hemp Rolls",
+      "marke": "OCB",
+      "lieferant": {
+        "name": "Hemag Nova",
+        "grundlage": "belegt: Position in Hemag-Nova-Bestellung 90030067307 vom 2025-12-11 (gtin-hemagnova.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json (Staffel vervollständigt in catalog-extra.json)",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 40,
+        "url": "https://jibbit.ch/shop/ocb-bio-slim-organic-hemp-rolls-40",
+        "name_de": "OCB Bio Slim Organic Hemp Rolls",
+        "namen_en_fr_it": [
+          "OCB Bio Slim Organic Hemp Rolls (24)"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": null,
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/40/image_1024?unique=4cb2ef3"
+      },
+      "test_storefront": {
+        "handle": null,
+        "hinweis": "nicht in test.jibbit.ch/sitemap.xml"
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «OCB Bio Slim Organic Hemp Rolls (24)» statt «OCB Bio Slim Organic Hemp Rolls»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [
+        {
+          "gtin": "3057067323242",
+          "quelle_datei": "data/gtin-sunvi.json",
+          "quelle": "sunvi.de 10172 — OCB Rolls Organic Hemp Slim 24 Rolls je 4 Meter",
+          "einheit_laut_quelle": "Display 24 Rolls je 4 m (Umkarton 10)",
+          "vertrauen": "niedrig",
+          "hinweis": "OCB Organic Hemp Slim Rolls passt zum Artikel, aber 24er-Display; jibbit führt nur «Einzeln» → nur Referenz.",
+          "pruefziffer_gueltig": true
+        }
+      ],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "OCB-BIO-SLI-ORG-HEM-ROL-EA",
+          "katalog_preis_ab_1_chf": null,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 40,
+            "odoo_product_id": 40,
+            "url": "https://jibbit.ch/shop/ocb-bio-slim-organic-hemp-rolls-40",
+            "name": "OCB Bio Slim Organic Hemp Rolls",
+            "preis_chf": 2,
+            "streichpreis_chf": null,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 120
+            }
+          },
+          "test_storefront": null,
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "3057067323242",
+            "quelle_datei": "data/gtin-hemagnova.json",
+            "quelle": "shop.hemagnova.ch RB7433 — OCB Bio Slim Organic Hemp Rolls (24)",
+            "einheit_laut_quelle": "unklar — vermutlich Display (24er-Box)",
+            "vertrauen": "niedrig",
+            "hinweis": "Produkt passt sicher (Name identisch). Code ist aber sehr wahrscheinlich der des 24er-Displays; jibbit hat nur «Einzeln» (Mindestmenge 24). Für eine künftige Display-Variante wäre er ein guter Kandidat (dann: mittel). Einzelrolle scannen — erwartet wird eine GTIN-8.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "3057067323242",
+              "quelle_datei": "data/gtin-hemagnova.json",
+              "quelle": "shop.hemagnova.ch RB7433 — OCB Bio Slim Organic Hemp Rolls (24)",
+              "einheit_laut_quelle": "unklar — vermutlich Display (24er-Box)",
+              "vertrauen": "niedrig",
+              "hinweis": "Produkt passt sicher (Name identisch). Code ist aber sehr wahrscheinlich der des 24er-Displays; jibbit hat nur «Einzeln» (Mindestmenge 24). Für eine künftige Display-Variante wäre er ein guter Kandidat (dann: mittel). Einzelrolle scannen — erwartet wird eine GTIN-8.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "ocb-premium-kss-papers-mit-filter",
+      "name": "OCB Premium KSS Papers mit Filter",
+      "marke": "OCB",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": "3",
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 7,
+        "url": "https://jibbit.ch/shop/3-ocb-premium-kss-papers-mit-filter-7",
+        "name_de": "OCB Premium KSS Papers mit Filter",
+        "namen_en_fr_it": [
+          "OCB Premium KSS Papers mit Filter"
+        ],
+        "interne_referenz": "3",
+        "untertitel": "Papers + Filters",
+        "staffel_text": "Anzahl Preis 1 CHF 1.95 10+ CHF 1.85 32+ (Box) CHF 1.65 64+ (2x Box) CHF 1.55 160+ (5x Box) CHF 1.45",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/7/image_1024?unique=f47c142"
+      },
+      "test_storefront": {
+        "handle": null,
+        "hinweis": "nicht in test.jibbit.ch/sitemap.xml"
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [
+        {
+          "gtin": "3057067331322",
+          "quelle_datei": "data/gtin-sunvi.json",
+          "quelle": "sunvi.de 10125 — OCB KS Schwarz Premium Slim + Tips 32 Hefte je 32 Blatt",
+          "einheit_laut_quelle": "Box 32 Hefte je 32 Blatt + Tips (Umkarton 24)",
+          "vertrauen": "niedrig",
+          "hinweis": "OCB Schwarz Premium King Size Slim + Tips passt zum Artikel, aber Box-Einheit (32 Hefte); jibbit führt nur «Einzeln» → nur Referenz.",
+          "pruefziffer_gueltig": true
+        }
+      ],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "OCB-PRE-KSS-PAP-MIT-FIL-EA",
+          "katalog_preis_ab_1_chf": 1.95,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 7,
+            "odoo_product_id": 7,
+            "url": "https://jibbit.ch/shop/3-ocb-premium-kss-papers-mit-filter-7",
+            "name": "OCB Premium KSS Papers mit Filter",
+            "preis_chf": 1.95,
+            "streichpreis_chf": 2.1,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": null,
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        }
+      ]
+    },
+    {
+      "handle": "ocb-premium-kurz",
+      "name": "OCB Premium kurz",
+      "marke": "OCB",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": "5",
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 9,
+        "url": "https://jibbit.ch/shop/5-ocb-premium-kurz-9",
+        "name_de": "OCB Premium kurz",
+        "namen_en_fr_it": [
+          "OCB Premium kurz"
+        ],
+        "interne_referenz": "5",
+        "untertitel": "Ziggi Papers im Double Window Format, schwarz",
+        "staffel_text": "Anzahl Preis 1 CHF 1.79 10+ CHF 1.59 25+ (Box) CHF 1.49 50+ (2x Box) CHF 1.00 100+ (4x Box) CHF 0.95",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/9/image_1024?unique=03f2fd4"
+      },
+      "test_storefront": {
+        "handle": "ocb-premium-kurz",
+        "url": "https://test.jibbit.ch/products/ocb-premium-kurz",
+        "name": "OCB Premium kurz",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.8"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [
+        {
+          "gtin": "3057067096252",
+          "quelle_datei": "data/gtin-sunvi.json",
+          "quelle": "sunvi.de 10106 — OCB kurz Schwarz Premium 25 Hefte je 100 Blatt",
+          "einheit_laut_quelle": "Box 25 Hefte je 100 Blatt",
+          "vertrauen": "niedrig",
+          "hinweis": "OCB Schwarz Premium kurz 100 Blatt (Double Window) passt, Sunvi verkauft aber die 25er-Box; OCB-Einzelhefte tragen üblicherweise GTIN-8. Dieselbe Nummer steht bei derhollaender.ch auf «OCB Kurz Double Window» – Einheit (Heft vs. Box) am Karton klären.",
+          "pruefziffer_gueltig": true
+        }
+      ],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "OCB-PRE-KUR-EA",
+          "katalog_preis_ab_1_chf": 1.79,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 9,
+            "odoo_product_id": 9,
+            "url": "https://jibbit.ch/shop/5-ocb-premium-kurz-9",
+            "name": "OCB Premium kurz",
+            "preis_chf": 1.79,
+            "streichpreis_chf": 2,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJA22KBAQVD7JHEJ6TM",
+            "preis_chf": 1.8,
+            "in_stock": true
+          },
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        }
+      ]
+    },
+    {
+      "handle": "ocb-premium-rolls-slim",
+      "name": "OCB Premium Rolls Slim",
+      "marke": "OCB",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": "7",
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 3,
+        "url": "https://jibbit.ch/shop/7-ocb-premium-rolls-slim-3",
+        "name_de": "OCB Premium Rolls Slim",
+        "namen_en_fr_it": [
+          "OCB Premium Rolls Slim"
+        ],
+        "interne_referenz": "7",
+        "untertitel": "4 Meter Rolls, gebleicht",
+        "staffel_text": "Anzahl Preis 10+ CHF 1.75 24+ (Box) CHF 1.55 48+ (2x Box) CHF 1.45 120+ (5x Box) CHF 1.30",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/3/image_1024?unique=e5dbef9"
+      },
+      "test_storefront": {
+        "handle": "ocb-black-premium-rolls-slim",
+        "url": "https://test.jibbit.ch/products/ocb-black-premium-rolls-slim",
+        "name": "OCB Black Premium Rolls Slim",
+        "handle_weicht_ab": true,
+        "varianten": [
+          "Einzeln = CHF 1.95"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [
+        {
+          "gtin": "3057067089247",
+          "quelle_datei": "data/gtin-sunvi.json",
+          "quelle": "sunvi.de 10104 — OCB Rolls Schwarz Premium Slim 24 Rolls je 4 Meter",
+          "einheit_laut_quelle": "Display 24 Rolls je 4 m (Umkarton 10)",
+          "vertrauen": "niedrig",
+          "hinweis": "Artikel passt (OCB Premium/Schwarz Rolls Slim 4 m), aber 24er-Display; die Einzelrolle trägt eine GTIN-8 (Kandidat 30062092). jibbit führt nur «Einzeln» → nur Referenz.",
+          "pruefziffer_gueltig": true
+        }
+      ],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "OCB-PRE-ROL-SLI-EA",
+          "katalog_preis_ab_1_chf": 1.95,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 3,
+            "odoo_product_id": 3,
+            "url": "https://jibbit.ch/shop/7-ocb-premium-rolls-slim-3",
+            "name": "OCB Premium Rolls Slim",
+            "preis_chf": 1.95,
+            "streichpreis_chf": 2,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJAZ5RWA6VSFV41PV1R",
+            "preis_chf": 1.95,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "30062092",
+            "quelle_datei": "data/gtin-candidates.json",
+            "quelle": "derhollaender.ch — OCB Rolls Premium \"Black\" — CHF 2.00",
+            "vertrauen": "mittel",
+            "hinweis": "OCB Premium ist die schwarze, gebleichte Linie; unsere Beschreibung sagt «4 m, gebleicht». Passt, aber die 4 m stehen beim Holländer nicht dabei — am Karton gegenprüfen.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "30062092",
+              "quelle_datei": "data/gtin-candidates.json",
+              "quelle": "derhollaender.ch — OCB Rolls Premium \"Black\" — CHF 2.00",
+              "vertrauen": "mittel",
+              "hinweis": "OCB Premium ist die schwarze, gebleichte Linie; unsere Beschreibung sagt «4 m, gebleicht». Passt, aber die 4 m stehen beim Holländer nicht dabei — am Karton gegenprüfen.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "ocb-slim-filter-bio-120-tips",
+      "name": "OCB Slim Filter Bio (120 Tips)",
+      "marke": "OCB",
+      "lieferant": {
+        "name": "Hemag Nova",
+        "grundlage": "belegt: Position in Hemag-Nova-Bestellung 90030067307 vom 2025-12-11 (gtin-hemagnova.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 41,
+        "url": "https://jibbit.ch/shop/ocb-slim-filter-bio-120-tips-41",
+        "name_de": "OCB Slim Filter Bio (120 Tips)",
+        "namen_en_fr_it": [
+          "OCB Slim Filter Bio (10x120 Tips)"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": null,
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/41/image_1024?unique=9f6a8a7"
+      },
+      "test_storefront": {
+        "handle": "ocb-slim-filter-bio-120-tips",
+        "url": "https://test.jibbit.ch/products/ocb-slim-filter-bio-120-tips",
+        "name": "OCB Slim Filter Bio (120 Tips)",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.8"
+        ]
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «OCB Slim Filter Bio (10x120 Tips)» statt «OCB Slim Filter Bio (120 Tips)»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [
+        {
+          "gtin": "3057068104109",
+          "quelle_datei": "data/gtin-sunvi.json",
+          "quelle": "sunvi.de 12010 — OCB Filter Slim Organic Hemp 10 Beutel je 120 Filter",
+          "einheit_laut_quelle": "Gebinde 10 Beutel je 120 Filter",
+          "vertrauen": "niedrig",
+          "hinweis": "OCB Slim Filter Organic Hemp 120er passt, aber Gebinde à 10 Beutel; jibbit führt nur «Einzeln» → nur Referenz.",
+          "pruefziffer_gueltig": true
+        }
+      ],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "OCB-SLI-FIL-BIO-120-TIP-EA",
+          "katalog_preis_ab_1_chf": 1.8,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 41,
+            "odoo_product_id": 41,
+            "url": "https://jibbit.ch/shop/ocb-slim-filter-bio-120-tips-41",
+            "name": "OCB Slim Filter Bio (120 Tips)",
+            "preis_chf": 1.8,
+            "streichpreis_chf": null,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 7
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJBT1FF84TXWSJ0SSR5",
+            "preis_chf": 1.8,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "3057068104109",
+            "quelle_datei": "data/gtin-hemagnova.json",
+            "quelle": "shop.hemagnova.ch RB2223 — OCB Slim Filter Bio (10x120 Tips)",
+            "einheit_laut_quelle": "unklar — vermutlich Gebinde (10 Beutel)",
+            "vertrauen": "niedrig",
+            "hinweis": "Produkt passt sicher (OCB Slim Bio, 120 Tips pro Beutel). Code gehört aber vermutlich zum 10er-Gebinde, jibbit verkauft den Einzelbeutel. Beutel scannen.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "3057068104109",
+              "quelle_datei": "data/gtin-hemagnova.json",
+              "quelle": "shop.hemagnova.ch RB2223 — OCB Slim Filter Bio (10x120 Tips)",
+              "einheit_laut_quelle": "unklar — vermutlich Gebinde (10 Beutel)",
+              "vertrauen": "niedrig",
+              "hinweis": "Produkt passt sicher (OCB Slim Bio, 120 Tips pro Beutel). Code gehört aber vermutlich zum 10er-Gebinde, jibbit verkauft den Einzelbeutel. Beutel scannen.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "purize-aktivkohlefilter-o-9mm",
+      "name": "PURIZE Aktivkohlefilter ø 9mm",
+      "marke": "PURIZE",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 60,
+        "url": "https://jibbit.ch/shop/purize-aktivkohlefilter-9mm-60",
+        "name_de": "PURIZE Aktivkohlefilter ø 9mm",
+        "namen_en_fr_it": [
+          "PURIZE Aktivkohlefilter ø 9mm"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": "Anzahl Preis 1 CHF 7.40 10+ CHF 7.20 50+ CHF 6.70",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/60/image_1024?unique=303ba06"
+      },
+      "test_storefront": {
+        "handle": "purize-aktivkohlefilter-o-9mm",
+        "url": "https://test.jibbit.ch/products/purize-aktivkohlefilter-o-9mm",
+        "name": "PURIZE Aktivkohlefilter ø 9mm",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 7.4"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "PUR-AKT-O-9MM-EA",
+          "katalog_preis_ab_1_chf": 7.4,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 60,
+            "odoo_product_id": 60,
+            "url": "https://jibbit.ch/shop/purize-aktivkohlefilter-9mm-60",
+            "name": "PURIZE Aktivkohlefilter ø 9mm",
+            "preis_chf": 7.4,
+            "streichpreis_chf": 7.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": -1
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJBVR72PXT8RTM8Z4NP",
+            "preis_chf": 7.4,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "42660748410653",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de PURIZE-002 — PURIZE Aktivkohlefilter, ø 9mm, 50er Packung",
+            "einheit_laut_quelle": "single",
+            "vertrauen": "mittel",
+            "hinweis": "Artikel deckt sich, aber der Knistermann-Code ist ungültig erfasst — siehe gtin_korrigiert_vorschlag. Farbe der 9mm-Filter nennt Knistermann nicht (PURIZE vergibt je Farbe eigene GTINs).",
+            "auffaelligkeit": "Knistermann führt 42660748410653 (14 Stellen, Feld gtin14) — GS1-Prüfziffer UNGÜLTIG. Sehr wahrscheinlich Tippfehler (eine 6 zu viel): 4260748410653 ist eine gültige EAN-13, trägt das PURIZE-Präfix 4260748 der beiden anderen PURIZE-Artikel und wird von visionofhemp.ch für «Purize Filter Regular» geführt.",
+            "gtin_korrigiert_vorschlag": "4260748410653",
+            "gtin_korrigiert_quelle": "Ableitung (1 Ziffer entfernt) + Websuche, https://www.visionofhemp.ch/shop/en/active-charcoal-filter/7596-purize-filter-regular.html — nicht von Knistermann",
+            "pruefziffer_gueltig": false,
+            "gtin_korrigiert_pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": "KONFLIKT — Quellen nennen verschiedene Nummern: 42660748410653 (knistermann) vs. 4260748410653 (sunvi) vs. 4260748411384 (sunvi)",
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "42660748410653",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de PURIZE-002 — PURIZE Aktivkohlefilter, ø 9mm, 50er Packung",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "mittel",
+              "hinweis": "Artikel deckt sich, aber der Knistermann-Code ist ungültig erfasst — siehe gtin_korrigiert_vorschlag. Farbe der 9mm-Filter nennt Knistermann nicht (PURIZE vergibt je Farbe eigene GTINs).",
+              "auffaelligkeit": "Knistermann führt 42660748410653 (14 Stellen, Feld gtin14) — GS1-Prüfziffer UNGÜLTIG. Sehr wahrscheinlich Tippfehler (eine 6 zu viel): 4260748410653 ist eine gültige EAN-13, trägt das PURIZE-Präfix 4260748 der beiden anderen PURIZE-Artikel und wird von visionofhemp.ch für «Purize Filter Regular» geführt.",
+              "gtin_korrigiert_vorschlag": "4260748410653",
+              "gtin_korrigiert_quelle": "Ableitung (1 Ziffer entfernt) + Websuche, https://www.visionofhemp.ch/shop/en/active-charcoal-filter/7596-purize-filter-regular.html — nicht von Knistermann",
+              "pruefziffer_gueltig": false,
+              "gtin_korrigiert_pruefziffer_gueltig": true
+            },
+            {
+              "gtin": "4260748410653",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 07664 — PURIZE White, 50er Pack., Regular Size 9mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (50 Filter)",
+              "vertrauen": "niedrig",
+              "hinweis": "jibbit nennt nur «ø 9 mm» ohne Farbe/Stückzahl; Sunvi führt 9 mm in White, Organic, Pink, Spy, Lilac, AllColour, short sowie als 50/100/250er. White 50er ist nur der wahrscheinlichste Kandidat.",
+              "pruefziffer_gueltig": true
+            },
+            {
+              "gtin": "4260748411384",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 07726 — PURIZE Organic; 50er Pack. Regular Size 9mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (50 Filter)",
+              "vertrauen": "niedrig",
+              "hinweis": "Alternative zum vorigen Eintrag: Regular 9 mm «Organic» 50er. Nur eine der beiden kann stimmen – Farbe/Stückzahl am Pack klären.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "purize-super-slim-white-o5mm",
+      "name": "Purize SUPER SLIM White ø5mm",
+      "marke": "PURIZE",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 48,
+        "url": "https://jibbit.ch/shop/purize-super-slim-white-5mm-48",
+        "name_de": "Purize SUPER SLIM White ø5mm",
+        "namen_en_fr_it": [
+          "Purize Super SLIM White, 50er Pack, 5mm (Kopie)"
+        ],
+        "interne_referenz": null,
+        "untertitel": "50er Pack im Beutel",
+        "staffel_text": "Anzahl Preis 1 CHF 7.80 5+ CHF 7.60 10+ CHF 7.40",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/48/image_1024?unique=e9c36cb"
+      },
+      "test_storefront": {
+        "handle": "purize-super-slim-white-o5mm",
+        "url": "https://test.jibbit.ch/products/purize-super-slim-white-o5mm",
+        "name": "Purize SUPER SLIM White ø5mm",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 7.8"
+        ]
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «Purize Super SLIM White, 50er Pack, 5mm (Kopie)» statt «Purize SUPER SLIM White ø5mm»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "PUR-SUP-SLI-WHI-O5M-EA",
+          "katalog_preis_ab_1_chf": 7.8,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 48,
+            "odoo_product_id": 48,
+            "url": "https://jibbit.ch/shop/purize-super-slim-white-5mm-48",
+            "name": "Purize SUPER SLIM White ø5mm",
+            "preis_chf": 7.8,
+            "streichpreis_chf": 8.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJB035XEHT9N7BKPT13",
+            "preis_chf": 7.8,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "4260748413173",
+            "quelle_datei": "data/gtin-sunvi.json",
+            "quelle": "sunvi.de 77115 — PURIZE Weiß; 50er Pack; Super Slim Size Ø 5mm, Aktivkohlefilter",
+            "einheit_laut_quelle": "Einzelpackung (50 Filter); Display wäre 20 Stk.",
+            "vertrauen": "hoch",
+            "hinweis": "Super Slim ø5 mm, weiss, 50er-Pack – identisch; Seite nennt «1 Stück (50er Pack)».",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": "KONFLIKT — Quellen nennen verschiedene Nummern: 4260748413173 (sunvi) vs. 4260748413166 (knistermann)",
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "4260748413173",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 77115 — PURIZE Weiß; 50er Pack; Super Slim Size Ø 5mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (50 Filter); Display wäre 20 Stk.",
+              "vertrauen": "hoch",
+              "hinweis": "Super Slim ø5 mm, weiss, 50er-Pack – identisch; Seite nennt «1 Stück (50er Pack)».",
+              "pruefziffer_gueltig": true
+            },
+            {
+              "gtin": "4260748413166",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de PURIZE-098 — PURIZE® Super Slim Size Aktivkohlefilter, ø 5mm, 50er Packung",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "mittel",
+              "hinweis": "Marke, ø 5 mm und 50er-Pack stimmen; Knistermann nennt aber keine Farbe, jibbit führt explizit «White» — Farbe am Beutel prüfen.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "purize-xtra-slim-white-50er-pack-5-9mm",
+      "name": "Purize Xtra SLIM White, 50er Pack, 5.9mm",
+      "marke": "PURIZE",
+      "lieferant": {
+        "name": "Knistermann (vermutet)",
+        "grundlage": "nur aus Marke/Name abgeleitet — Artikel steht NICHT in Bestellung 61334"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": "6",
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 10,
+        "url": "https://jibbit.ch/shop/6-purize-xtra-slim-white-50er-pack-5-9mm-10",
+        "name_de": "Purize Xtra SLIM White, 50er Pack, 5.9mm",
+        "namen_en_fr_it": [
+          "PURIZE White, 50er Pack"
+        ],
+        "interne_referenz": "6",
+        "untertitel": "Aktivkohle Filter Xtra Slim",
+        "staffel_text": "Anzahl Preis 5+ CHF 7.70 10+ CHF 7.40",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/10/image_1024?unique=996f6f2"
+      },
+      "test_storefront": {
+        "handle": "purize-xtra-slim-white-50er-pack-5-9mm",
+        "url": "https://test.jibbit.ch/products/purize-xtra-slim-white-50er-pack-5-9mm",
+        "name": "Purize Xtra SLIM White, 50er Pack, 5.9mm",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 7.8"
+        ]
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «PURIZE White, 50er Pack» statt «Purize Xtra SLIM White, 50er Pack, 5.9mm»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "PUR-XTR-SLI-WHI-50E-PAC-EA",
+          "katalog_preis_ab_1_chf": 7.8,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 10,
+            "odoo_product_id": 10,
+            "url": "https://jibbit.ch/shop/6-purize-xtra-slim-white-50er-pack-5-9mm-10",
+            "name": "Purize Xtra SLIM White, 50er Pack, 5.9mm",
+            "preis_chf": 7.8,
+            "streichpreis_chf": 8.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJB4WZWXQEKZ3XZHF76",
+            "preis_chf": 7.8,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "4260748410363",
+            "quelle_datei": "data/gtin-sunvi.json",
+            "quelle": "sunvi.de 07701 — PURIZE White, 50er Pack., Xtra Slim Size Ø 5,9mm, Aktivkohlefilter",
+            "einheit_laut_quelle": "Einzelpackung (50 Filter); Sunvi verkauft stückweise",
+            "vertrauen": "hoch",
+            "hinweis": "Marke, Linie Xtra Slim ø5,9 mm, Farbe White und 50er-Pack decken sich; Sunvi verkauft die Einzelpackung, PURIZE-Präfix 4260748.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "4260748410363",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 07701 — PURIZE White, 50er Pack., Xtra Slim Size Ø 5,9mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (50 Filter); Sunvi verkauft stückweise",
+              "vertrauen": "hoch",
+              "hinweis": "Marke, Linie Xtra Slim ø5,9 mm, Farbe White und 50er-Pack decken sich; Sunvi verkauft die Einzelpackung, PURIZE-Präfix 4260748.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "purize-xtra-slim-xmas-o-6mm",
+      "name": "PURIZE XTRA Slim XMAS ø 6mm",
+      "marke": "PURIZE",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 54,
+        "url": "https://jibbit.ch/shop/purize-xtra-slim-xmas-6mm-54",
+        "name_de": "PURIZE XTRA Slim XMAS ø 6mm",
+        "namen_en_fr_it": [
+          "PURIZE XTRA Slim XMAS ø 5,9mm"
+        ],
+        "interne_referenz": null,
+        "untertitel": "Limited Edition",
+        "staffel_text": "Anzahl Preis 1 CHF 7.80 5+ CHF 7.60 10+ CHF 7.40",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/54/image_1024?unique=d8243ed"
+      },
+      "test_storefront": {
+        "handle": null,
+        "hinweis": "nicht in test.jibbit.ch/sitemap.xml"
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «PURIZE XTRA Slim XMAS ø 5,9mm» statt «PURIZE XTRA Slim XMAS ø 6mm»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "PUR-XTR-SLI-XMA-O-6MM-EA",
+          "katalog_preis_ab_1_chf": 7.8,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 54,
+            "odoo_product_id": 54,
+            "url": "https://jibbit.ch/shop/purize-xtra-slim-xmas-6mm-54",
+            "name": "PURIZE XTRA Slim XMAS ø 6mm",
+            "preis_chf": 7.8,
+            "streichpreis_chf": 8.9,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": -3
+            }
+          },
+          "test_storefront": null,
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "4260748412169",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de PURIZE-021 — PURIZE Aktivkohlefilter, XTRA Slim XMAS, ø 5,9mm, 50er Packung",
+            "einheit_laut_quelle": "single",
+            "vertrauen": "hoch",
+            "hinweis": "XMAS-Edition, Xtra Slim ø 5,9 mm, 50er — deckt sich (jibbit-Katalog rundet auf ø 6 mm). PURIZE-Präfix 4260748.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": "2 Quellen einig: 4260748412169",
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "4260748412169",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de PURIZE-021 — PURIZE Aktivkohlefilter, XTRA Slim XMAS, ø 5,9mm, 50er Packung",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "hoch",
+              "hinweis": "XMAS-Edition, Xtra Slim ø 5,9 mm, 50er — deckt sich (jibbit-Katalog rundet auf ø 6 mm). PURIZE-Präfix 4260748.",
+              "pruefziffer_gueltig": true
+            },
+            {
+              "gtin": "4260748412169",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 77020 — PURIZE Weihnachtsedition, 50er Pack., Xtra Slim Size Ø 5,9mm, Aktivkohlefilter",
+              "einheit_laut_quelle": "Einzelpackung (50 Filter)",
+              "vertrauen": "mittel",
+              "hinweis": "Weihnachtsedition Xtra Slim ø5,9 mm 50er passt, aber PURIZE bringt jährlich neue XMAS-Designs; ob es dieselbe Auflage (und ein 50er-Pack) ist, am Pack prüfen.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "raw-black-kss-papers",
+      "name": "RAW Black KSS Papers",
+      "marke": "RAW",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 2,
+        "url": "https://jibbit.ch/shop/raw-black-kss-papers-2",
+        "name_de": "RAW Black KSS Papers",
+        "namen_en_fr_it": [
+          "RAW Black KSS Papers"
+        ],
+        "interne_referenz": null,
+        "untertitel": "King Size Slim Papers Extra fein",
+        "staffel_text": null,
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/2/image_1024?unique=39061ff"
+      },
+      "test_storefront": {
+        "handle": "raw-black-kss-papers",
+        "url": "https://test.jibbit.ch/products/raw-black-kss-papers",
+        "name": "RAW Black KSS Papers",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.9",
+          "Display (50 Stk.) = CHF 50"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "RAW-BLA-KSS-PAP-EA",
+          "katalog_preis_ab_1_chf": 1.89,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "Odoo-Variante (Attribut «Menge»)",
+            "odoo_template_id": 2,
+            "odoo_product_id": 64,
+            "url": "https://jibbit.ch/shop/raw-black-kss-papers-2",
+            "name": "RAW Black KSS Papers (Einzel)",
+            "preis_chf": 1.89,
+            "streichpreis_chf": 55,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJC60FVZNR5T1S67WRZ",
+            "preis_chf": 1.9,
+            "in_stock": true
+          },
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        },
+        {
+          "titel": "Display (50 Stk.)",
+          "pack_type": "display",
+          "units_per_pack": 50,
+          "sku": "RAW-BLA-KSS-PAP-D50",
+          "katalog_preis_ab_1_chf": 50,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "Odoo-Variante (Attribut «Menge» = «50 Stk (Display)»)",
+            "odoo_template_id": 2,
+            "odoo_product_id": 65,
+            "url": "https://jibbit.ch/shop/raw-black-kss-papers-2",
+            "name": "RAW Black KSS Papers (50 Stk (Display))",
+            "preis_chf": 50,
+            "streichpreis_chf": 55,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJFEYXKQN9APVV8M0TM",
+            "preis_chf": 50,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "716165250326",
+            "quelle_datei": "data/gtin-sunvi.json",
+            "quelle": "sunvi.de 10145 — RAW Classic King Size Black Slim, 50 Hefte je 32 Blatt",
+            "einheit_laut_quelle": "Display 50 Hefte je 32 Blatt",
+            "vertrauen": "mittel",
+            "hinweis": "RAW Black Classic King Size Slim, 50er-Display = jibbits Display-Grösse. Sunvi verkauft die Box, daher vermutlich Box-Code; bei RAW tragen Heft und Box verschiedene UPCs – NICHT für «Einzeln» verwenden.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "716165250326",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 10145 — RAW Classic King Size Black Slim, 50 Hefte je 32 Blatt",
+              "einheit_laut_quelle": "Display 50 Hefte je 32 Blatt",
+              "vertrauen": "mittel",
+              "hinweis": "RAW Black Classic King Size Slim, 50er-Display = jibbits Display-Grösse. Sunvi verkauft die Box, daher vermutlich Box-Code; bei RAW tragen Heft und Box verschiedene UPCs – NICHT für «Einzeln» verwenden.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "raw-classic-rolls-slim",
+      "name": "RAW Classic Rolls Slim",
+      "marke": "RAW",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": "4",
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 8,
+        "url": "https://jibbit.ch/shop/4-raw-classic-rolls-slim-8",
+        "name_de": "RAW Classic Rolls Slim",
+        "namen_en_fr_it": [
+          "RAW Classic Rolls Slim"
+        ],
+        "interne_referenz": "4",
+        "untertitel": "5 Meter Rolls, ungebleicht",
+        "staffel_text": "Anzahl Preis 1 CHF 1.95 10+ CHF 1.85 24+ (Box) CHF 1.55 48+ (2x Box) CHF 1.50 120+ (5x Box) CHF 1.40",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/8/image_1024?unique=1d607d9"
+      },
+      "test_storefront": {
+        "handle": "raw-classic-rolls-slim",
+        "url": "https://test.jibbit.ch/products/raw-classic-rolls-slim",
+        "name": "RAW Classic Rolls Slim",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.95"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [
+        {
+          "gtin": "716165250142",
+          "quelle_datei": "data/gtin-sunvi.json",
+          "quelle": "sunvi.de 13042 — RAW Rolls Classic Slim 24 Rolls je 5 Meter",
+          "einheit_laut_quelle": "Display 24 Rolls je 5 m",
+          "vertrauen": "niedrig",
+          "hinweis": "Artikel passt (RAW Classic Rolls Slim 5 m), aber Sunvi listet das 24er-Display; die Einzelrolle hat laut gtin-candidates.json 716165280293. jibbit führt nur «Einzeln» → keine passende Variante, nur Referenz.",
+          "pruefziffer_gueltig": true
+        }
+      ],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "RAW-CLA-ROL-SLI-EA",
+          "katalog_preis_ab_1_chf": 1.95,
+          "katalog_gtin": "716165280293",
+          "katalog_gtin_pruefziffer_gueltig": true,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": "data/gtin-candidates.json",
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 8,
+            "odoo_product_id": 8,
+            "url": "https://jibbit.ch/shop/4-raw-classic-rolls-slim-8",
+            "name": "RAW Classic Rolls Slim",
+            "preis_chf": 1.95,
+            "streichpreis_chf": 3.2,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJFP3CJF29B048WJAKY",
+            "preis_chf": 1.95,
+            "in_stock": true
+          },
+          "gtin_status": "vorhanden",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "716165280293",
+              "quelle_datei": "data/gtin-candidates.json",
+              "quelle": "derhollaender.ch — Raw Rolls, King Size Slim, Classic, ungebleicht 5mtr — CHF 2.50",
+              "vertrauen": "hoch",
+              "hinweis": "Unsere Beschreibung sagt «RAW Classic, 5 m pro Rolle, ungebleicht» — Länge und Ausführung sind identisch.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "raw-kristallglas-aschenbecher-darkside",
+      "name": "RAW Kristallglas Aschenbecher Darkside",
+      "marke": "RAW",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 52,
+        "url": "https://jibbit.ch/shop/raw-kristallglas-aschenbecher-darkside-52",
+        "name_de": "RAW Kristallglas Aschenbecher Darkside",
+        "namen_en_fr_it": [
+          "RAW Kristallglas Aschenbecher Darkside"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": null,
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/52/image_1024?unique=9d55d4b"
+      },
+      "test_storefront": {
+        "handle": "raw-kristallglas-aschenbecher-darkside",
+        "url": "https://test.jibbit.ch/products/raw-kristallglas-aschenbecher-darkside",
+        "name": "RAW Kristallglas Aschenbecher Darkside",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 27"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "RAW-KRI-ASC-DAR-EA",
+          "katalog_preis_ab_1_chf": 27,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 52,
+            "odoo_product_id": 52,
+            "url": "https://jibbit.ch/shop/raw-kristallglas-aschenbecher-darkside-52",
+            "name": "RAW Kristallglas Aschenbecher Darkside",
+            "preis_chf": 27,
+            "streichpreis_chf": 29,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJFHFZ72GGQ9EAJZS67",
+            "preis_chf": 27,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "716165299530",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de AS-119-GY — RAW Kristallglas Aschenbecher, ø ca. 11,5cm, Darkside",
+            "einheit_laut_quelle": "single",
+            "vertrauen": "hoch",
+            "hinweis": "Identischer Artikel (RAW Kristallglas Darkside, Einzelstück); HBI/RAW-Präfix 716165.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "716165299530",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de AS-119-GY — RAW Kristallglas Aschenbecher, ø ca. 11,5cm, Darkside",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "hoch",
+              "hinweis": "Identischer Artikel (RAW Kristallglas Darkside, Einzelstück); HBI/RAW-Präfix 716165.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "raw-kristallglas-aschenbecher-rainbow",
+      "name": "RAW Kristallglas Aschenbecher Rainbow",
+      "marke": "RAW",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 50,
+        "url": "https://jibbit.ch/shop/raw-kristallglas-aschenbecher-rainbow-50",
+        "name_de": "RAW Kristallglas Aschenbecher Rainbow",
+        "namen_en_fr_it": [
+          "RAW Kristallglas Aschenbecher Rainbow"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": null,
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/50/image_1024?unique=a28fc54"
+      },
+      "test_storefront": {
+        "handle": "raw-kristallglas-aschenbecher-rainbow",
+        "url": "https://test.jibbit.ch/products/raw-kristallglas-aschenbecher-rainbow",
+        "name": "RAW Kristallglas Aschenbecher Rainbow",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 27"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "RAW-KRI-ASC-RAI-EA",
+          "katalog_preis_ab_1_chf": 27,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 50,
+            "odoo_product_id": 50,
+            "url": "https://jibbit.ch/shop/raw-kristallglas-aschenbecher-rainbow-50",
+            "name": "RAW Kristallglas Aschenbecher Rainbow",
+            "preis_chf": 27,
+            "streichpreis_chf": 29,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJGYXCKDCEQH52P3EGA",
+            "preis_chf": 27,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "716165299523",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de AS-119-RW — RAW Kristallglas Aschenbecher, ø ca. 11,5cm, Rainbow",
+            "einheit_laut_quelle": "single",
+            "vertrauen": "hoch",
+            "hinweis": "Identischer Artikel (RAW Kristallglas Rainbow, Einzelstück); HBI/RAW-Präfix 716165.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "716165299523",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de AS-119-RW — RAW Kristallglas Aschenbecher, ø ca. 11,5cm, Rainbow",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "hoch",
+              "hinweis": "Identischer Artikel (RAW Kristallglas Rainbow, Einzelstück); HBI/RAW-Präfix 716165.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "raw-kristallglas-aschenbecher-ruby",
+      "name": "RAW Kristallglas Aschenbecher Ruby",
+      "marke": "RAW",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 51,
+        "url": "https://jibbit.ch/shop/raw-kristallglas-aschenbecher-ruby-51",
+        "name_de": "RAW Kristallglas Aschenbecher Ruby",
+        "namen_en_fr_it": [
+          "RAW Kristallglas Aschenbecher Ruby"
+        ],
+        "interne_referenz": null,
+        "untertitel": "Limited Edition",
+        "staffel_text": null,
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/51/image_1024?unique=7e71ce3"
+      },
+      "test_storefront": {
+        "handle": "raw-kristallglas-aschenbecher-ruby",
+        "url": "https://test.jibbit.ch/products/raw-kristallglas-aschenbecher-ruby",
+        "name": "RAW Kristallglas Aschenbecher Ruby",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 27"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "RAW-KRI-ASC-RUB-EA",
+          "katalog_preis_ab_1_chf": 27,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 51,
+            "odoo_product_id": 51,
+            "url": "https://jibbit.ch/shop/raw-kristallglas-aschenbecher-ruby-51",
+            "name": "RAW Kristallglas Aschenbecher Ruby",
+            "preis_chf": 27,
+            "streichpreis_chf": 29,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJG5CVTTS3BFP17Y73Q",
+            "preis_chf": 27,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "716165310556",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de AS-157 — RAW Kristallglas Aschenbecher Ruby",
+            "einheit_laut_quelle": "single",
+            "vertrauen": "hoch",
+            "hinweis": "Identischer Artikel (RAW Kristallglas Ruby, Einzelstück); HBI/RAW-Präfix 716165.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "716165310556",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de AS-157 — RAW Kristallglas Aschenbecher Ruby",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "hoch",
+              "hinweis": "Identischer Artikel (RAW Kristallglas Ruby, Einzelstück); HBI/RAW-Präfix 716165.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "smoking-brown-kurz-double-window",
+      "name": "Smoking Brown kurz (double window)",
+      "marke": "Smoking",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 28,
+        "url": "https://jibbit.ch/shop/smoking-brown-kurz-double-window-28",
+        "name_de": "Smoking Brown kurz (double window)",
+        "namen_en_fr_it": [
+          "Smoking Brown Double Window"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": "Anzahl Preis Total 10+ CHF 1.50 CHF 15 25+ CHF 0.96 CHF 24",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/28/image_1024?unique=fdfebcb"
+      },
+      "test_storefront": {
+        "handle": "smoking-brown-kurz-double-window",
+        "url": "https://test.jibbit.ch/products/smoking-brown-kurz-double-window",
+        "name": "Smoking Brown kurz (double window)",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.9",
+          "Display (25 Stk.) = CHF 24"
+        ]
+      },
+      "namensabweichungen": [
+        "EN/FR/IT-Seiten zeigen «Smoking Brown Double Window» statt «Smoking Brown kurz (double window)»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "SMO-BRO-KUR-DOU-WIN-EA",
+          "katalog_preis_ab_1_chf": 1.9,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 28,
+            "odoo_product_id": 28,
+            "url": "https://jibbit.ch/shop/smoking-brown-kurz-double-window-28",
+            "name": "Smoking Brown kurz (double window)",
+            "preis_chf": 1.9,
+            "streichpreis_chf": 2,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJGCGWYQMV458FN2YCK",
+            "preis_chf": 1.9,
+            "in_stock": true
+          },
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        },
+        {
+          "titel": "Display (25 Stk.)",
+          "pack_type": "display",
+          "units_per_pack": 25,
+          "sku": "SMO-BRO-KUR-DOU-WIN-D25",
+          "katalog_preis_ab_1_chf": 24,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt (Display/Box-Seite)",
+            "odoo_template_id": 34,
+            "odoo_product_id": 34,
+            "url": "https://jibbit.ch/shop/display-25x-smoking-brown-kurz-double-window-34",
+            "name": "Display: 25x Smoking Brown kurz (double window)",
+            "preis_chf": 24,
+            "streichpreis_chf": 50,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJG149TQD8A5Q9PS07R",
+            "preis_chf": 24,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "8414775014698",
+            "quelle_datei": "data/gtin-sunvi.json",
+            "quelle": "sunvi.de 14698 — Smoking Regular Brown Double Window 25 Hefte 120 Blatt",
+            "einheit_laut_quelle": "Display 25 Hefte je 120 Blatt",
+            "vertrauen": "hoch",
+            "hinweis": "Smoking Regular Brown Double Window; Sunvi weist die Nummer ausdrücklich als «EAN Display» aus, 25er-Display = jibbits Display. Blattzahl (120) am Heft gegenprüfen.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "8414775014698",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 14698 — Smoking Regular Brown Double Window 25 Hefte 120 Blatt",
+              "einheit_laut_quelle": "Display 25 Hefte je 120 Blatt",
+              "vertrauen": "hoch",
+              "hinweis": "Smoking Regular Brown Double Window; Sunvi weist die Nummer ausdrücklich als «EAN Display» aus, 25er-Display = jibbits Display. Blattzahl (120) am Heft gegenprüfen.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "zig-zag-slim-filter-6mm-120stk",
+      "name": "Zig Zag Slim Filter 6mm 120stk",
+      "marke": "Zig-Zag",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 32,
+        "url": "https://jibbit.ch/shop/zig-zag-slim-filter-6mm-120stk-32",
+        "name_de": "Zig Zag Slim Filter 6mm 120stk",
+        "namen_en_fr_it": [
+          "Zig Zag Slim Filter 6mm 120stk"
+        ],
+        "interne_referenz": null,
+        "untertitel": null,
+        "staffel_text": "Anzahl Preis Total 10+ CHF 1.50 CHF 15 34+ CHF 1.15 CHF 39.10",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/32/image_1024?unique=2dc7e01"
+      },
+      "test_storefront": {
+        "handle": "zig-zag-slim-filter-6mm-120stk",
+        "url": "https://test.jibbit.ch/products/zig-zag-slim-filter-6mm-120stk",
+        "name": "Zig Zag Slim Filter 6mm 120stk",
+        "handle_weicht_ab": false,
+        "varianten": [
+          "Einzeln = CHF 1.6",
+          "Display (34 Stk.) = CHF 39.1"
+        ]
+      },
+      "namensabweichungen": [],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "ZIG-ZAG-SLI-FIL-6MM-120-EA",
+          "katalog_preis_ab_1_chf": 1.6,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 32,
+            "odoo_product_id": 32,
+            "url": "https://jibbit.ch/shop/zig-zag-slim-filter-6mm-120stk-32",
+            "name": "Zig Zag Slim Filter 6mm 120stk",
+            "preis_chf": 1.6,
+            "streichpreis_chf": 1.7,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJHJW252E4CZXY3CD9P",
+            "preis_chf": 1.6,
+            "in_stock": true
+          },
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        },
+        {
+          "titel": "Display (34 Stk.)",
+          "pack_type": "display",
+          "units_per_pack": 34,
+          "sku": "ZIG-ZAG-SLI-FIL-6MM-120-D34",
+          "katalog_preis_ab_1_chf": 39.1,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt (Display/Box-Seite)",
+            "odoo_template_id": 33,
+            "odoo_product_id": 33,
+            "url": "https://jibbit.ch/shop/display-34x-zig-zag-slim-filter-6mm-120stk-33",
+            "name": "Display: 34x Zig Zag Slim Filter 6mm 120stk",
+            "preis_chf": 39.1,
+            "streichpreis_chf": 40.800000000000004,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": {
+            "variant_id": "variant_01M0E9MGJHEVK8FBDEM1RTTCN0",
+            "preis_chf": 39.1,
+            "in_stock": true
+          },
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "3057068011346",
+            "quelle_datei": "data/gtin-sunvi.json",
+            "quelle": "sunvi.de 12007 — Zig-Zag Slim Filter 34 Beutel je 120 Filter",
+            "einheit_laut_quelle": "Display 34 Beutel je 120 Filter (Umkarton 8)",
+            "vertrauen": "mittel",
+            "hinweis": "Zig-Zag Slim Filter 120er, 34er-Display = jibbits Display-Grösse; Präfix 305706 (Republic Technologies) passt. Vermutlich Display-Code – nicht für «Einzeln» verwenden.",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "3057068011346",
+              "quelle_datei": "data/gtin-sunvi.json",
+              "quelle": "sunvi.de 12007 — Zig-Zag Slim Filter 34 Beutel je 120 Filter",
+              "einheit_laut_quelle": "Display 34 Beutel je 120 Filter (Umkarton 8)",
+              "vertrauen": "mittel",
+              "hinweis": "Zig-Zag Slim Filter 120er, 34er-Display = jibbits Display-Grösse; Präfix 305706 (Republic Technologies) passt. Vermutlich Display-Code – nicht für «Einzeln» verwenden.",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "handle": "black-leaf-el-humeros-konische-huelsen-ks-100x",
+      "name": "Black Leaf El Humeros Konische Hülsen KS 100x",
+      "marke": "Black Leaf",
+      "lieferant": {
+        "name": null,
+        "grundlage": "unbekannt"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog-extra.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 47,
+        "url": "https://jibbit.ch/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-47",
+        "name_de": "Black Leaf El Humeros Konische Hülsen KS 100X",
+        "namen_en_fr_it": [
+          "Black Leaf El Humeros Konische Hülsen KS 100X (Kopie)"
+        ],
+        "interne_referenz": null,
+        "untertitel": "100 Kingsize Hülsen",
+        "staffel_text": "Anzahl Preis 1 CHF 15.20 5+ CHF 13.90 10+ CHF 12.60",
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/47/image_1024?unique=c9de20f"
+      },
+      "test_storefront": {
+        "handle": null,
+        "hinweis": "nicht in test.jibbit.ch/sitemap.xml"
+      },
+      "namensabweichungen": [
+        "Katalog «Black Leaf El Humeros Konische Hülsen KS 100x» vs. live (DE) «Black Leaf El Humeros Konische Hülsen KS 100X»",
+        "EN/FR/IT-Seiten zeigen «Black Leaf El Humeros Konische Hülsen KS 100X (Kopie)» statt «Black Leaf El Humeros Konische Hülsen KS 100X»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "BLA-LEA-EL-HUM-KON-HUE-EA",
+          "katalog_preis_ab_1_chf": 17.9,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 47,
+            "odoo_product_id": 47,
+            "url": "https://jibbit.ch/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-47",
+            "name": "Black Leaf El Humeros Konische Hülsen KS 100X",
+            "preis_chf": 17.9,
+            "streichpreis_chf": null,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "product",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": null,
+          "gtin_status": "fehlt",
+          "gtin_vorschlag": null,
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": []
+        }
+      ]
+    },
+    {
+      "handle": "silikon-dose-o-22mm-hellgruen",
+      "name": "Silikon Dose ø 22mm hellgrün",
+      "marke": "No-Name (Silikon)",
+      "lieferant": {
+        "name": "Knistermann",
+        "grundlage": "belegt: Position in Knistermann-Bestellung 61334 vom 2026-05-05 (gtin-knistermann.json)"
+      },
+      "in_catalog": true,
+      "catalog_datei": "catalog-extra.json",
+      "catalog_ref": null,
+      "live": {
+        "vorhanden": true,
+        "odoo_template_id": 55,
+        "url": "https://jibbit.ch/shop/silikon-dose-22mm-55",
+        "name_de": "Silikon Dose ø 22mm",
+        "namen_en_fr_it": [
+          "Silikon Dose ø 22mm, hellgrün"
+        ],
+        "interne_referenz": null,
+        "untertitel": "hellgrün",
+        "staffel_text": null,
+        "coming_soon_platzhalter": false,
+        "bild": "https://jibbit.ch/web/image/product.template/55/image_1024?unique=5f7e18d"
+      },
+      "test_storefront": {
+        "handle": "silikon-dose-22-mm",
+        "url": "https://test.jibbit.ch/products/silikon-dose-22-mm",
+        "name": "Silikon Dose ø 22mm",
+        "handle_weicht_ab": true,
+        "varianten": [
+          "Default variant = CHF 0"
+        ]
+      },
+      "namensabweichungen": [
+        "Katalog «Silikon Dose ø 22mm hellgrün» vs. live (DE) «Silikon Dose ø 22mm»",
+        "EN/FR/IT-Seiten zeigen «Silikon Dose ø 22mm, hellgrün» statt «Silikon Dose ø 22mm»"
+      ],
+      "gebinde_codes_ohne_jibbit_variante": [],
+      "varianten": [
+        {
+          "titel": "Einzeln",
+          "pack_type": "single",
+          "units_per_pack": 1,
+          "sku": "SIL-DOS-O-22M-HEL-EA",
+          "katalog_preis_ab_1_chf": 1.1,
+          "katalog_gtin": null,
+          "katalog_gtin_pruefziffer_gueltig": null,
+          "katalog_gtin_deckt_sich_mit_vorschlag_aus": null,
+          "live": {
+            "gefuehrt_als": "eigenes Odoo-Produkt",
+            "odoo_template_id": 55,
+            "odoo_product_id": 55,
+            "url": "https://jibbit.ch/shop/silikon-dose-22mm-55",
+            "name": "Silikon Dose ø 22mm",
+            "preis_chf": 1.1,
+            "streichpreis_chf": null,
+            "verfuegbarkeit": {
+              "kaufbar": true,
+              "bestand_auf_seite_sichtbar": false,
+              "odoo_product_type": "consu",
+              "allow_out_of_stock_order": true,
+              "free_qty_laut_endpoint": 0
+            }
+          },
+          "test_storefront": null,
+          "gtin_status": "vorschlag",
+          "gtin_vorschlag": {
+            "gtin": "0725844729039",
+            "quelle_datei": "data/gtin-knistermann.json",
+            "quelle": "shop.knistermann.de ZU-SI-33 — Silikon Dose, ca. ø 22mm, hellgrün",
+            "einheit_laut_quelle": "single",
+            "vertrauen": "mittel",
+            "hinweis": "Artikel deckt sich (Silikon Dose ø22mm hellgrün; steht in catalog-extra.json). No-Name-Ware — prüfen, ob auf der Ware überhaupt ein Barcode ist.",
+            "auffaelligkeit": "Knistermann führt 0725844729039 als gtin13; das ist der UPC-A 725844729039 mit führender Null (selbe Nummer, beide Schreibweisen gültig).",
+            "gtin_alternativ_schreibweise": "725844729039",
+            "pruefziffer_gueltig": true
+          },
+          "gtin_quellenlage": null,
+          "gtin_vorschlaege_alle": [
+            {
+              "gtin": "0725844729039",
+              "quelle_datei": "data/gtin-knistermann.json",
+              "quelle": "shop.knistermann.de ZU-SI-33 — Silikon Dose, ca. ø 22mm, hellgrün",
+              "einheit_laut_quelle": "single",
+              "vertrauen": "mittel",
+              "hinweis": "Artikel deckt sich (Silikon Dose ø22mm hellgrün; steht in catalog-extra.json). No-Name-Ware — prüfen, ob auf der Ware überhaupt ein Barcode ist.",
+              "auffaelligkeit": "Knistermann führt 0725844729039 als gtin13; das ist der UPC-A 725844729039 mit führender Null (selbe Nummer, beide Schreibweisen gültig).",
+              "gtin_alternativ_schreibweise": "725844729039",
+              "pruefziffer_gueltig": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "nur_auf_test_storefront": [
+    {
+      "handle": "elements-ultra-thin-king-size-slim-kss",
+      "url": "https://test.jibbit.ch/products/elements-ultra-thin-king-size-slim-kss",
+      "name": "Elements Ultra Thin King Size Slim",
+      "varianten": [
+        "5er Pack = CHF 13.5",
+        "1 Heftchen = CHF 2.9"
+      ],
+      "einordnung": "weder auf jibbit.ch noch in catalog.json/catalog-extra.json — Seed-/Demo-Produkt oder von Hand im Admin angelegt (vgl. backend/src/scripts/seed.ts, remove-seed-demo.ts)",
+      "gtin_status": "fehlt (nicht bewertet — kein Katalogartikel)"
+    },
+    {
+      "handle": "raw-classic-king-size-slim",
+      "url": "https://test.jibbit.ch/products/raw-classic-king-size-slim",
+      "name": "RAW Classic King Size Slim",
+      "varianten": [
+        "1 Heftchen = CHF 2.5",
+        "Box (50 Heftchen) = CHF 99"
+      ],
+      "einordnung": "weder auf jibbit.ch noch in catalog.json/catalog-extra.json — Seed-/Demo-Produkt oder von Hand im Admin angelegt (vgl. backend/src/scripts/seed.ts, remove-seed-demo.ts)",
+      "gtin_status": "fehlt (nicht bewertet — kein Katalogartikel)"
+    },
+    {
+      "handle": "purize-xtra-slim-6mm",
+      "url": "https://test.jibbit.ch/products/purize-xtra-slim-6mm",
+      "name": "PURIZE XTRA Slim Aktivkohlefilter 6 mm",
+      "varianten": [
+        "50 Stück = CHF 6.5",
+        "100 Stück = CHF 10.9"
+      ],
+      "einordnung": "weder auf jibbit.ch noch in catalog.json/catalog-extra.json — Seed-/Demo-Produkt oder von Hand im Admin angelegt (vgl. backend/src/scripts/seed.ts, remove-seed-demo.ts)",
+      "gtin_status": "fehlt (nicht bewertet — kein Katalogartikel)"
+    },
+    {
+      "handle": "purize-aktivkohlefilter-6mm",
+      "url": "https://test.jibbit.ch/products/purize-aktivkohlefilter-6mm",
+      "name": "PURIZE Aktivkohlefilter 9 mm",
+      "varianten": [
+        "50 Stück = CHF 5.9",
+        "100 Stück = CHF 9.9",
+        "250 Stück = CHF 21.9"
+      ],
+      "einordnung": "weder auf jibbit.ch noch in catalog.json/catalog-extra.json — Seed-/Demo-Produkt oder von Hand im Admin angelegt (vgl. backend/src/scripts/seed.ts, remove-seed-demo.ts)",
+      "gtin_status": "fehlt (nicht bewertet — kein Katalogartikel)"
+    }
+  ],
+  "gtin_vorschlaege_ohne_jibbit_produkt": [
+    {
+      "gtin": "4014663817505",
+      "quelle_datei": "data/gtin-knistermann.json",
+      "quelle": "shop.knistermann.de ZU-SI-24 — Silikon Schüssel, ø ca. 65mm",
+      "einheit_laut_quelle": "unklar (4er-Set oder Einzelstück)",
+      "vertrauen": "niedrig",
+      "hinweis": "Kein passendes Produkt in catalog.json / catalog-extra.json gefunden (Silikon Schüssel ø65mm ist bei jibbit nicht gelistet).",
+      "pruefziffer_gueltig": true
+    },
+    {
+      "gtin": "7612800211185",
+      "quelle_datei": "data/gtin-hemagnova.json",
+      "quelle": "shop.hemagnova.ch RB8294 — Parisienne Authentique 6x25 gr. Beutel",
+      "einheit_laut_quelle": "unklar — zwei verschiedene Codes, möglicherweise einer für den Beutel und einer für die 6er-Stange (oder alter/neuer Hersteller-Code: Präfix 761 = Schweiz, 87 = Niederlande)",
+      "vertrauen": "niedrig",
+      "hinweis": "Kein Tabak in catalog.json / product-content.json — kein passendes jibbit-Produkt. Nur der Vollständigkeit halber erfasst.",
+      "pruefziffer_gueltig": true
+    }
+  ],
+  "gtin_quelldateien": [
+    {
+      "datei": "data/gtin-candidates.json",
+      "geaendert": "2026-09-20T10:04:45.898Z"
+    },
+    {
+      "datei": "data/gtin-knistermann.json",
+      "geaendert": "2026-09-20T11:50:02.348Z"
+    },
+    {
+      "datei": "data/gtin-hemagnova.json",
+      "geaendert": "2026-09-20T11:51:58.318Z"
+    },
+    {
+      "datei": "data/gtin-sunvi.json",
+      "geaendert": "2026-09-20T11:52:53.222Z"
+    }
+  ],
+  "auffaelligkeiten": [
+    "jibbit.ch liefert KEIN JSON-LD. Einzige strukturierte Daten: Microdata schema.org/Product (name, url, image) + Offer (price, priceCurrency, dazu das nicht standardisierte «listPrice»). Kein brand, sku, gtin, availability, description.",
+    "test.jibbit.ch liefert je Produkt einen JSON-LD-Product-Block mit name, description, image, offers (ein Offer, nur erste Variante) — ohne sku, gtin, brand; «brand» ist im Seiten-Payload überall leer.",
+    "Odoo-Produktseiten zeigen keine interne Referenz; sie steckt nur im display_name des öffentlichen Endpunkts /website_sale/get_combination_info. Nur 5 Produkte haben eine: [7] OCB Premium Rolls Slim, [3] OCB Premium KSS Papers mit Filter, [4] RAW Classic Rolls Slim, [5] OCB Premium kurz, [6] Purize Xtra SLIM White — deckungsgleich mit «ref» in catalog.json.",
+    "Die EN/FR/IT-Sprachversionen sind unübersetzt und tragen alte Arbeitsnamen: «(COMING SOON)» (ID 11 = Kailar weiss), «Kailar Filer …» (ID 26, Tippfehler), «(Kopie)» an ID 47, 48, 61, «PURIZE White, 50er Pack» (ID 10), «Angel Slim Filters» (13), «Smoking Brown Double Window» (28), «OCB Bio Slim Organic Hemp Rolls (24)» (40), «OCB Slim Filter Bio (10x120 Tips)» (41), «Silikon Dose ø 22mm, hellgrün» (55), «Elements King Size Ultra Thin» (56), «PURIZE XTRA Slim XMAS ø 5,9mm» (54). Die DE-Seiten sind sauber. Echte COMING-SOON-Platzhalter ohne Produkt gibt es keine.",
+    "Widerspruch Durchmesser: PURIZE XMAS heisst DE «ø 6mm», EN/FR/IT «ø 5,9mm»; Knistermann führt den Artikel als ø 5,9mm.",
+    "Widerspruch Format: DE «Elements King Slim Size Ultra Thin», EN/FR/IT «Elements King Size Ultra Thin»; die Knistermann-Bestellung war King Size (nicht Slim) — vor GTIN-Übernahme am Heftchen klären.",
+    "Odoo-Anzeigename ID 29 hat ein doppeltes Leerzeichen («Kailar Filter 9mm BIG  100 stk schwarz»). Katalog schreibt «KS 100x», live «KS 100X» (Black Leaf).",
+    "Black Leaf (ID 47): Microdata-Preis ist «17.900000000000002» (Float-Artefakt); die Staffeltabelle im Seitentext nennt dagegen «1 CHF 15.20». dubi (ID 49): Preis 7.50, Staffeltext «1 CHF 7.90».",
+    "Streichpreise auf live teils unplausibel: RAW Black KSS Einzeln zeigt CHF 55 durchgestrichen (= Display-Listenpreis), Display Smoking Brown CHF 50.",
+    "Odoo führt Display/Box uneinheitlich: 5× als eigenes Produkt (ID 31, 33, 34, 57, 59), 2× als Variante per Attribut «Menge» (RAW Black KSS: product.product 64/65; Angel: 72/73). Zusammen 33 Templates = 35 verkaufbare Einheiten = exakt die 35 Katalogvarianten.",
+    "Verfügbarkeit: alle 35 Einheiten sind kaufbar (Warenkorb-Button, allow_out_of_stock_order=true überall, Bestandsanzeige aus). free_qty laut Endpunkt ist kein verlässlicher Bestand (Verbrauchsartikel = 0, mehrere lagergeführte negativ: Gizeh −20, PURIZE XMAS −3, PURIZE 9mm −1, Box Elements BLUE −1).",
+    "catalog.json trägt an 3 Varianten ein «gtin» (uncommitted, während dieser Erhebung am 2026-09-20 eingetragen; zu Beginn der Erhebung hatte keine Variante eines): Greengo Unbleached Slim Rolls Einzeln 85966789, Greengo Unbleached Slim Rolls Display (24 Stk.) 8595134501285, RAW Classic Rolls Slim Einzeln 716165280293 — identisch mit den «hoch»-Vorschlägen aus gtin-candidates.json, dessen _geprueft_am weiterhin null ist. SKUs stehen nur in inventory.json (deterministisch aus skuFor in import-catalog.ts).",
+    "Quellenkonflikt PURIZE Super Slim White ø5mm: Knistermann (ohne Farbangabe) 4260748413166 vs. Sunvi («Weiß») 4260748413173 — am Beutel scannen. Übereinstimmungen: PURIZE XMAS 4260748412169 (Knistermann + Sunvi); dubi 9120089700019 und PURIZE 9mm 4260748410653 — Sunvi bestätigt jeweils die KORRIGIERTE Nummer, nicht den bei Knistermann falsch erfassten Code. Für PURIZE 9mm nennt Sunvi zwei Farben (White 4260748410653, Organic 4260748411384) — Farbe klären.",
+    "Hemag Nova und Sunvi führen für Gizeh, OCB (Rolls, kurz, KSS+Tips, Bio Rolls, Bio Filter) und RAW Classic Rolls nur Gebinde-Codes; jibbit verkauft dort nur «Einzeln» — auch wo gtin-hemagnova.json formal auf «Einzeln» zeigt (Vertrauen niedrig), fehlt die Einzelpackungs-GTIN faktisch weiter. Der in gtin-candidates.json als Falle markierte Code 3057067096252 ist laut Sunvi die 25er-Box «OCB kurz Schwarz Premium».",
+    "gtin-candidates.json: Liste «kein_kandidat» benutzt Handles, die es so nicht gibt (z. B. «kailar-filter-5.9mm-65stk-pink», «purize-aktivkohlefilter-9mm», «purize-xtra-slim-white-50er-5.9mm», «kailar-filter-9mm-big-100stk-schwarz»); die 4 Einträge unter «uebernehmen» stimmen. Auf test.jibbit.ch heisst «ocb-premium-rolls-slim» aber «ocb-black-premium-rolls-slim» (vermutlich im Admin umbenannt) — beim Einspielen per Handle beachten.",
+    "gtin-knistermann.json / gtin-sunvi.json: Kailar weiss, schwarz und (bei Sunvi) pink teilen sich dieselbe GTIN 4270000724510 (nicht farbspezifisch, höchstens eine stimmt); dubi- und PURIZE-9mm-Code sind bei Knistermann falsch erfasst (korrigierte Vorschläge stammen aus Websuche); Elements-Codes gehören vermutlich zur Box, nicht zum Einzelstück; «Silikon Schüssel ø 65mm» (4014663817505) wurde bestellt, ist aber weder live noch im Katalog.",
+    "test.jibbit.ch weicht vom Katalog ab: es fehlen dort elements-king-slim-size-ultra-thin, ocb-bio-slim-organic-hemp-rolls, ocb-premium-kss-papers-mit-filter, purize-xtra-slim-xmas-o-6mm, black-leaf-el-humeros-konische-huelsen-ks-100x; «silikon-dose-22-mm» hat nur «Default variant» zu CHF 0; zusätzlich 4 Produkte, die es sonst nirgends gibt (elements-ultra-thin-king-size-slim-kss, raw-classic-king-size-slim, purize-xtra-slim-6mm, purize-aktivkohlefilter-6mm), darunter «purize-aktivkohlefilter-6mm» mit Titel «PURIZE Aktivkohlefilter 9 mm».",
+    "Preis live ≠ test.jibbit.ch: OCB Premium kurz / Einzeln: live CHF 1.79 vs. test.jibbit.ch CHF 1.8; RAW Black KSS Papers / Einzeln: live CHF 1.89 vs. test.jibbit.ch CHF 1.9"
+  ]
+}
