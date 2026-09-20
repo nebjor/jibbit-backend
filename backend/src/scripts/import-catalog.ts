@@ -22,13 +22,14 @@
  * Bilder über import-product-images.ts.
  *
  * GTIN: trägt eine Variante im Katalog ein `gtin`, landet es in Medusas
- * nativer Spalte (GTIN-13 -> ean, GTIN-12 -> upc, GTIN-8/14 -> barcode, siehe
- * gtin.ts) — mit GS1-Prüfziffer geprüft. Eine ungültige oder doppelte Nummer
- * bricht den Lauf ab, bevor irgendetwas geschrieben wird.
+ * nativer Spalte variant.ean — jede Länge (8/12/13/14), siehe gtin.ts — mit
+ * GS1-Prüfziffer geprüft. Eine ungültige oder doppelte Nummer bricht den Lauf
+ * ab, bevor irgendetwas geschrieben wird. upc/barcode schreibt dieses Script
+ * nicht.
  *
- * Daneben können je Variante ean (8–14 Ziffern, ohne Prüfziffern-Kontrolle
- * direkt nach variant.ean — das Feld der Galaxus-Anbindung) und weight_g
- * (Gramm) gepflegt sein, je Produkt brand (Marke). Alle drei braucht die
+ * Daneben können je Variante ean (das Feld der Galaxus-Anbindung: dieselbe
+ * Spalte variant.ean, dieselbe Prüfung wie `gtin`) und weight_g (Gramm)
+ * gepflegt sein, je Produkt brand (Marke). Alle drei braucht die
  * Galaxus-Anbindung (galaxus-export.ts); das Gewicht schaltet zusätzlich den
  * Brieftarif des swiss-shipping-Moduls frei, der ohne Gewichte nie greift.
  * Stehen `gtin` und `ean` an derselben Variante, müssen sie übereinstimmen.
@@ -53,8 +54,7 @@ import {
   createInventoryLevelsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
-import { isValidGtin } from "./galaxus-common"
-import { assertCatalogGtins, gtinFields } from "./gtin"
+import { assertCatalogGtins, catalogEan, isValidGtin } from "./gtin"
 import { roundTo } from "./import-price-tiers"
 import { parseScriptArgs } from "./script-args"
 
@@ -75,11 +75,15 @@ export type CatalogVariant = {
   /**
    * GTIN dieser Packung (8/12/13/14 Ziffern, als String — führende Nullen).
    * Je Variante, nicht je Produkt: Einzelstück und Display sind zwei Artikel
-   * mit zwei Nummern. Optional; fehlt sie, bleibt das Feld in Medusa leer.
+   * mit zwei Nummern. Landet in variant.ean. Optional; fehlt sie (und `ean`),
+   * bleibt das Feld in Medusa leer.
    */
   gtin?: string
   tiers: CatalogTier[]
-  /** GTIN/EAN, 8–14 Ziffern — Pflicht für Galaxus, sonst optional. */
+  /**
+   * GTIN/EAN — Pflicht für Galaxus, sonst optional. Dieselbe Spalte und
+   * dieselbe Prüfung wie `gtin` (8/12/13/14 Ziffern, GS1-Prüfziffer).
+   */
   ean?: string | null
   /** Verpackungsgewicht in Gramm — schaltet den Brieftarif frei. */
   weight_g?: number | null
@@ -96,7 +100,9 @@ export type CatalogProduct = {
 /**
  * EANs und Gewichte des ganzen Katalogs prüfen, BEVOR etwas geschrieben
  * wird. Eine falsche GTIN fällt sonst erst auf, wenn Galaxus die Datei
- * ablehnt; eine doppelte ordnet zwei Artikel demselben Produkt zu.
+ * ablehnt; eine doppelte ordnet zwei Artikel demselben Produkt zu. Geprüft
+ * wird mit der GS1-Prüfziffer (gtin.ts), nicht nur auf 8–14 Ziffern wie beim
+ * Auslesen in galaxus-common.ts — ein Zahlendreher soll hier auffallen.
  *
  * Exportiert, weil update-catalog.ts dieselbe Prüfung braucht.
  */
@@ -109,7 +115,10 @@ export function validateCatalogData(catalog: CatalogProduct[]): string[] {
       const where = `${entry.product} (${v.label})`
       if (v.ean != null) {
         if (!isValidGtin(v.ean)) {
-          errors.push(`${where}: EAN «${v.ean}» ist keine GTIN (8–14 Ziffern)`)
+          errors.push(
+            `${where}: EAN «${v.ean}» ist keine gültige GTIN ` +
+              `(8/12/13/14 Ziffern mit korrekter GS1-Prüfziffer)`
+          )
         } else {
           const owner = seenEans.get(v.ean)
           if (owner) {
@@ -227,8 +236,6 @@ type PreparedVariant = {
   /** Gramm — so führt Medusa Gewichte im Admin (siehe swiss-shipping). */
   weight?: number
   manage_inventory: boolean
-  upc?: string
-  barcode?: string
   options: Record<string, string>
   /** units_per_pack/pack_type — für den Grundpreis auf der Produktseite. */
   metadata: Record<string, unknown>
@@ -367,10 +374,9 @@ export default async function importCatalog({ container, args }: ExecArgs) {
       variants: entry.variants.map((v) => ({
         title: v.label,
         sku: skuFor(entry.product, v),
-        ean: v.ean ?? undefined,
+        ean: catalogEan(v),
         weight: v.weight_g ?? undefined,
         manage_inventory: manageInventory,
-        ...gtinFields(v.gtin),
         options: { [OPTION_TITLE]: v.label },
         metadata: {
           // Für den Grundpreis "CHF 0.98 / Stk." auf der Produktseite.
@@ -443,9 +449,8 @@ export default async function importCatalog({ container, args }: ExecArgs) {
           )
           .join("  ")
         logger.info(`     ${v.sku.padEnd(34)} ${v.title.padEnd(20)} ${staffeln}`)
-        const gtin = v.ean ?? v.upc ?? v.barcode
-        if (gtin) {
-          logger.info(`     ${"".padEnd(34)} GTIN ${gtin}`)
+        if (v.ean) {
+          logger.info(`     ${"".padEnd(34)} GTIN ${v.ean}`)
         }
       }
     }

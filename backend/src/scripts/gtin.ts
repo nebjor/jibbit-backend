@@ -1,28 +1,24 @@
 /**
- * GTIN (EAN/UPC) je Variante — Prüfung und Zuordnung auf Medusas native
- * Spalten. Reine Funktionen, von import-catalog.ts und update-catalog.ts
- * geteilt.
+ * GTIN (EAN/UPC) je Variante — Prüfung der Katalognummern. Reine Funktionen,
+ * von import-catalog.ts und update-catalog.ts geteilt.
  *
  * WOHIN DIE NUMMER GEHT
- * `product_variant` hat drei native Spalten, und die Nummer gehört dorthin,
- * nicht in `metadata` — das Admin zeigt und pflegt genau diese Felder, und
- * die Store-API liefert sie typisiert aus:
+ * Jede gültige GTIN — 8, 12, 13 oder 14 Ziffern — landet in `variant.ean`.
+ * Das ist die Konvention der Galaxus-Anbindung (galaxus-common.ts liest
+ * ausschliesslich `variants.ean` und nimmt dort 8–14 Ziffern), und eine
+ * zweite daneben hiesse: eine UPC-A oder EAN-8 fehlt im Galaxus-Export, nur
+ * weil sie kürzer ist. `upc` und `barcode` schreiben die Katalog-Scripts
+ * nicht; sie bleiben frei für das, was der Betreiber im Admin dort pflegt
+ * (etwa einen hauseigenen Lagercode). In `metadata` gehört die Nummer nicht —
+ * das Admin zeigt und pflegt die native Spalte, und die Store-API liefert
+ * sie typisiert aus. Die Storefront liest `ean` zuerst und bestimmt die
+ * Länge selbst (lib/gtin.ts dort).
  *
- *   GTIN-13 (EAN-13) -> ean
- *   GTIN-12 (UPC-A)  -> upc
- *   GTIN-8  (EAN-8)  -> barcode
- *   GTIN-14 (ITF-14) -> barcode
- *
- * Für GTIN-8 und GTIN-14 gibt es keine eigene Spalte. `barcode` ist das
- * Feld für «was auf der Packung gescannt wird» und damit die ehrliche Wahl;
- * `ean` bleibt 13-stellig, damit niemand, der die Spalte später ausliest
- * (Feed, Lager), auf zwei Längen gefasst sein muss. Die Storefront liest
- * alle drei Felder und prüft selbst nach (lib/gtin.ts dort) — eine im Admin
- * von Hand in `ean` getippte EAN-8 kommt also trotzdem an.
- *
- * Alle drei Spalten tragen einen Unique-Index: dieselbe Nummer an zwei
- * Varianten lässt den Schreiblauf mittendrin scheitern. Deshalb prüft
- * `validateCatalogGtins` auch auf Doppelte — vor dem ersten Schreibzugriff.
+ * Die Katalogfelder `gtin` und `ean` zielen damit auf dieselbe Spalte; beide
+ * werden gleich streng geprüft (`isValidGtin`). `variant.ean` trägt einen
+ * Unique-Index: dieselbe Nummer an zwei Varianten lässt den Schreiblauf
+ * mittendrin scheitern. Deshalb prüft `validateCatalogGtins` auch auf
+ * Doppelte — vor dem ersten Schreibzugriff.
  */
 
 import type { CatalogProduct } from "./import-catalog"
@@ -53,24 +49,15 @@ export function isValidGtin(value: unknown): value is string {
   return (10 - (sum % 10)) % 10 === check
 }
 
-export type GtinField = "ean" | "upc" | "barcode"
-
-/** Die native Spalte für eine (gültige) GTIN — Zuordnung siehe Dateikopf. */
-export function gtinFieldFor(gtin: string): GtinField {
-  if (gtin.length === 13) {
-    return "ean"
-  }
-  if (gtin.length === 12) {
-    return "upc"
-  }
-  return "barcode"
-}
-
-/** `{ ean: "…" }`, `{ upc: "…" }` oder `{ barcode: "…" }`; ohne GTIN `{}`. */
-export function gtinFields(
-  gtin: string | null | undefined
-): Partial<Record<GtinField, string>> {
-  return gtin ? { [gtinFieldFor(gtin)]: gtin } : {}
+/**
+ * Der Wert für `variant.ean` aus den beiden Katalogfeldern. `gtin` zuerst;
+ * die Validierung garantiert, dass ein zusätzliches `ean` gleich lautet.
+ */
+export function catalogEan(v: {
+  gtin?: string | null
+  ean?: string | null
+}): string | undefined {
+  return v.gtin ?? v.ean ?? undefined
 }
 
 /**
@@ -85,9 +72,9 @@ export function validateCatalogGtins(catalog: CatalogProduct[]): string[] {
   const errors: string[] = []
   const seen = new Map<string, string>()
 
-  // Das ältere Katalogfeld `ean` (Galaxus-Anbindung, siehe import-catalog.ts)
-  // schreibt ebenfalls in die Spalte ean. Eine GTIN, die dort schon an einer
-  // ANDEREN Variante steht, liefe auf denselben Unique-Index.
+  // Das Katalogfeld `ean` (Galaxus-Anbindung, siehe import-catalog.ts)
+  // schreibt in dieselbe Spalte. Eine GTIN, die dort schon an einer ANDEREN
+  // Variante steht, liefe auf denselben Unique-Index.
   const eanOwner = new Map<string, string>()
   for (const p of catalog) {
     for (const v of p.variants) {

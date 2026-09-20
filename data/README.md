@@ -67,38 +67,36 @@ Eine Variante in `catalog.json` / `catalog-extra.json` darf ein optionales
 `"gtin"` tragen — als **String** (führende Nullen), 8/12/13/14 Ziffern, je
 Packung eine eigene Nummer (Einzelstück und Display sind zwei Artikel).
 Import und Update prüfen die GS1-Prüfziffer und auf Doppelte und brechen bei
-einem Fehler ab, bevor etwas geschrieben wird. Abgelegt wird in Medusas
-nativen Varianten-Spalten, nicht in `metadata`:
+einem Fehler ab, bevor etwas geschrieben wird.
 
-| Länge            | Spalte    |
-| ---------------- | --------- |
-| GTIN-13 (EAN-13) | `ean`     |
-| GTIN-12 (UPC-A)  | `upc`     |
-| GTIN-8, GTIN-14  | `barcode` |
-
-Für GTIN-8/-14 hat Medusa keine eigene Spalte; `barcode` ist «was auf der
-Packung gescannt wird», und `ean` bleibt so durchgehend 13-stellig. Die
-Storefront liest alle drei Felder, prüft selbst nach und gibt die Nummer im
-Produkt-Schema als `gtin8`/`gtin12`/`gtin13`/`gtin14` aus. Ohne `gtin` im
-Katalog fasst `update-catalog.ts` die drei Spalten nicht an.
+Abgelegt wird **jede** gültige GTIN — 8, 12, 13 oder 14 Ziffern — in Medusas
+nativer Varianten-Spalte `ean`, nicht in `metadata`. Das ist dieselbe Spalte,
+die der Galaxus-Export liest (`galaxus-common.ts` kennt nur `variants.ean`
+und nimmt dort 8–14 Ziffern): eine UPC-A von RAW oder die EAN-8 von Greengo
+steht damit genauso im Feed wie eine EAN-13. `upc` und `barcode` schreiben
+die Katalog-Scripts nicht; die Felder bleiben frei für das, was im Admin
+dort gepflegt wird (z. B. ein hauseigener Lagercode). Die Storefront liest
+`ean` zuerst, prüft selbst nach und gibt die Nummer je nach Länge im
+Produkt-Schema als `gtin8`/`gtin12`/`gtin13`/`gtin14` aus. Ohne `gtin` (und
+ohne `ean`) im Katalog fasst `update-catalog.ts` die Spalte nicht an.
 
 Nur an der Ware geprüfte Nummern eintragen — `gtin-candidates.json` sind
 Vorschläge, keine Daten.
 
-**`gtin` oder `ean`?** Neue Nummern gehören ins Feld `gtin`: es prüft die
-Prüfziffer und wählt die Spalte nach der Länge. Das Galaxus-Feld `ean`
-(nächster Abschnitt) schreibt ungeprüft nach `variant.ean` und bleibt für
-bestehende Einträge gültig. Stehen beide an derselben Variante, müssen sie
-gleich lauten — sonst bricht der Lauf ab. Achtung: der Galaxus-Export liest
-bisher nur `variant.ean`; eine GTIN-8/-12/-14 (Spalten `barcode`/`upc`) sieht
-er nicht.
+**`gtin` oder `ean`?** Beide Katalogfelder landen in derselben Spalte
+`variant.ean` und werden gleich geprüft (Länge 8/12/13/14, GS1-Prüfziffer,
+keine Doppelten). `gtin` ist der Weg, eine Nummer einzutragen — neue Nummern
+gehören dorthin. Das Galaxus-Feld `ean` (nächster Abschnitt) bleibt für
+bestehende Einträge gültig und bedeutet dasselbe. Stehen beide an derselben
+Variante, müssen sie gleich lauten — sonst bricht der Lauf ab.
 
 ## Galaxus-Felder: `ean`, `weight_g`, `brand`
 
 Für die Anbindung ans Digitec-Galaxus-Händlerprogramm (siehe
 `docs/galaxus-marktplatz.md`) kennt das Katalogformat drei zusätzliche,
-optionale Felder — je Variante `ean` (GTIN, 8–14 Ziffern, als String, damit
-führende Nullen überleben) und `weight_g` (Verpackungsgewicht in Gramm), je
+optionale Felder — je Variante `ean` (GTIN, 8/12/13/14 Ziffern mit gültiger
+GS1-Prüfziffer, als String, damit führende Nullen überleben; gleichbedeutend
+mit `gtin`, siehe oben) und `weight_g` (Verpackungsgewicht in Gramm), je
 Produkt `brand` (Marke):
 
     {
@@ -117,8 +115,8 @@ Produkt `brand` (Marke):
       ]
     }
 
-`import-catalog.ts` und `update-catalog.ts` prüfen die EANs (8–14 Ziffern,
-keine Duplikate) und brechen bei Fehlern ab, bevor etwas geschrieben wird.
+`import-catalog.ts` und `update-catalog.ts` prüfen die EANs (8/12/13/14 Ziffern,
+GS1-Prüfziffer, keine Duplikate) und brechen bei Fehlern ab, bevor etwas geschrieben wird.
 Fehlende Felder sind erlaubt und löschen nie einen Wert in Medusa. Das
 Gewicht schaltet nebenbei den Brieftarif (CHF 3.75) des
 swiss-shipping-Moduls frei, der ohne Varianten-Gewichte nie greift.
