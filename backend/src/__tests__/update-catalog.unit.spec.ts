@@ -38,6 +38,7 @@ import updateCatalog, {
   planCatalogUpdate,
   pricesEqual,
 } from "../scripts/update-catalog"
+import { validateCatalogGtins } from "../scripts/gtin"
 import {
   CatalogProduct,
   categoryFor,
@@ -306,6 +307,63 @@ describe("planCatalogUpdate", () => {
     expect(plan.products).toHaveLength(0)
   })
 
+  it("plant die GTIN in die passende native Spalte — und nur bei Abweichung", () => {
+    const withGtin: CatalogProduct = {
+      ...angel,
+      variants: [
+        { ...angel.variants[0], gtin: "85966789" }, // GTIN-8 -> barcode
+        { ...angel.variants[1], gtin: "8595134501285" }, // GTIN-13 -> ean
+      ],
+    }
+    const plan = planCatalogUpdate({
+      ...base,
+      catalog: [withGtin],
+      existing: [existingAngel()],
+    })
+    expect(plan.products).toHaveLength(1)
+    expect(plan.products[0].variantPrices).toHaveLength(0)
+    expect(plan.products[0].variantGtins).toEqual([
+      { variant_id: "var_1", sku: angelSkuEA, field: "barcode", gtin: "85966789" },
+      { variant_id: "var_2", sku: angelSkuD, field: "ean", gtin: "8595134501285" },
+    ])
+
+    // Danach ist der Zustand gleich — zweiter Lauf plant nichts mehr.
+    const after = existingAngel()
+    after.variants[0].barcode = "85966789"
+    after.variants[1].ean = "8595134501285"
+    const second = planCatalogUpdate({
+      ...base,
+      catalog: [withGtin],
+      existing: [after],
+    })
+    expect(second.products).toHaveLength(0)
+  })
+
+  it("plant eine GTIN-13 nur einmal, wenn gtin und ean dasselbe sagen", () => {
+    const both: CatalogProduct = {
+      ...angel,
+      variants: [
+        { ...angel.variants[0], gtin: "8595134501285", ean: "8595134501285" },
+        angel.variants[1],
+      ],
+    }
+    const plan = planCatalogUpdate({
+      ...base,
+      catalog: [both],
+      existing: [existingAngel()],
+    })
+    expect(plan.products[0].variantGtins).toHaveLength(1)
+    expect(plan.products[0].variantData).toHaveLength(0)
+    expect(plan.products[0].changes).toHaveLength(1)
+  })
+
+  it("lässt im Admin gepflegte Nummern stehen, wenn der Katalog keine GTIN hat", () => {
+    const existing = existingAngel()
+    existing.variants[0].ean = "8595134501285"
+    const plan = planCatalogUpdate({ ...base, existing: [existing] })
+    expect(plan.products).toHaveLength(0)
+  })
+
   it("erhält beim Setzen der Marke vorhandene Metadaten", () => {
     const existing = existingAngel({ metadata: { seo_title: "Angel Filter" } })
     const plan = planCatalogUpdate({
@@ -354,6 +412,10 @@ describe("data/*.json", () => {
 
   const merged = mergeCatalogs(catalog, extra)
   const byHandle = new Map(merged.map((p) => [slugify(p.product), p]))
+
+  it("alle GTINs im Katalog sind gültig und eindeutig", () => {
+    expect(validateCatalogGtins(merged)).toEqual([])
+  })
 
   it("catalog-extra.json hat für jede Variante einen Preis ab Menge 1", () => {
     for (const p of extra) {
@@ -528,5 +590,44 @@ describe("updateCatalog (exec)", () => {
     )
     // Preise stimmen bereits — kein Varianten-Update.
     expect(updateProductVariantsWorkflow).not.toHaveBeenCalled()
+  })
+
+  it("Schreiblauf: setzt die GTIN über den Varianten-Workflow", async () => {
+    const gtinPath = join(dir, "catalog-gtin.json")
+    writeFileSync(
+      gtinPath,
+      JSON.stringify([
+        {
+          ...angel,
+          variants: [{ ...angel.variants[0], gtin: "716165280293" }, angel.variants[1]],
+        },
+      ])
+    )
+
+    await updateCatalog({ container, args: [gtinPath] } as any)
+
+    expect(updateProductVariantsWorkflow).toHaveBeenCalledTimes(1)
+    expect(runMock).toHaveBeenCalledWith({
+      input: { product_variants: [{ id: "var_1", upc: "716165280293" }] },
+    })
+  })
+
+  it("bricht bei einer ungültigen GTIN laut ab — auch im Trockenlauf, vor jeder Abfrage", async () => {
+    const brokenPath = join(dir, "catalog-broken.json")
+    writeFileSync(
+      brokenPath,
+      JSON.stringify([
+        {
+          ...angel,
+          variants: [{ ...angel.variants[0], gtin: "85966780" }, angel.variants[1]],
+        },
+      ])
+    )
+
+    await expect(
+      updateCatalog({ container, args: [brokenPath, "dry-run"] } as any)
+    ).rejects.toThrow(/Ungültige GTIN/)
+    expect(graphMock).not.toHaveBeenCalled()
+    expect(runMock).not.toHaveBeenCalled()
   })
 })

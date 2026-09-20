@@ -42,6 +42,14 @@
  *     Ganzes mit den Staffeln aus dem Katalog abgeglichen und bei Abweichung
  *     ersetzt. Preislisten-Preise (Aktionen) bleiben unberührt — der
  *     Pricing-Service ersetzt beim Update nur Preise mit price_list_id=null.
+ *   - GTIN: trägt die Katalog-Variante ein `gtin`, wird die passende native
+ *     Spalte gesetzt (GTIN-13 -> ean, GTIN-12 -> upc, GTIN-8/14 -> barcode,
+ *     siehe gtin.ts) — nur bei Abweichung. Ohne `gtin` (und ohne das ältere
+ *     `ean`, siehe oben) im Katalog bleiben ean/upc/barcode unangetastet: was
+ *     im Admin gepflegt wurde, überschreibt ein leeres Katalogfeld nie.
+ *     Ungültige oder doppelte Nummern brechen den Lauf ab, bevor etwas
+ *     geschrieben wird; `gtin` und `ean` derselben Variante müssen gleich
+ *     lauten.
  *   - Bestand: siehe inventory=. Varianten ohne Inventory-Item bekommen eines
  *     (samt Link), fehlende Levels werden angelegt, abweichende gesetzt.
  *   - Titel, Handle, Kategorien, Bilder: nie. Produkte, die in Medusa fehlen,
@@ -63,6 +71,7 @@ import {
   updateProductVariantsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
+import { assertCatalogGtins, GtinField, gtinFieldFor } from "./gtin"
 import { roundTo } from "./import-price-tiers"
 import {
   CatalogProduct,
@@ -119,11 +128,13 @@ export type ExistingPrice = {
 export type ExistingVariant = {
   id: string
   sku: string | null
-  /** GTIN/EAN — optional, weil ältere Aufrufer das Feld nicht laden. */
+  /** GTIN-13/EAN — optional, weil ältere Aufrufer das Feld nicht laden. */
   ean?: string | null
   /** Gramm — optional, weil ältere Aufrufer das Feld nicht laden. */
   weight?: number | null
   manage_inventory: boolean
+  upc?: string | null
+  barcode?: string | null
   prices: ExistingPrice[]
   inventory_item_ids: string[]
 }
@@ -170,6 +181,14 @@ export type VariantDataPlan = {
   }
 }
 
+/** Genau eine native Spalte je Variante — welche, entscheidet die Länge. */
+export type VariantGtinPlan = {
+  variant_id: string
+  sku: string
+  field: GtinField
+  gtin: string
+}
+
 export type ProductPlan = {
   id: string
   handle: string
@@ -180,6 +199,7 @@ export type ProductPlan = {
   }
   variantPrices: VariantPricePlan[]
   variantData: VariantDataPlan[]
+  variantGtins: VariantGtinPlan[]
   changes: FieldChange[]
 }
 
@@ -309,6 +329,7 @@ export function planCatalogUpdate(input: {
       update: {},
       variantPrices: [],
       variantData: [],
+      variantGtins: [],
       changes: [],
     }
 
@@ -356,10 +377,36 @@ export function planCatalogUpdate(input: {
         continue
       }
 
+      // GTIN vor der Preis-Sperre unten: die Nummer hängt nicht an den
+      // Staffeln. Nur die eine passende Spalte, und nur bei Abweichung.
+      const gtinField = variant.gtin ? gtinFieldFor(variant.gtin) : null
+      if (variant.gtin && gtinField) {
+        const have = existingVariant[gtinField] ?? null
+        if (have !== variant.gtin) {
+          productPlan.variantGtins.push({
+            variant_id: existingVariant.id,
+            sku,
+            field: gtinField,
+            gtin: variant.gtin,
+          })
+          productPlan.changes.push({
+            field: `${sku} ${gtinField}`,
+            before: have ?? "(leer)",
+            after: variant.gtin,
+          })
+        }
+      }
+
       // EAN und Gewicht — unabhängig vom Preisproblem weiter unten, damit
-      // Galaxus-Daten auch dann ankommen, wenn eine Staffel klemmt.
+      // Galaxus-Daten auch dann ankommen, wenn eine Staffel klemmt. Belegt
+      // `gtin` die Spalte ean schon (GTIN-13), ist das Katalogfeld `ean`
+      // erledigt — die Validierung garantiert, dass beide gleich lauten.
       const dataUpdate: VariantDataPlan["update"] = {}
-      if (variant.ean != null && variant.ean !== (existingVariant.ean ?? null)) {
+      if (
+        variant.ean != null &&
+        gtinField !== "ean" &&
+        variant.ean !== (existingVariant.ean ?? null)
+      ) {
         dataUpdate.ean = variant.ean
         productPlan.changes.push({
           field: `${sku} ean`,
@@ -495,6 +542,9 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
   }
   const catalog = mergeCatalogs(...catalogs)
 
+  // Wirft bei einer ungültigen oder doppelten GTIN — auch im Probelauf.
+  assertCatalogGtins(catalog)
+
   // Dieselbe Prüfung wie import-catalog.ts: kaputte EANs oder Gewichte
   // sollen auffallen, bevor irgendetwas geschrieben wird.
   const dataErrors = validateCatalogData(catalog)
@@ -527,6 +577,8 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       "variants.ean",
       "variants.weight",
       "variants.manage_inventory",
+      "variants.upc",
+      "variants.barcode",
       "variants.prices.amount",
       "variants.prices.currency_code",
       "variants.prices.min_quantity",
@@ -549,6 +601,8 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       ean: v.ean ?? null,
       weight: v.weight == null ? null : Number(v.weight),
       manage_inventory: !!v.manage_inventory,
+      upc: v.upc ?? null,
+      barcode: v.barcode ?? null,
       prices: (v.prices ?? []).map((pr: any) => ({
         amount: Number(pr.amount),
         currency_code: pr.currency_code,
@@ -727,6 +781,19 @@ export default async function updateCatalog({ container, args }: ExecArgs) {
       },
     })
     logger.info(`${dataUpdates.length} Varianten-Stammdaten (EAN/Gewicht) gesetzt.`)
+  }
+
+  const gtinUpdates = plan.products.flatMap((p) => p.variantGtins)
+  if (gtinUpdates.length) {
+    await updateProductVariantsWorkflow(container).run({
+      input: {
+        product_variants: gtinUpdates.map((v) => ({
+          id: v.variant_id,
+          [v.field]: v.gtin,
+        })),
+      },
+    })
+    logger.info(`${gtinUpdates.length} GTINs gesetzt.`)
   }
 
   const manageUpdates = plan.inventory.filter((i) => i.set_manage_inventory)

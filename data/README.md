@@ -61,6 +61,38 @@ laufenden Odoo-Sitemap (Stand 2026-08-20). `catalog.json` bleibt unberührt.
   die in Medusa Varianten sind. Einzubauen in der Next.js-Storefront
   (siehe PR); am robustesten über die Odoo-ID am Pfadende.
 
+## GTIN je Variante
+
+Eine Variante in `catalog.json` / `catalog-extra.json` darf ein optionales
+`"gtin"` tragen — als **String** (führende Nullen), 8/12/13/14 Ziffern, je
+Packung eine eigene Nummer (Einzelstück und Display sind zwei Artikel).
+Import und Update prüfen die GS1-Prüfziffer und auf Doppelte und brechen bei
+einem Fehler ab, bevor etwas geschrieben wird. Abgelegt wird in Medusas
+nativen Varianten-Spalten, nicht in `metadata`:
+
+| Länge            | Spalte    |
+| ---------------- | --------- |
+| GTIN-13 (EAN-13) | `ean`     |
+| GTIN-12 (UPC-A)  | `upc`     |
+| GTIN-8, GTIN-14  | `barcode` |
+
+Für GTIN-8/-14 hat Medusa keine eigene Spalte; `barcode` ist «was auf der
+Packung gescannt wird», und `ean` bleibt so durchgehend 13-stellig. Die
+Storefront liest alle drei Felder, prüft selbst nach und gibt die Nummer im
+Produkt-Schema als `gtin8`/`gtin12`/`gtin13`/`gtin14` aus. Ohne `gtin` im
+Katalog fasst `update-catalog.ts` die drei Spalten nicht an.
+
+Nur an der Ware geprüfte Nummern eintragen — `gtin-candidates.json` sind
+Vorschläge, keine Daten.
+
+**`gtin` oder `ean`?** Neue Nummern gehören ins Feld `gtin`: es prüft die
+Prüfziffer und wählt die Spalte nach der Länge. Das Galaxus-Feld `ean`
+(nächster Abschnitt) schreibt ungeprüft nach `variant.ean` und bleibt für
+bestehende Einträge gültig. Stehen beide an derselben Variante, müssen sie
+gleich lauten — sonst bricht der Lauf ab. Achtung: der Galaxus-Export liest
+bisher nur `variant.ean`; eine GTIN-8/-12/-14 (Spalten `barcode`/`upc`) sieht
+er nicht.
+
 ## Galaxus-Felder: `ean`, `weight_g`, `brand`
 
 Für die Anbindung ans Digitec-Galaxus-Händlerprogramm (siehe
