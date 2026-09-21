@@ -62,9 +62,6 @@ const STOCK_LOCATION_NAME = "Lager Zürich";
 const FULFILLMENT_SET_NAME = "Versand Schweiz";
 const FULFILLMENT_PROVIDER_ID = "swiss-shipping_swiss-shipping";
 
-/** Schweizer MwSt.-Normalsatz seit 01.01.2024. */
-const CH_VAT_RATE = 8.1;
-
 // Der Stock-Seed definierte hier einen eigenen "update-store-currencies"
 // Workflow, der nur `updateStoresStep` aufruft. Das reicht hier NICHT:
 // `is_tax_inclusive` wird nicht am Store gespeichert, sondern von
@@ -112,7 +109,7 @@ export default async function seedJibbitData({ container }: ExecArgs) {
             // Entscheidend: erzeugt die price_preference
             // (attribute=currency_code, value=chf, is_tax_inclusive=true).
             //
-            // Ohne diese Preference rechnet Medusa die 8.1% MwSt. ON TOP auf
+            // Ohne diese Preference rechnet Medusa einen Steuersatz ON TOP auf
             // den gepflegten Preis (CHF 2.50 → item_total 2.70). Die
             // Preference auf der REGION allein genügt nicht: isTaxInclusive()
             // in @medusajs/pricing greift sie nur, wenn der Preis selbst eine
@@ -143,9 +140,8 @@ export default async function seedJibbitData({ container }: ExecArgs) {
             name: REGION_NAME,
             currency_code: CURRENCY,
             countries: [COUNTRY],
-            // Schweizer Detailhandel kommuniziert Endkundenpreise INKLUSIVE
-            // MwSt. Ohne dieses Flag schlägt Medusa die 8.1% auf den
-            // gepflegten Preis auf (CHF 2.50 → 2.70 im Warenkorb).
+            // Gepflegte Preise sind Endpreise. Ohne dieses Flag schlüge
+            // Medusa einen allfälligen Steuersatz auf den Preis auf.
             is_tax_inclusive: true,
             // pp_zahls_zahls (offizielles zahls.ch-Plugin) kommt NUR dazu,
             // wenn der Provider auch registriert ist — d.h. wenn
@@ -179,7 +175,8 @@ export default async function seedJibbitData({ container }: ExecArgs) {
   logger.info("Finished seeding regions.");
 
   // ─── Steuerregion Schweiz ────────────────────────────────────
-  logger.info("Seeding tax region (CH, 8.1% MwSt.)...");
+  // jibbit ist nicht mehrwertsteuerpflichtig: Steuerregion ohne Steuersatz.
+  logger.info("Seeding tax region (CH, ohne MwSt.)...");
 
   const existingTaxRegions = await taxModuleService.listTaxRegions({
     country_code: COUNTRY,
@@ -191,11 +188,6 @@ export default async function seedJibbitData({ container }: ExecArgs) {
         {
           country_code: COUNTRY,
           provider_id: "tp_system",
-          default_tax_rate: {
-            name: "MwSt. Normalsatz",
-            code: "CH-VAT-STD",
-            rate: CH_VAT_RATE,
-          },
         },
       ],
     });
@@ -311,9 +303,8 @@ export default async function seedJibbitData({ container }: ExecArgs) {
     });
 
     // EINE `calculated` Option, der Preis kommt aus
-    // SwissShippingProviderService.calculatePrice(): Brief CHF 3.75,
-    // Paket CHF 9.00, ab CHF 69.00 Warenwert gratis. Brief oder Paket
-    // entscheidet das Variantengewicht.
+    // SwissShippingProviderService.calculatePrice(): ein Versandpreis,
+    // gratis ab der Schwelle (medusa-config.ts).
     //
     // WARUM NICHT zwei FLAT Optionen mit `item_total`-Rules (naheliegender
     // und in vielen Tutorials so gezeigt)? Weil numerische Rules in Medusa
