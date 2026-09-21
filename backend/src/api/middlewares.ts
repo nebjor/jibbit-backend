@@ -1,8 +1,15 @@
-import { MedusaRequest, MedusaResponse, MedusaNextFunction } from "@medusajs/framework/http"
+import {
+  MedusaRequest,
+  MedusaResponse,
+  MedusaNextFunction,
+  validateAndTransformBody,
+} from "@medusajs/framework/http"
 import { defineMiddlewares } from "@medusajs/medusa"
 import { z } from "@medusajs/framework/zod"
 
 import { sammleNachschubMetadataFehler } from "../lib/nachschub"
+import { schuetzePreistabelle } from "../lib/preistabelle-schutz"
+import { PostPreistabelleSchema } from "./admin/products/[id]/preistabelle/validators"
 
 const addressSchema = z.object({
   postal_code: z.string().min(4, "Postal code is required (min 4 chars)"),
@@ -63,6 +70,18 @@ export default defineMiddlewares({
       matcher: "/admin/products*",
       method: "POST",
       middlewares: [validateNachschubBody],
+    },
+    {
+      // Preistabelle (Mengenrabatt): das Standard-Preisraster darf die
+      // Staffel nicht still löschen — siehe lib/preistabelle-schutz.ts.
+      matcher: "/admin/products*",
+      method: "POST",
+      middlewares: [schuetzePreistabelle],
+    },
+    {
+      matcher: "/admin/products/:id/preistabelle",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostPreistabelleSchema)],
     },
     {
       /**
