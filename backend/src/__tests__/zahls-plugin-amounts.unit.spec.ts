@@ -31,10 +31,9 @@ const utils = require(
 }
 
 describe("zahls-Plugin: Dezimalbetrag → Rappen (toMinorUnits)", () => {
-  it("CHF 3.75 (Brieftarif Kleinsendung) wird zu 375 — nicht 374", () => {
+  it("CHF 3.75 wird zu 375 — nicht 374", () => {
     // 3.75 * 100 ist in IEEE-754 375.00000000000006; ein naives
-    // parseInt/floor ergäbe 374 oder 375.00000000000006. Der Brieftarif
-    // ist der reale Fall, an dem so ein Fehler zuerst auffiele.
+    // parseInt/floor ergäbe 374 oder 375.00000000000006.
     expect(utils.toMinorUnits(3.75, "chf")).toBe(375)
   })
 

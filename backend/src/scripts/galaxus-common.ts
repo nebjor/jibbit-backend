@@ -152,8 +152,7 @@ export function fehlendeFelder(s: VariantSnapshot): string[] {
 
 /**
  * Galaxus «Brief» (ShipmentType 1) geht laut Handbuch Anhang 3.1.1 bis
- * 1000 g. Deckt sich mit `letterMaxWeight` des swiss-shipping-Moduls.
- * Ohne Gewicht gilt Paket — dieselbe konservative Vorgabe wie im Versand.
+ * 1000 g. Ohne Gewicht gilt Paket.
  */
 export const LETTER_MAX_WEIGHT_G = 1000
 

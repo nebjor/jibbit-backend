@@ -30,8 +30,7 @@
  * Daneben können je Variante ean (das Feld der Galaxus-Anbindung: dieselbe
  * Spalte variant.ean, dieselbe Prüfung wie `gtin`) und weight_g (Gramm)
  * gepflegt sein, je Produkt brand (Marke). Alle drei braucht die
- * Galaxus-Anbindung (galaxus-export.ts); das Gewicht schaltet zusätzlich den
- * Brieftarif des swiss-shipping-Moduls frei, der ohne Gewichte nie greift.
+ * Galaxus-Anbindung (galaxus-export.ts).
  * Stehen `gtin` und `ean` an derselben Variante, müssen sie übereinstimmen.
  *
  * Idempotent über den Handle: bereits vorhandene Produkte werden übersprungen,
@@ -85,7 +84,7 @@ export type CatalogVariant = {
    * dieselbe Prüfung wie `gtin` (8/12/13/14 Ziffern, GS1-Prüfziffer).
    */
   ean?: string | null
-  /** Verpackungsgewicht in Gramm — schaltet den Brieftarif frei. */
+  /** Verpackungsgewicht in Gramm (Galaxus `WeightG`). */
   weight_g?: number | null
 }
 
