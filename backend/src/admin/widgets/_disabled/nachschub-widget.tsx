@@ -1,6 +1,10 @@
 /**
  * Widget «Nachschub» an der Produktseite im Admin.
  *
+ * DERZEIT ABGESCHALTET: liegt in einem Ordner mit «_» und wird deshalb vom
+ * Admin-Build nicht eingesammelt. Wieder einschalten: siehe
+ * src/admin/NACHSCHUB-ABGESCHALTET.md
+ *
  * Zwei Ebenen, zwei Abschnitte:
  *
  *   - LIEFERANTEN fürs ganze PRODUKT: der Betreiber kauft ein Produkt beim
@@ -62,14 +66,14 @@ import {
   pruefeLieferantenEingabe,
   pruefeMeldebestandEingabe,
   SUPPLIERS_KEY,
-} from "../../lib/nachschub"
-import { LieferantLink } from "../components/lieferant-link"
+} from "../../../lib/nachschub"
+import { LieferantLink } from "../../components/lieferant-link"
 import {
   NACHSCHUB_PRODUCT_FIELDS,
   produktLieferanten,
   zeilenAusProdukt,
-} from "../lib/nachschub-daten"
-import { sdk } from "../lib/sdk"
+} from "../../lib/nachschub-daten"
+import { sdk } from "../../lib/sdk"
 
 /**
  * Platzhalter-Wert der Länderauswahl für «nicht gepflegt» — Radix Select
