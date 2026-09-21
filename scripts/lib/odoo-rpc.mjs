@@ -1,7 +1,7 @@
 /**
  * Gemeinsamer Odoo-JSON-RPC-Zugang für die Export-Scripte.
  *
- * Warum hier und nicht in jedem Script neu: odoo-export.mjs (Produkte),
+ * Warum hier und nicht in jedem Script neu:
  * odoo-export-customers.mjs (res.partner) und odoo-export-orders.mjs
  * (sale.order) reden mit derselben Instanz, melden sich gleich an und müssen
  * beim Feldabgleich dieselbe Nachsicht walten lassen — Odoo 17 kennt nicht

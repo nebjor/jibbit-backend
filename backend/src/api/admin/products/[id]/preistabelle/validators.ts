@@ -1,7 +1,7 @@
 import { z } from "@medusajs/framework/zod"
 
-/** Body von POST /admin/products/:id/preistabelle. Fachliche Prüfung: lib/preistabelle.ts. */
 export const PostPreistabelleSchema = z.object({
+  regulaerer_preis: z.number().nullish(),
   zeilen: z
     .array(
       z.object({

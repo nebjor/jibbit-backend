@@ -1,8 +1,7 @@
 /**
  * product-thumbnail — leere Vorschaubilder aus der Galerie füllen.
  *
- * updateProductsWorkflow ist gemockt (gleiches Muster wie
- * update-catalog.unit.spec.ts): die Tests prüfen, WAS geschrieben würde,
+ * updateProductsWorkflow ist gemockt: die Tests prüfen, WAS geschrieben würde,
  * ohne Datenbank. Die drei Zusicherungen, an denen alles hängt:
  *
  *   1. leeres Thumbnail + Bilder  -> erstes Bild wird eingesetzt

@@ -12,7 +12,6 @@ import {
   toCsv,
   VariantSnapshot,
 } from "../scripts/galaxus-common"
-import { validateCatalogData, CatalogProduct } from "../scripts/import-catalog"
 
 // ─── GTIN ───────────────────────────────────────────────────────
 
@@ -290,56 +289,5 @@ describe("buildGalaxusExport", () => {
     ]) {
       expect(file.indexOf("AAA-EA")).toBeLessThan(file.indexOf("ZZZ-EA"))
     }
-  })
-})
-
-// ─── Katalog-Validierung (import-catalog/update-catalog) ────────
-
-describe("validateCatalogData", () => {
-  const produkt = (variant: Partial<CatalogProduct["variants"][0]>): CatalogProduct => ({
-    product: "Gizeh DW Extra Fine",
-    ref: null,
-    variants: [
-      {
-        label: "Einzeln",
-        pack_type: "single",
-        units_per_pack: 1,
-        tiers: [{ min_quantity: 1, max_quantity: null, price: 1.7 }],
-        ...variant,
-      },
-    ],
-  })
-
-  it("lässt Varianten ohne die neuen Felder unbeanstandet", () => {
-    expect(validateCatalogData([produkt({})])).toEqual([])
-  })
-
-  it("akzeptiert gültige EAN und Gewicht", () => {
-    expect(
-      validateCatalogData([produkt({ ean: "4012345678901", weight_g: 25 })])
-    ).toEqual([])
-  })
-
-  it("meldet ungültige EANs mit Fundstelle", () => {
-    const errors = validateCatalogData([produkt({ ean: "40123" })])
-    expect(errors).toHaveLength(1)
-    expect(errors[0]).toContain("Gizeh DW Extra Fine (Einzeln)")
-    expect(errors[0]).toContain("40123")
-  })
-
-  it("meldet doppelt vergebene EANs", () => {
-    const a = produkt({ ean: "4012345678901" })
-    const b = {
-      ...produkt({ ean: "4012345678901" }),
-      product: "Anderes Produkt",
-    }
-    const errors = validateCatalogData([a, b])
-    expect(errors).toHaveLength(1)
-    expect(errors[0]).toContain("bereits vergeben")
-  })
-
-  it("meldet Gewichte, die nicht über 0 liegen", () => {
-    expect(validateCatalogData([produkt({ weight_g: 0 })])).toHaveLength(1)
-    expect(validateCatalogData([produkt({ weight_g: -5 })])).toHaveLength(1)
   })
 })

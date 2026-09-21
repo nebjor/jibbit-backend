@@ -19,8 +19,6 @@
  *      NIE stillschweigend verloren (effektiveLieferantenMetadata).
  */
 
-import { readFileSync } from "node:fs"
-import { join, resolve } from "node:path"
 
 import {
   effektiveLieferantenMetadata,
@@ -46,8 +44,6 @@ import {
   validateNachschubMetadata,
 } from "../lib/nachschub"
 import { validateNachschubBody } from "../api/middlewares"
-
-const DATA_DIR = resolve(__dirname, "../../../data")
 
 // ─── Adressprüfung ──────────────────────────────────────────────
 
@@ -296,28 +292,6 @@ describe("nachschubUebersicht", () => {
     expect(u.ohneBestand).toBe(2)
     expect(u.ohneMeldebestand).toBe(1)
     expect(u.nichtUeberwachbar).toBe(3)
-  })
-
-  it("HEUTIGER STAND: alle 35 Varianten aus inventory.json sind nicht überwachbar", () => {
-    // inventory.json führt quantity=null für alles — Bestandsführung ist
-    // überall aus. Die Nachschubliste wäre leer, und genau deshalb müssen
-    // Übersicht und Bericht die 35 nicht überwachbaren Varianten nennen:
-    // die leere Liste ist Pflegeschuld, keine Entwarnung.
-    const inventory = JSON.parse(
-      readFileSync(join(DATA_DIR, "inventory.json"), "utf8")
-    ) as { items: { sku: string; quantity: number | null }[] }
-
-    expect(inventory.items).toHaveLength(35)
-
-    const zeilen = inventory.items.map((i) =>
-      zeile({ sku: i.sku, bestand: i.quantity, meldebestand: null })
-    )
-    const u = nachschubUebersicht(zeilen)
-
-    expect(u.faellig).toHaveLength(0)
-    expect(u.ueberwacht).toBe(0)
-    expect(u.nichtUeberwachbar).toBe(35)
-    expect(u.ohneBestand).toBe(35)
   })
 })
 
