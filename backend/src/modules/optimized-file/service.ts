@@ -66,6 +66,9 @@ export default class OptimizedFileService extends LocalFileService {
         .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: "inside", withoutEnlargement: true })
         .webp({ quality: WEBP_QUALITY })
         .toBuffer()
+      if (meta.format === "webp" && output.length >= input.length) {
+        return null
+      }
       const { dir, name } = path.parse(file.filename)
       return {
         ...file,
