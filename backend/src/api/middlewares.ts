@@ -72,9 +72,7 @@ export default defineMiddlewares({
       middlewares: [validateNachschubBody],
     },
     {
-      // Preistabelle (Mengenrabatt): das Standard-Preisraster darf die
-      // Staffel nicht still löschen — siehe lib/preistabelle-schutz.ts.
-      matcher: "/admin/products*",
+      matcher: "/admin/price-lists/:id/prices/batch",
       method: "POST",
       middlewares: [schuetzePreistabelle],
     },

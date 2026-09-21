@@ -28,6 +28,7 @@ export type QuantityRow = {
 export type Probe = {
   quantity: number
   amount: number | null
+  original_amount?: number | null
   currency_code: string | null
 }
 
@@ -35,6 +36,8 @@ export type Tier = {
   min_quantity: number
   max_quantity: number | null
   amount: number
+  /** Regulärer Preis bei dieser Menge — höher als amount heisst Aktion. */
+  original_amount: number
   currency_code: string
 }
 
@@ -126,7 +129,8 @@ export function tiersFromProbes(
       current = null
       continue
     }
-    if (current && current.amount === probe.amount) {
+    const original = probe.original_amount ?? probe.amount
+    if (current && current.amount === probe.amount && current.original_amount === original) {
       continue
     }
     if (current) {
@@ -136,6 +140,7 @@ export function tiersFromProbes(
       min_quantity: probe.quantity,
       max_quantity: null,
       amount: probe.amount,
+      original_amount: original,
       currency_code: probe.currency_code ?? fallbackCurrency,
     }
     tiers.push(current)

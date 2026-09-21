@@ -1,19 +1,9 @@
 /**
- * Widget «Preistabelle» an der Produktseite im Admin.
- *
- * EIN Ort für den Preis eines Produkts: Zeilen «ab Menge → Stückpreis».
- *   ab 1 Stk.  → CHF 1.95
- *   ab 10 Stk. → CHF 1.85
- *   ab 24 Stk. → CHF 1.40   (optional: Bezeichnung «24er Display» + Foto)
- * Der Kunde kauft jede Menge; es gilt der Stückpreis der höchsten
- * erreichten Zeile. Gespeichert wird direkt als Medusa-Mengenstaffel auf der
- * einzigen Variante des Produkts (siehe src/lib/preistabelle.ts) — dieselben
- * Preiszeilen, mit denen der Warenkorb rechnet. Keine Datei, kein Import.
- * Bezeichnung und Foto je Zeile liegen in product.metadata.preistabelle; das
- * Foto ist eines der Produktbilder (oben im Abschnitt «Medien» hochladen).
- *
- * Neues Produkt: im Admin wie gewohnt «Erstellen» (Titel + Preis), danach
- * auf der Produktseite hier die weiteren Zeilen ergänzen.
+ * Widget «Preistabelle»: der ganze Preis eines Produkts an einem Ort —
+ * regulärer Preis (im Shop durchgestrichen) und Zeilen «ab Menge →
+ * Stückpreis», optional mit Bezeichnung und Produktfoto je Zeile.
+ * Speichermodell: src/lib/preistabelle.ts. Neues Produkt: wie gewohnt
+ * «Erstellen», danach hier die Preistabelle ergänzen.
  */
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { DetailWidgetProps, HttpTypes } from "@medusajs/framework/types"
@@ -44,11 +34,9 @@ type Zeile = {
 
 type Antwort = {
   variant_count: number
-  variant_id: string | null
-  waehrung: string
+  regulaerer_preis: number | null
   zeilen: Zeile[]
   hinweise: string[]
-  preislisten: { id: string; title: string; status: string; zeilen: number }[]
 }
 
 type EingabeZeile = { menge: string; preis: string; label: string; image_id: string | null }
@@ -86,7 +74,7 @@ const PreistabelleWidget = ({ data: product }: DetailWidgetProps<HttpTypes.Admin
           </Text>
         </div>
         {data && data.variant_count === 1 && (
-          <PreistabelleBearbeiten product={product} bilder={bilder} zeilen={data.zeilen} />
+          <PreistabelleBearbeiten product={product} bilder={bilder} daten={data} />
         )}
       </div>
 
@@ -105,6 +93,14 @@ const PreistabelleWidget = ({ data: product }: DetailWidgetProps<HttpTypes.Admin
         </div>
       ) : (
         <>
+          <div className="px-6 py-4">
+            <Text size="small" leading="compact">
+              Regulärer Preis:{" "}
+              {data.regulaerer_preis != null
+                ? `CHF ${chf(data.regulaerer_preis)} (im Shop durchgestrichen)`
+                : "keiner"}
+            </Text>
+          </div>
           {data.zeilen.length ? (
             <Table>
               <Table.Header>
@@ -144,17 +140,10 @@ const PreistabelleWidget = ({ data: product }: DetailWidgetProps<HttpTypes.Admin
               </Text>
             </div>
           )}
-          {(data.hinweise.length > 0 || data.preislisten.length > 0) && (
+          {data.hinweise.length > 0 && (
             <div className="flex flex-col gap-y-1 px-6 py-4">
               {data.hinweise.map((h) => (
                 <Text key={h} size="small" className="text-ui-fg-error">{h}</Text>
-              ))}
-              {data.preislisten.map((l) => (
-                <Text key={l.id} size="small" className="text-ui-fg-error">
-                  Achtung: Die Preisliste «{l.title}»{l.status ? ` (${l.status})` : ""} enthält
-                  eigene Preise für diesen Artikel. Ist sie aktiv, gelten im Shop ihre
-                  Preise statt dieser Tabelle.
-                </Text>
               ))}
             </div>
           )}
@@ -167,18 +156,20 @@ const PreistabelleWidget = ({ data: product }: DetailWidgetProps<HttpTypes.Admin
 const PreistabelleBearbeiten = ({
   product,
   bilder,
-  zeilen,
+  daten: { zeilen, regulaerer_preis },
 }: {
   product: HttpTypes.AdminProduct
   bilder: Bild[]
-  zeilen: Zeile[]
+  daten: Antwort
 }) => {
   const queryClient = useQueryClient()
   const [offen, setOffen] = useState(false)
   const [eingabe, setEingabe] = useState<EingabeZeile[]>([])
+  const [regulaer, setRegulaer] = useState("")
 
   const oeffnen = (o: boolean) => {
     if (o) {
+      setRegulaer(regulaerer_preis != null ? regulaerer_preis.toFixed(2) : "")
       setEingabe(
         zeilen.length
           ? zeilen.map((z) => ({
@@ -194,10 +185,10 @@ const PreistabelleBearbeiten = ({
   }
 
   const speichern = useMutation({
-    mutationFn: (neu: Zeile[]) =>
+    mutationFn: (body: { regulaerer_preis: number | null; zeilen: Zeile[] }) =>
       sdk.client.fetch<Antwort>(`/admin/products/${product.id}/preistabelle`, {
         method: "POST",
-        body: { zeilen: neu },
+        body,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKey(product.id) })
@@ -211,16 +202,21 @@ const PreistabelleBearbeiten = ({
   const setze = (i: number, teil: Partial<EingabeZeile>) =>
     setEingabe((alt) => alt.map((z, j) => (j === i ? { ...z, ...teil } : z)))
 
+  const zahl = (s: string) => Number(s.trim().replace(",", "."))
+
   const absenden = () => {
-    const neu = eingabe
+    const zeilenNeu = eingabe
       .filter((z) => z.menge.trim() !== "" || z.preis.trim() !== "")
       .map((z) => ({
         min_quantity: Number(z.menge.trim()),
-        amount: Number(z.preis.trim().replace(",", ".")),
+        amount: zahl(z.preis),
         label: z.label.trim() || null,
         image_id: z.image_id,
       }))
-    speichern.mutate(neu)
+    speichern.mutate({
+      regulaerer_preis: regulaer.trim() ? zahl(regulaer) : null,
+      zeilen: zeilenNeu,
+    })
   }
 
   return (
@@ -242,6 +238,16 @@ const PreistabelleBearbeiten = ({
             Bezeichnung und Foto sind freiwillig (z.B. «24er Display» mit dem Foto
             der Box).
           </Text>
+          <div className="flex flex-col gap-y-1">
+            <Label size="small" weight="plus">Regulärer Preis (CHF, freiwillig)</Label>
+            <Input
+              size="small"
+              inputMode="decimal"
+              placeholder="z.B. 2.50 — im Shop durchgestrichen"
+              value={regulaer}
+              onChange={(e) => setRegulaer(e.target.value)}
+            />
+          </div>
           {eingabe.map((z, i) => (
             <div
               key={i}

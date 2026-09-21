@@ -1,7 +1,6 @@
 /**
  * Galaxus-Exporte — erzeugt die CSV-Dateien für das Händlerprogramm aus den
- * ECHTEN Medusa-Daten (Preise, Bestände, Bilder stehen in der Datenbank,
- * nicht in catalog.json):
+ * ECHTEN Medusa-Daten (Preise, Bestände, Bilder stehen in der Datenbank):
  *
  *   ProductData_<provider>.csv        Stammdaten inkl. Bild-URLs
  *                                     (Datenaufteilung Option 2 des Handbuchs:
@@ -50,7 +49,7 @@ export default async function galaxusExport({ container, args }: ExecArgs) {
   const snapshots = await loadVariantSnapshots(container)
   if (!snapshots.length) {
     logger.warn(
-      "Keine Varianten in der Datenbank — zuerst import-catalog.ts laufen lassen."
+      "Keine Varianten in der Datenbank."
     )
     return
   }

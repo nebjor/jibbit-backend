@@ -33,7 +33,7 @@ bzw. das Partner-Wiki (confdg.atlassian.net, Login nötig).
 | Schritt | Werkzeug |
 |---|---|
 | Was fehlt noch? | `npx medusa exec ./src/scripts/galaxus-report.ts` |
-| Daten pflegen | `data/catalog.json` (`ean`, `weight_g`, `brand`) + `update-catalog.ts` |
+| Daten pflegen | Admin: Variante (EAN, Gewicht), Produkt-Metadaten (`brand`), Lager (Bestand) |
 | CSV-Exporte erzeugen | `npx medusa exec ./src/scripts/galaxus-export.ts` |
 | Hochladen | **bewusst nicht gebaut** — FTP-Zugang gibt es erst nach der Aufnahme |
 
@@ -54,34 +54,22 @@ läuft dasselbe über `docker compose exec medusa npx medusa exec
 
 - **EAN/GTIN je Variante.** Steht auf der Verpackung (Strichcode) oder kommt
   vom Lieferanten/Grossisten. Wichtig: Die Display-/Box-Variante hat eine
-  **eigene** EAN (die der Umverpackung), nicht die der Einzelpackung. Als
-  String mit führenden Nullen in `data/catalog.json` eintragen (`"ean"`).
+  **eigene** EAN (die der Umverpackung), nicht die der Einzelpackung. Im
+  Admin an der Variante im Feld EAN eintragen.
   Eigene EANs kaufen (GS1 Schweiz) ist nur nötig, falls ein Artikel wirklich
   keine hat — dann vorher mit Galaxus klären, ob ein `ManufacturerKey`
   reicht.
-- **Gewicht in Gramm je Variante** (`"weight_g"`): Produkt **inklusive
+- **Gewicht in Gramm je Variante** (Admin, Feld Gewicht): Produkt **inklusive
   Verpackung** wiegen. Doppelter Nutzen: Galaxus-Pflichtfeld `WeightG` und
   der Brieftarif CHF 3.75 im Shop, der ohne Gewichte nie greift (ohne
   Gewicht rechnet swiss-shipping immer Paket CHF 9.00).
-- **Marke je Produkt** (`"brand"`): Gizeh, OCB, RAW, Elements, PURIZE … —
+- **Marke je Produkt** (Admin, Produkt-Metadaten `brand`): Gizeh, OCB, RAW, Elements, PURIZE … —
   Galaxus legt Produkte nur mit Marke an.
-- **Bestand**: `data/inventory.json` ausfüllen (Zahlen statt `null`).
+- **Bestand**: im Admin unter Lager erfassen.
 - **Bilder**: mindestens ein Bild pro Produkt, längste Kante ≥ 600 px,
   JPEG/PNG, frei zugängliche URL — die Medusa-Bilder unter
   `https://…/static/…` erfüllen das (siehe `docs/produktbilder.md`,
   `import-product-images.ts`).
-
-Dann einspielen (idempotent, `dry-run` zeigt vorher jede Änderung):
-
-    cd backend
-    npx medusa exec ./src/scripts/update-catalog.ts ../data/catalog.json \
-      extra=../data/catalog-extra.json \
-      content=../data/product-content.json \
-      inventory=../data/inventory.json \
-      dry-run
-
-Beide Import-Skripte validieren die EANs (8/12/13/14 Ziffern, GS1-Prüfziffer,
-keine Duplikate) und brechen bei Fehlern ab, bevor etwas geschrieben wird.
 
 ### 3. Exporte erzeugen
 

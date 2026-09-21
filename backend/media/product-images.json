@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Zuordnung Produktfoto -> Produkt. Der Produktname muss exakt dem 'product'-Feld in catalog.json entsprechen. Das erste Bild je Produkt ist das Vorschaubild (thumbnail).",
+  "_hinweis": "Zuordnung Produktfoto -> Produkt. Der Produktname muss exakt dem Produkttitel in Medusa entsprechen. Das erste Bild je Produkt ist das Vorschaubild (thumbnail).",
   "_quellverzeichnis": "/mnt/c/Users/jnebe/kDrive/jibbit/Media/Produktfotos",
   "_stand": "2026-08-20",
   "produkte": [

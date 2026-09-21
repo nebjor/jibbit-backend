@@ -1,72 +1,81 @@
+import { PriceListStatus } from "@medusajs/framework/utils"
 import {
   createWorkflow,
   transform,
+  when,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import {
+  batchPriceListPricesWorkflow,
+  createPriceListsWorkflow,
   updateProductsWorkflow,
   updateProductVariantsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
 import {
+  AKTIONSPREISLISTE,
+  basisPreis,
   metadataMitExtras,
-  PreisZeile,
-  preiseAusTabelle,
+  staffelAenderungen,
+  staffelPreise,
   stufenExtras,
   zuBehaltendePreise,
 } from "../../lib/preistabelle"
-import { ladePreistabelleZielStep } from "./steps/lade-preistabelle-ziel"
-
-export type SetzePreistabelleInput = {
-  product_id: string
-  zeilen: PreisZeile[]
-}
+import { ladePreistabelleZielStep, LadePreistabelleZielInput } from "./steps/lade-preistabelle-ziel"
 
 /**
- * Schreibt die Preistabelle eines Produkts:
- *   1. Preise als Mengenstaffel (price.min_quantity/max_quantity, CHF) auf die
- *      einzige Variante — damit rechnet der Warenkorb.
- *   2. Optionales Bild/Bezeichnung je Zeile in product.metadata.preistabelle
- *      (bestehende Metadata-Schlüssel bleiben erhalten).
- *
- * Idempotent: dieselbe Tabelle zweimal gespeichert ergibt denselben Stand.
- * Beide Schreibschritte sind Medusa-Kernworkflows mit eigener Kompensation:
- * scheitert Schritt 2, stellt updatePriceSetsStep die vorherigen Preise
- * wieder her. Preise anderer Währungen/Regionen werden mit ihrer id
- * mitgeschickt und bleiben erhalten; Preislisten-Preise fasst Medusa hier
- * ohnehin nicht an.
+ * Schreibt die Preistabelle: regulärer Preis als Basispreis der einzigen
+ * Variante, die Staffel in die Aktionspreisliste (legt sie beim ersten Mal an),
+ * Bild/Bezeichnung je Zeile in product.metadata. Nur Kern-Workflows mit
+ * eigener Kompensation; idempotent.
  */
 export const setzePreistabelleWorkflow = createWorkflow(
   "setze-preistabelle",
-  function (input: SetzePreistabelleInput) {
-    const ziel = ladePreistabelleZielStep(input)
+  function (input: LadePreistabelleZielInput) {
+    const daten = ladePreistabelleZielStep(input)
 
-    const variantenPayload = transform({ ziel, input }, function ({ ziel, input }) {
-      return {
-        product_variants: [
-          {
-            id: ziel.variant_id,
-            prices: [...preiseAusTabelle(input.zeilen), ...zuBehaltendePreise(ziel.prices)],
-          },
-        ],
-      }
-    })
-
-    updateProductVariantsWorkflow.runAsStep({ input: variantenPayload })
-
-    const produktPayload = transform({ ziel, input }, function ({ ziel, input }) {
-      return {
-        selector: { id: input.product_id },
-        update: { metadata: metadataMitExtras(ziel.metadata, stufenExtras(input.zeilen)) },
-      }
-    })
-
-    updateProductsWorkflow.runAsStep({ input: produktPayload })
-
-    return new WorkflowResponse(
-      transform({ ziel }, function ({ ziel }) {
-        return { variant_id: ziel.variant_id }
+    const neueListe = when({ daten }, ({ daten }) => !daten.preisliste).then(() =>
+      createPriceListsWorkflow.runAsStep({
+        input: {
+          price_lists_data: [
+            {
+              ...AKTIONSPREISLISTE,
+              status: PriceListStatus.ACTIVE,
+            },
+          ],
+        },
       })
     )
+
+    const variantId = transform({ daten }, ({ daten }) => daten.variant_ids[0])
+
+    updateProductVariantsWorkflow.runAsStep({
+      input: transform({ daten, input, variantId }, ({ daten, input, variantId }) => ({
+        product_variants: [
+          { id: variantId, prices: [basisPreis(input), ...zuBehaltendePreise(daten.basis)] },
+        ],
+      })),
+    })
+
+    batchPriceListPricesWorkflow.runAsStep({
+      input: transform(
+        { daten, input, variantId, neueListe },
+        ({ daten, input, variantId, neueListe }) => ({
+          data: {
+            id: (daten.preisliste?.id ?? neueListe?.[0]?.id) as string,
+            ...staffelAenderungen(staffelPreise(input), daten.liste, variantId),
+          },
+        })
+      ),
+    })
+
+    updateProductsWorkflow.runAsStep({
+      input: transform({ daten, input }, ({ daten, input }) => ({
+        selector: { id: input.product_id },
+        update: { metadata: metadataMitExtras(daten.metadata, stufenExtras(input.zeilen)) },
+      })),
+    })
+
+    return new WorkflowResponse(variantId)
   }
 )

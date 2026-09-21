@@ -22,8 +22,8 @@ import {
  *
  * Wie die Stufen entstehen: Die rohen Preiszeilen (`listPrices`) nennen nur
  * die KANDIDATEN-Mengen, an denen sich der Preis ändern kann — Standardpreise
- * UND Preislisten-Zeilen, denn seit import-price-lists.ts liegen die
- * Staffeln in der Preisliste „Aktionspreise jibbit.ch", nicht mehr im
+ * UND Preislisten-Zeilen, denn die Preistabelle legt die
+ * Staffeln in die Preisliste „Aktionspreise jibbit.ch", nicht in den
  * Basispreis. Den Betrag je Menge bestimmt dann `calculatePrices` — dieselbe
  * Auswertung, mit der Medusa auch den Warenkorb abrechnet. Sie kennt
  * Preislisten-Status, Start-/Enddatum und Kundengruppen-Regeln; da diese
@@ -249,6 +249,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       probesByVariant.get(variantId)?.push({
         quantity,
         amount,
+        original_amount: amount === null ? null : toAmount(hit?.original_amount),
         currency_code: hit?.currency_code ?? null,
       })
     }
