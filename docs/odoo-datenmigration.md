@@ -3,9 +3,8 @@
 Anleitung für den Betreiber. Was hier steht, betrifft **Personendaten** —
 bitte den Abschnitt [Datenschutz](#datenschutz-dsg) vor dem ersten Lauf lesen.
 
-Der Produktteil der Migration steht in
-[`product-pricing-model.md`](./product-pricing-model.md); diese Anleitung setzt
-darauf auf.
+Produkte und Preise werden nicht migriert, sondern im Admin gepflegt (Preise
+im Widget «Preistabelle» auf der Produktseite).
 
 ---
 
@@ -69,7 +68,6 @@ export ODOO_API_KEY=<api-schlüssel>
 
 OUT=~/odoo-export-$(date +%F)
 
-node scripts/odoo-export.mjs           "$OUT"   # Produkte und Preise
 node scripts/odoo-export-customers.mjs "$OUT"   # Kunden
 node scripts/odoo-export-orders.mjs    "$OUT"   # Bestellungen
 ```
@@ -184,19 +182,11 @@ cd backend
 # 1) Grundgerüst: Region, Sales Channel, Lager, Versandprofil
 npx medusa exec ./src/scripts/seed.ts
 
-# 2) Produkte und Preise. PROBELAUF IST DER NORMALFALL: ohne das Wort
-#    `schreiben` zeigt jedes Script nur, was es täte. `schreiben` steht
-#    immer als ERSTES Argument gleich nach dem Script-Pfad.
-npx medusa exec ./src/scripts/import-catalog.ts \
-  "$OUT/catalog.json"
-npx medusa exec ./src/scripts/import-catalog.ts schreiben \
-  "$OUT/catalog.json"
-npx medusa exec ./src/scripts/import-price-tiers.ts \
-  "$OUT/tiers.json" "pricelist=Public Pricelist"
-npx medusa exec ./src/scripts/import-price-tiers.ts schreiben \
-  "$OUT/tiers.json" "pricelist=Public Pricelist"
+# 2) Produkte und Preise: im Admin anlegen (Preise im Widget «Preistabelle»)
 
-# 3) Kunden — erst der Probelauf
+# 3) Kunden — erst der Probelauf. PROBELAUF IST DER NORMALFALL: ohne das
+#    Wort `schreiben` zeigt jedes Script nur, was es täte. `schreiben` steht
+#    immer als ERSTES Argument gleich nach dem Script-Pfad.
 npx medusa exec ./src/scripts/import-customers.ts \
   "$OUT/partners.json" country=ch
 

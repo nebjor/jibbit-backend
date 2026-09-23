@@ -348,7 +348,7 @@ const CURRENCY = "chf"
 
 /**
  * Alle Varianten mit dem, was Galaxus braucht, aus der Datenbank lesen —
- * die Exporte entstehen aus den echten Medusa-Daten, nicht aus catalog.json.
+ * die Exporte entstehen aus den echten Medusa-Daten.
  */
 export async function loadVariantSnapshots(
   container: MedusaContainer
