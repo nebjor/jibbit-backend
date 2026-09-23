@@ -162,7 +162,7 @@ export default async function nachschubReport({ container, args }: ExecArgs) {
   const { zeilen, uebernahmen } = await loadNachschubZeilen(container)
   if (!zeilen.length) {
     logger.warn(
-      "Keine Varianten in der Datenbank — zuerst import-catalog.ts laufen lassen."
+      "Keine Varianten in der Datenbank — zuerst Produkte im Admin anlegen."
     )
     return
   }

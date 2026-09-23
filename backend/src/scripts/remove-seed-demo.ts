@@ -22,11 +22,15 @@
  * `papers`, `filter` und `zubehoer` überleben deshalb automatisch, ohne dass
  * sie hier auftauchen müssten.
  *
- *   npx medusa exec ./src/scripts/remove-seed-demo.js dry-run
- *   npx medusa exec ./src/scripts/remove-seed-demo.js
+ * PROBELAUF IST DER NORMALFALL — gelöscht wird nur mit dem Wort `schreiben`:
  *
+ *   npx medusa exec ./src/scripts/remove-seed-demo.js
+ *   npx medusa exec ./src/scripts/remove-seed-demo.js schreiben
+ *
+ * `dry-run` bleibt als ausdrücklicher Probelauf erlaubt (ohne Wirkung).
  * Argumente ohne Bindestrich-Präfix — `medusa exec` lehnt unbekannte Optionen
- * ab, siehe script-args.ts.
+ * ab, siehe script-args.ts. Unbekannte oder vertippte Argumente brechen den
+ * Lauf ab.
  */
 
 import { ExecArgs } from "@medusajs/framework/types"
@@ -36,7 +40,7 @@ import {
   deleteProductCategoriesWorkflow,
 } from "@medusajs/medusa/core-flows"
 
-import { parseScriptArgs } from "./script-args"
+import { applyHint, parseScriptArgs, resolveRunMode } from "./script-args"
 
 /** Exakt die Produkte aus seed.ts. Reihenfolge wie dort. */
 const SEED_HANDLES = [
@@ -58,7 +62,13 @@ const SEED_HANDLES = [
 export default async function removeSeedDemo({ container, args }: ExecArgs) {
   const logger = container.resolve("logger")
   const opts = parseScriptArgs(args)
-  const dryRun = opts.flag("dry-run")
+
+  // Modus und Argumente ZUERST — ohne `schreiben` bleibt alles ein Probelauf.
+  const mode = resolveRunMode(opts, {}, logger)
+  if (!mode) {
+    return
+  }
+  const { dryRun } = mode
 
   const productService = container.resolve(Modules.PRODUCT)
 
@@ -94,6 +104,7 @@ export default async function removeSeedDemo({ container, args }: ExecArgs) {
       `Trockenlauf: würde ${found.length} Produkte löschen. ` +
         `Danach blieben ${before.length - found.length} übrig.`,
     )
+    logger.info(applyHint(args))
   } else {
     await deleteProductsWorkflow(container).run({
       input: { ids: found.map((p) => p.id) },

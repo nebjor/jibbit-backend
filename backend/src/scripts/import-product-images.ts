@@ -1,17 +1,28 @@
 /**
  * Produktbilder hochladen und den Produkten zuordnen.
  *
+ * PROBELAUF IST DER NORMALFALL — ohne das Wort `schreiben` wird nichts
+ * hochgeladen und nichts geschrieben (Hintergrund: script-args.ts):
+ *
  *   docker compose cp ./backend/media medusa:/app/media
- *   docker compose exec medusa npx medusa exec ./src/scripts/import-product-images.js \
- *     /app/media/product-images.json dry-run
- *   docker compose exec medusa npx medusa exec ./src/scripts/import-product-images.js \
+ *   docker compose exec medusa npx medusa exec \
+ *     ./src/scripts/import-product-images.js \
+ *     /app/media/product-images.json
+ *
+ * Hochladen — `schreiben` als ERSTES Argument gleich nach dem Script-Pfad:
+ *
+ *   docker compose exec medusa npx medusa exec \
+ *     ./src/scripts/import-product-images.js schreiben \
  *     /app/media/product-images.json
  *
  * Argumente OHNE Bindestrich-Präfix — `medusa exec` lehnt unbekannte Optionen
- * ab, siehe script-args.ts.
+ * ab, siehe script-args.ts. Unbekannte oder vertippte Argumente brechen den
+ * Lauf ab, bevor etwas gelesen oder geschrieben wird.
  *
  * Optionen:
- *   dry-run        nur anzeigen, nichts hochladen und nichts schreiben
+ *   schreiben      wirklich hochladen und schreiben. Ohne dieses Wort:
+ *                  Probelauf.
+ *   dry-run        ausdrücklicher Probelauf — ohne Wirkung, bleibt erlaubt
  *   dir=<pfad>     Ordner mit den aufbereiteten Varianten.
  *                  Default: <ordner der json>/produktbilder
  *   allow-internal-url
@@ -69,7 +80,7 @@ import {
   uploadFilesWorkflow,
 } from "@medusajs/medusa/core-flows"
 
-import { parseScriptArgs } from "./script-args"
+import { applyHint, parseScriptArgs, resolveRunMode } from "./script-args"
 
 /** Welche Varianten prepare-product-images.mjs erzeugt, in Reihenfolge der Suche. */
 const FALLBACK_EXTENSIONS = [".jpg", ".png"]
@@ -190,13 +201,23 @@ export default async function importProductImages({ container, args }: ExecArgs)
 
   const opts = parseScriptArgs(args)
 
+  // Modus und Argumente ZUERST — ohne `schreiben` bleibt alles ein Probelauf.
+  const mode = resolveRunMode(
+    opts,
+    { values: ["dir"], flags: ["allow-internal-url"], file: ".json" },
+    logger
+  )
+  if (!mode) {
+    return
+  }
+  const { dryRun } = mode
+
   const mappingFile = opts.file(".json")
   if (!mappingFile) {
     logger.error("Pfad zu product-images.json fehlt.")
     return
   }
 
-  const dryRun = opts.flag("dry-run")
   const imageDir = resolve(
     opts.value("dir") ?? join(dirname(resolve(mappingFile)), "produktbilder")
   )
@@ -349,6 +370,7 @@ export default async function importProductImages({ container, args }: ExecArgs)
       `Würde ${uploads} Bilder hochladen (je eine WebP- und eine ` +
         `Rückfall-Fassung) und ${planned.length} Produkte aktualisieren.`
     )
+    logger.info(applyHint(args))
     return
   }
 
