@@ -2,15 +2,26 @@
  * Legt den Katalog aus catalog.json in Medusa an — Produkte, Varianten und
  * Staffelpreise in einem Durchgang.
  *
+ * PROBELAUF IST DER NORMALFALL — ohne das Wort `schreiben` wird nur
+ * angezeigt, was angelegt würde (Hintergrund: script-args.ts):
+ *
  *   node scripts/parse-price-rules.mjs preisregeln.txt
  *   cd backend
- *   npx medusa exec ./src/scripts/import-catalog.ts ../odoo-export/catalog.json dry-run
+ *   npx medusa exec ./src/scripts/import-catalog.ts \
+ *     ../odoo-export/catalog.json
+ *
+ * Anlegen — `schreiben` als ERSTES Argument gleich nach dem Script-Pfad:
+ *
+ *   npx medusa exec ./src/scripts/import-catalog.ts schreiben \
+ *     ../odoo-export/catalog.json
  *
  * Argumente OHNE Bindestrich-Präfix — `medusa exec` lehnt unbekannte Optionen
- * ab, siehe script-args.ts.
+ * ab, siehe script-args.ts. Unbekannte oder vertippte Argumente brechen den
+ * Lauf ab, bevor etwas gelesen oder geschrieben wird.
  *
  * Optionen:
- *   dry-run        nur anzeigen, nichts schreiben
+ *   schreiben      wirklich anlegen. Ohne dieses Wort: Probelauf.
+ *   dry-run        ausdrücklicher Probelauf — ohne Wirkung, bleibt erlaubt
  *   round=<step>   Rundung, Default 0.05 (siehe import-price-tiers.ts)
  *   stock=<n>      Bestandsführung einschalten und mit n Stück starten.
  *                  Ohne die Option wird manage_inventory=false gesetzt,
@@ -56,7 +67,7 @@ import {
 
 import { assertCatalogGtins, catalogEan, isValidGtin } from "./gtin"
 import { roundTo } from "./import-price-tiers"
-import { parseScriptArgs } from "./script-args"
+import { applyHint, parseScriptArgs, resolveRunMode } from "./script-args"
 
 const CURRENCY = "chf"
 const OPTION_TITLE = "Verpackungseinheit"
@@ -265,13 +276,23 @@ export default async function importCatalog({ container, args }: ExecArgs) {
 
   const opts = parseScriptArgs(args)
 
+  // Modus und Argumente ZUERST — ohne `schreiben` bleibt alles ein Probelauf.
+  const mode = resolveRunMode(
+    opts,
+    { values: ["round", "stock"], file: ".json" },
+    logger
+  )
+  if (!mode) {
+    return
+  }
+  const { dryRun } = mode
+
   const file = opts.file(".json")
   if (!file) {
     logger.error("Pfad zu catalog.json fehlt.")
     return
   }
 
-  const dryRun = opts.flag("dry-run")
   const step = Number(opts.value("round") ?? String(ROUND_DEFAULT))
   const stockRaw = opts.value("stock")
   const manageInventory = stockRaw !== undefined
@@ -458,6 +479,7 @@ export default async function importCatalog({ container, args }: ExecArgs) {
       `Würde ${toCreate.length} Produkte mit ` +
         `${toCreate.reduce((n, p) => n + p.variants.length, 0)} Varianten anlegen.`
     )
+    logger.info(applyHint(args))
     return
   }
 

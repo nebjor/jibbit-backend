@@ -184,39 +184,53 @@ cd backend
 # 1) Grundgerüst: Region, Sales Channel, Lager, Versandprofil
 npx medusa exec ./src/scripts/seed.ts
 
-# 2) Produkte und Preise
-npx medusa exec ./src/scripts/import-catalog.ts     "$OUT/catalog.json" dry-run
-npx medusa exec ./src/scripts/import-catalog.ts     "$OUT/catalog.json"
-npx medusa exec ./src/scripts/import-price-tiers.ts "$OUT/tiers.json" "pricelist=Public Pricelist"
+# 2) Produkte und Preise. PROBELAUF IST DER NORMALFALL: ohne das Wort
+#    `schreiben` zeigt jedes Script nur, was es täte. `schreiben` steht
+#    immer als ERSTES Argument gleich nach dem Script-Pfad.
+npx medusa exec ./src/scripts/import-catalog.ts \
+  "$OUT/catalog.json"
+npx medusa exec ./src/scripts/import-catalog.ts schreiben \
+  "$OUT/catalog.json"
+npx medusa exec ./src/scripts/import-price-tiers.ts \
+  "$OUT/tiers.json" "pricelist=Public Pricelist"
+npx medusa exec ./src/scripts/import-price-tiers.ts schreiben \
+  "$OUT/tiers.json" "pricelist=Public Pricelist"
 
 # 3) Kunden — erst der Probelauf
-npx medusa exec ./src/scripts/import-customers.ts "$OUT/partners.json" country=ch dry-run
+npx medusa exec ./src/scripts/import-customers.ts \
+  "$OUT/partners.json" country=ch
 
 # 4) Kunden — echt
-npx medusa exec ./src/scripts/import-customers.ts "$OUT/partners.json" country=ch
+npx medusa exec ./src/scripts/import-customers.ts schreiben \
+  "$OUT/partners.json" country=ch
 
 # 5) Anmeldung vorbereiten — PFLICHT, und zwar VOR der DNS-Umstellung.
 #    Ohne diesen Schritt kommt kein importierter Kunde je wieder in sein
 #    Konto: "Passwort vergessen" antwortet mit 201 und verschickt nichts.
 #    Siehe Abschnitt 7.
-npx medusa exec ./src/scripts/prepare-odoo-logins.ts dry-run
-#    -> Zusammenfassung lesen, besonders die Zeile "Konflikte".
-#       Konflikte zuerst im Admin zusammenfuehren.
 npx medusa exec ./src/scripts/prepare-odoo-logins.ts
+#    -> Probelauf. Zusammenfassung lesen, besonders die Zeile "Konflikte".
+#       Konflikte zuerst im Admin zusammenfuehren.
+npx medusa exec ./src/scripts/prepare-odoo-logins.ts schreiben
 
 # 6) Optional: alle einladen, ihr Passwort zu setzen. Ohne das fuehrt der
 #    Weg ueber "Passwort vergessen" auf der Anmeldeseite — auch gut.
-npx medusa exec ./src/scripts/prepare-odoo-logins.ts invite
+npx medusa exec ./src/scripts/prepare-odoo-logins.ts schreiben invite
 ```
 
 **Argumente ohne führende Bindestriche** — `medusa exec` lehnt unbekannte
-Optionen ab. Warum, steht in `backend/src/scripts/script-args.ts`.
+Optionen ab. Warum, steht in `backend/src/scripts/script-args.ts`. Dort steht
+auch, warum der Probelauf der Normalfall ist und `schreiben` vorne steht: ein
+beim Einfügen umbrochener Einzeiler hat einmal das `dry-run` am Zeilenende
+verloren und scharf geschrieben. Unbekannte oder vertippte Argumente brechen
+den Lauf ab.
 
 ### Optionen von `import-customers.ts`
 
 | Option | Wirkung |
 |---|---|
-| `dry-run` | rechnet den Plan und berichtet, schreibt nichts |
+| `schreiben` | legt wirklich an. Ohne dieses Wort: Probelauf — rechnet den Plan und berichtet, schreibt nichts |
+| `dry-run` | ausdrücklicher Probelauf; ohne Wirkung, bleibt erlaubt |
 | `country=ch` | Ländercode für Adressen, denen Odoo keines mitgibt |
 | `limit=25` | nur die ersten 25 Kunden — für einen ersten echten Lauf |
 | `include-inactive` | archivierte Odoo-Partner ebenfalls anlegen |
@@ -417,4 +431,6 @@ verwenden ausschliesslich erfundene Namen.
 | `Feld customer_rank fehlt — es werden ALLE Partner exportiert` | sehr alte Odoo-Version. Ausgabe vor dem Import durchsehen |
 | `Keine Bestellungen gefunden` | `states=` oder `from=` zu eng gefasst |
 | `Pfad zu partners.json fehlt` | `medusa exec` braucht den Dateipfad als Positionsargument, ohne `--` |
-| `error: Unknown arguments: dry-run` | Bindestriche am Argument. Ohne schreiben: `dry-run`, nicht `--dry-run` |
+| `error: Unknown arguments: dry-run` | Bindestriche am Argument. Argumente ohne `--`: `schreiben`, `dry-run` |
+| `ABBRUCH — Argumente nicht verstanden` | Tippfehler oder unbekanntes Argument; die Meldung nennt es und die erlaubten. Nichts wurde geändert |
+| `MODUS: PROBELAUF`, obwohl geschrieben werden sollte | `schreiben` fehlt — als erstes Argument nach dem Script-Pfad ergänzen |

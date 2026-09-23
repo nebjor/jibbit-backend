@@ -7,9 +7,11 @@
  * Das ist die Konvention der Galaxus-Anbindung (galaxus-common.ts liest
  * ausschliesslich `variants.ean` und nimmt dort 8–14 Ziffern), und eine
  * zweite daneben hiesse: eine UPC-A oder EAN-8 fehlt im Galaxus-Export, nur
- * weil sie kürzer ist. `upc` und `barcode` schreiben die Katalog-Scripts
- * nicht; sie bleiben frei für das, was der Betreiber im Admin dort pflegt
- * (etwa einen hauseigenen Lagercode). In `metadata` gehört die Nummer nicht —
+ * weil sie kürzer ist. `upc` und `barcode` setzen die Katalog-Scripts
+ * nie; sie bleiben frei für das, was der Betreiber im Admin dort pflegt
+ * (etwa einen hauseigenen Lagercode). Einzige Ausnahme: steht dort exakt die
+ * Katalog-GTIN der Variante (ein früherer Stand verteilte nach Länge), leert
+ * update-catalog.ts das Feld. In `metadata` gehört die Nummer nicht —
  * das Admin zeigt und pflegt die native Spalte, und die Store-API liefert
  * sie typisiert aus. Die Storefront liest `ean` zuerst und bestimmt die
  * Länge selbst (lib/gtin.ts dort).
