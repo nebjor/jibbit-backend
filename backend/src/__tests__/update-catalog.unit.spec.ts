@@ -3,7 +3,8 @@
  *
  * Die Workflows aus core-flows sind gemockt: die Tests prüfen, WAS geschrieben
  * würde, ohne eine Datenbank zu brauchen — und dass der Trockenlauf gar nichts
- * schreibt.
+ * schreibt. Der Trockenlauf ist der Normalfall: geschrieben wird nur mit dem
+ * ausdrücklichen Argument `schreiben` (siehe script-args.ts).
  */
 
 import { mkdtempSync, writeFileSync } from "node:fs"
@@ -35,6 +36,7 @@ import {
 import updateCatalog, {
   ExistingProduct,
   mergeCatalogs,
+  parseScope,
   planCatalogUpdate,
   pricesEqual,
 } from "../scripts/update-catalog"
@@ -398,6 +400,210 @@ describe("planCatalogUpdate", () => {
     expect(plan.inventory[0].sku).toBe(angelSkuD)
     expect(plan.inventory[0].set_manage_inventory).toBe(true)
   })
+
+  // ── Bereich nur= ──────────────────────────────────────────────
+
+  /** Alles weicht ab: Text, Marke, GTIN, Gewicht, Preis und Bestand. */
+  const allesAnders = () => {
+    const existing = existingAngel()
+    existing.variants[0].prices[1].amount = 1.35
+    return {
+      ...base,
+      catalog: [
+        {
+          ...angel,
+          brand: "Angel",
+          variants: [
+            { ...angel.variants[0], gtin: "85966789", weight_g: 30 },
+            angel.variants[1],
+          ],
+        },
+      ],
+      content: [{ handle: angelHandle, subtitle: "Neu", description: "Text." }],
+      inventory: [{ sku: angelSkuEA, quantity: 7 }],
+      existing: [existing],
+    }
+  }
+
+  it("nur=gtin plant ausschliesslich die GTIN — keine Preise, Texte, Marke, Gewicht, Bestand", () => {
+    const plan = planCatalogUpdate({ ...allesAnders(), scope: "gtin" })
+    expect(plan.products).toHaveLength(1)
+    expect(plan.products[0].update).toEqual({})
+    expect(plan.products[0].variantPrices).toEqual([])
+    expect(plan.products[0].variantData).toEqual([
+      { variant_id: "var_1", sku: angelSkuEA, update: { ean: "85966789" } },
+    ])
+    expect(plan.products[0].changes.map((c) => c.field)).toEqual([
+      `${angelSkuEA} ean`,
+    ])
+    expect(plan.inventory).toEqual([])
+  })
+
+  it("ohne nur= läuft weiterhin alles", () => {
+    const plan = planCatalogUpdate(allesAnders())
+    expect(Object.keys(plan.products[0].update).sort()).toEqual([
+      "description",
+      "metadata",
+      "subtitle",
+    ])
+    expect(plan.products[0].variantPrices).toHaveLength(1)
+    expect(plan.products[0].variantData[0].update).toEqual({
+      ean: "85966789",
+      weight: 30,
+    })
+    expect(plan.inventory).toHaveLength(1)
+  })
+
+  it("nur=preise / nur=inhalt / nur=bestand fassen je nur ihren Bereich an", () => {
+    const preise = planCatalogUpdate({ ...allesAnders(), scope: "preise" })
+    expect(preise.products[0].variantPrices).toHaveLength(1)
+    expect(preise.products[0].variantData).toEqual([])
+    expect(preise.products[0].update).toEqual({})
+    expect(preise.inventory).toEqual([])
+
+    const inhalt = planCatalogUpdate({ ...allesAnders(), scope: "inhalt" })
+    expect(inhalt.products[0].update).toEqual({
+      subtitle: "Neu",
+      description: "Text.",
+    })
+    expect(inhalt.products[0].variantPrices).toEqual([])
+    expect(inhalt.products[0].variantData).toEqual([])
+
+    const bestand = planCatalogUpdate({ ...allesAnders(), scope: "bestand" })
+    expect(bestand.products).toEqual([])
+    expect(bestand.inventory).toHaveLength(1)
+  })
+
+  it("nur=gtin meldet keine fehlenden Menge-1-Preise — Preise sind nicht im Bereich", () => {
+    const ohneBasis: CatalogProduct = {
+      ...angel,
+      variants: [
+        {
+          ...angel.variants[0],
+          tiers: [{ min_quantity: 10, max_quantity: null, price: 1.3 }],
+        },
+        angel.variants[1],
+      ],
+    }
+    const input = { ...base, catalog: [ohneBasis], existing: [existingAngel()] }
+    expect(planCatalogUpdate(input).noBasePrice).toHaveLength(1)
+    expect(planCatalogUpdate({ ...input, scope: "gtin" }).noBasePrice).toEqual([])
+  })
+
+  it("parseScope kennt genau die vier Bereiche", () => {
+    expect(parseScope(undefined)).toEqual({ scope: null })
+    expect(parseScope("gtin")).toEqual({ scope: "gtin" })
+    expect(parseScope("bestand")).toEqual({ scope: "bestand" })
+    expect(parseScope("gtins")).toEqual({
+      error: expect.stringContaining("nur=gtins"),
+    })
+    expect(parseScope("")).toHaveProperty("error")
+  })
+
+  // ── Verirrte Codes in upc/barcode ─────────────────────────────
+
+  const mitGtins: CatalogProduct = {
+    ...angel,
+    variants: [
+      { ...angel.variants[0], gtin: "85966789" }, // GTIN-8
+      { ...angel.variants[1], gtin: "716165280293" }, // GTIN-12
+    ],
+  }
+
+  it("leert upc/barcode, wenn dort exakt die Katalog-GTIN steht, und setzt ean", () => {
+    // Stand nach dem alten Script: GTIN-8 in barcode, GTIN-12 in upc.
+    const existing = existingAngel()
+    existing.variants[0].barcode = "85966789"
+    existing.variants[1].upc = "716165280293"
+
+    const plan = planCatalogUpdate({
+      ...base,
+      catalog: [mitGtins],
+      existing: [existing],
+      scope: "gtin",
+    })
+    expect(plan.products[0].variantData).toEqual([
+      {
+        variant_id: "var_1",
+        sku: angelSkuEA,
+        update: { ean: "85966789", barcode: null },
+      },
+      {
+        variant_id: "var_2",
+        sku: angelSkuD,
+        update: { ean: "716165280293", upc: null },
+      },
+    ])
+    expect(plan.products[0].changes).toEqual([
+      { field: `${angelSkuEA} ean`, before: "(leer)", after: "85966789" },
+      {
+        field: `${angelSkuEA} barcode`,
+        before: "85966789",
+        after: "(leer, steht jetzt in ean)",
+      },
+      { field: `${angelSkuD} ean`, before: "(leer)", after: "716165280293" },
+      {
+        field: `${angelSkuD} upc`,
+        before: "716165280293",
+        after: "(leer, steht jetzt in ean)",
+      },
+    ])
+  })
+
+  it("leert den verirrten Code auch, wenn ean schon stimmt — und ist danach idempotent", () => {
+    const existing = existingAngel()
+    existing.variants[1].ean = "716165280293"
+    existing.variants[1].upc = "716165280293"
+    existing.variants[0].ean = "85966789"
+
+    const plan = planCatalogUpdate({
+      ...base,
+      catalog: [mitGtins],
+      existing: [existing],
+    })
+    expect(plan.products[0].variantData).toEqual([
+      { variant_id: "var_2", sku: angelSkuD, update: { upc: null } },
+    ])
+
+    existing.variants[1].upc = null
+    expect(
+      planCatalogUpdate({ ...base, catalog: [mitGtins], existing: [existing] })
+        .products
+    ).toEqual([])
+  })
+
+  it("lässt einen ANDEREN Wert in upc/barcode stehen — Hauscodes gehören dem Betreiber", () => {
+    const existing = existingAngel()
+    existing.variants[0].barcode = "LAGER-0042"
+    existing.variants[0].upc = "85966790" // fast die GTIN, aber nicht identisch
+    existing.variants[1].barcode = "85966789" // GTIN einer ANDEREN Variante
+
+    const plan = planCatalogUpdate({
+      ...base,
+      catalog: [mitGtins],
+      existing: [existing],
+    })
+    for (const v of plan.products[0].variantData) {
+      expect(v.update).not.toHaveProperty("upc")
+      expect(v.update).not.toHaveProperty("barcode")
+    }
+  })
+
+  it("räumt nie auf, wenn der Katalog für die Variante keine GTIN hat oder GTIN nicht im Bereich ist", () => {
+    const existing = existingAngel()
+    existing.variants[0].upc = "716165280293"
+    expect(planCatalogUpdate({ ...base, existing: [existing] }).products).toEqual([])
+
+    const verirrt = existingAngel()
+    verirrt.variants[0].barcode = "85966789"
+    const plan = planCatalogUpdate({
+      ...base,
+      catalog: [mitGtins],
+      existing: [verirrt],
+      scope: "preise",
+    })
+    expect(plan.products).toEqual([])
+  })
 })
 
 // ─── Datenkonsistenz der eingecheckten Dateien ──────────────────
@@ -490,10 +696,11 @@ describe("data/*.json", () => {
 describe("updateCatalog (exec)", () => {
   const graphMock = jest.fn()
   const linkCreateMock = jest.fn()
+  const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
   const container = {
     resolve: (key: string) => {
       if (key === "logger") {
-        return { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+        return logger
       }
       if (key === "query") {
         return { graph: graphMock }
@@ -558,17 +765,7 @@ describe("updateCatalog (exec)", () => {
     })
   })
 
-  it("Trockenlauf: plant Änderungen, ruft aber keinen einzigen Workflow auf", async () => {
-    await updateCatalog({
-      container,
-      args: [
-        catalogPath,
-        `content=${contentPath}`,
-        `inventory=${inventoryPath}`,
-        "dry-run",
-      ],
-    } as any)
-
+  const expectNichtsGeschrieben = () => {
     expect(updateProductsWorkflow).not.toHaveBeenCalled()
     expect(updateProductVariantsWorkflow).not.toHaveBeenCalled()
     expect(createInventoryItemsWorkflow).not.toHaveBeenCalled()
@@ -576,12 +773,78 @@ describe("updateCatalog (exec)", () => {
     expect(updateInventoryLevelsWorkflow).not.toHaveBeenCalled()
     expect(linkCreateMock).not.toHaveBeenCalled()
     expect(runMock).not.toHaveBeenCalled()
+  }
+
+  it("OHNE Modus-Argument ist Trockenlauf: plant, ruft aber keinen einzigen Workflow auf", async () => {
+    const args = [
+      catalogPath,
+      `content=${contentPath}`,
+      `inventory=${inventoryPath}`,
+    ]
+    await updateCatalog({ container, args } as any)
+
+    expectNichtsGeschrieben()
+    // Geplant wurde trotzdem — der Probelauf hat die Datenbank gelesen.
+    expect(graphMock).toHaveBeenCalled()
+    // Erste Zeile nennt den Modus laut, die letzte sagt, wie man anwendet.
+    expect(logger.info.mock.calls[0][0]).toMatch(/^MODUS: PROBELAUF/)
+    expect(logger.info.mock.calls[0][0]).toContain('"schreiben"')
+    expect(logger.info.mock.calls[1][0]).toMatch(/^BEREICH: alles/)
+    const last = logger.info.mock.calls.at(-1)![0]
+    expect(last).toContain(`schreiben ${args.join(" ")}`)
+  })
+
+  it("`dry-run` bleibt erlaubt und bleibt trocken — an jeder Stelle", async () => {
+    for (const args of [
+      [catalogPath, `content=${contentPath}`, "dry-run"],
+      ["dry-run", catalogPath, `content=${contentPath}`],
+    ]) {
+      await updateCatalog({ container, args } as any)
+    }
+    expectNichtsGeschrieben()
+    // Der Hinweis wiederholt dry-run nicht.
+    expect(logger.info.mock.calls.at(-1)![0]).not.toContain("dry-run")
+  })
+
+  it("der Vorfall: die abgeschnittene Zeile OHNE das Schlusswort schreibt nicht mehr", async () => {
+    // bash führte nur `… update-catalog.js /app/data/catalog.json` aus; der
+    // Rest (`extra=… dry-run`) landete in einem zweiten Befehl.
+    await updateCatalog({ container, args: [catalogPath] } as any)
+    expectNichtsGeschrieben()
+  })
+
+  it("unbekannte Argumente brechen ab — vor jeder Abfrage, auch mit `schreiben`", async () => {
+    for (const args of [
+      ["schreiben", catalogPath, "dryrun"],
+      ["schreiben", catalogPath, "schreibe"],
+      ["schreiben", catalogPath, `extr=${contentPath}`],
+      ["schreiben", catalogPath, contentPath], // zweiter Pfad ohne name=
+      ["schreiben", catalogPath, "content="],
+      ["schreiben", "dry-run", catalogPath], // Widerspruch
+      ["schreiben", catalogPath, "nur=gtins"],
+      ["schreiben", catalogPath, "nur=inhalt"], // ohne content=
+    ]) {
+      jest.clearAllMocks()
+      await updateCatalog({ container, args } as any)
+      expect(logger.error.mock.calls[0][0]).toMatch(/^ABBRUCH/)
+      expect(graphMock).not.toHaveBeenCalled()
+      expectNichtsGeschrieben()
+    }
+  })
+
+  it("Schreiblauf: `schreiben` wird an jeder Stelle angenommen", async () => {
+    await updateCatalog({
+      container,
+      args: [catalogPath, `content=${contentPath}`, "schreiben"],
+    } as any)
+    expect(updateProductsWorkflow).toHaveBeenCalledTimes(1)
+    expect(logger.info.mock.calls[0][0]).toBe("MODUS: SCHREIBEN")
   })
 
   it("Schreiblauf: aktualisiert Texte über den Produkt-Workflow", async () => {
     await updateCatalog({
       container,
-      args: [catalogPath, `content=${contentPath}`],
+      args: ["schreiben", catalogPath, `content=${contentPath}`],
     } as any)
 
     expect(updateProductsWorkflow).toHaveBeenCalledTimes(1)
@@ -610,12 +873,75 @@ describe("updateCatalog (exec)", () => {
       ])
     )
 
-    await updateCatalog({ container, args: [gtinPath] } as any)
+    await updateCatalog({ container, args: ["schreiben", gtinPath] } as any)
 
     expect(updateProductVariantsWorkflow).toHaveBeenCalledTimes(1)
     expect(runMock).toHaveBeenCalledWith({
       input: { product_variants: [{ id: "var_1", ean: "716165280293" }] },
     })
+  })
+
+  it("nur=gtin: schreibt die GTIN, leert das verirrte upc mit null — und sonst nichts", async () => {
+    const gtinPath = join(dir, "catalog-gtin-scope.json")
+    writeFileSync(
+      gtinPath,
+      JSON.stringify([
+        {
+          ...angel,
+          brand: "Angel",
+          variants: [
+            { ...angel.variants[0], gtin: "716165280293", weight_g: 30 },
+            angel.variants[1],
+          ],
+        },
+      ])
+    )
+    // Medusa-Stand nach dem Vorfall: Nummer in upc, Preis weicht ab.
+    graphMock.mockImplementation(async ({ entity }: { entity: string }) => {
+      if (entity !== "product") {
+        throw new Error(`nur=gtin darf ${entity} nicht abfragen`)
+      }
+      const p = existingAngel()
+      p.variants[0].upc = "716165280293"
+      p.variants[0].prices[1].amount = 1.35
+      return {
+        data: [
+          { ...p, variants: p.variants.map((v) => ({ ...v, inventory_items: [] })) },
+        ],
+      }
+    })
+
+    const args = [
+      gtinPath,
+      "nur=gtin",
+      `content=${contentPath}`,
+      `inventory=${inventoryPath}`,
+    ]
+
+    // Probelauf nennt den Bereich und die Feldänderungen.
+    await updateCatalog({ container, args } as any)
+    expectNichtsGeschrieben()
+    const lines = logger.info.mock.calls.map((c) => c[0])
+    expect(lines[1]).toMatch(/^BEREICH: nur gtin/)
+    expect(lines).toContain(`    ${angelSkuEA} ean: (leer) -> 716165280293`)
+    expect(lines).toContain(
+      `    ${angelSkuEA} upc: 716165280293 -> (leer, steht jetzt in ean)`
+    )
+    expect(lines.some((l) => l.includes("preise"))).toBe(false)
+
+    // Schreiblauf: genau EIN Varianten-Update, null leert die Spalte.
+    jest.clearAllMocks()
+    await updateCatalog({ container, args: ["schreiben", ...args] } as any)
+    expect(updateProductsWorkflow).not.toHaveBeenCalled()
+    expect(updateProductVariantsWorkflow).toHaveBeenCalledTimes(1)
+    expect(runMock).toHaveBeenCalledTimes(1)
+    expect(runMock).toHaveBeenCalledWith({
+      input: {
+        product_variants: [{ id: "var_1", ean: "716165280293", upc: null }],
+      },
+    })
+    expect(createInventoryItemsWorkflow).not.toHaveBeenCalled()
+    expect(linkCreateMock).not.toHaveBeenCalled()
   })
 
   it("bricht bei einer ungültigen GTIN laut ab — auch im Trockenlauf, vor jeder Abfrage", async () => {

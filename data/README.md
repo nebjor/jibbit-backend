@@ -21,11 +21,27 @@ ohnehin im Shop.
 
 ## Einspielen
 
+**Probelauf ist der Normalfall.** Jedes Script, das in die Datenbank
+schreibt, zeigt ohne das Wort `schreiben` nur an, was es täte. `schreiben`
+steht immer als **erstes** Argument gleich nach dem Script-Pfad — ein beim
+Einfügen abgeschnittener Befehl verliert so höchstens Optionen, nie den
+Probelauf. Unbekannte oder vertippte Argumente brechen den Lauf ab. Die
+Befehle hier sind bewusst in kurze Zeilen mit `\` am Ende gebrochen, damit sie
+das Einfügen in ein umbrechendes Terminal überstehen.
+
     docker compose cp ./data medusa:/app/data
+
+Probelauf:
+
     docker compose exec medusa npx medusa exec \
-      ./src/scripts/import-catalog.js /app/data/catalog.json dry-run
+      ./src/scripts/import-catalog.js \
+      /app/data/catalog.json
+
+Anlegen:
+
     docker compose exec medusa npx medusa exec \
-      ./src/scripts/import-catalog.js /app/data/catalog.json
+      ./src/scripts/import-catalog.js schreiben \
+      /app/data/catalog.json
 
 Erwartet: 25 Produkte mit 32 Varianten. `OCB Bio Slim Organic Hemp Rolls`
 fehlt bewusst — für die Einzelpackung gibt es in den Odoo-Daten keinen Preis
@@ -73,15 +89,36 @@ Abgelegt wird **jede** gültige GTIN — 8, 12, 13 oder 14 Ziffern — in Medusa
 nativer Varianten-Spalte `ean`, nicht in `metadata`. Das ist dieselbe Spalte,
 die der Galaxus-Export liest (`galaxus-common.ts` kennt nur `variants.ean`
 und nimmt dort 8–14 Ziffern): eine UPC-A von RAW oder die EAN-8 von Greengo
-steht damit genauso im Feed wie eine EAN-13. `upc` und `barcode` schreiben
-die Katalog-Scripts nicht; die Felder bleiben frei für das, was im Admin
-dort gepflegt wird (z. B. ein hauseigener Lagercode). Die Storefront liest
+steht damit genauso im Feed wie eine EAN-13. `upc` und `barcode` setzen
+die Katalog-Scripts nie; die Felder bleiben frei für das, was im Admin
+dort gepflegt wird (z. B. ein hauseigener Lagercode). Einzige Ausnahme, zum
+Aufräumen: steht in `upc` oder `barcode` **exakt** die Katalog-GTIN der
+Variante (ein früherer Stand verteilte die Nummern nach Länge auf die drei
+Felder), leert `update-catalog.ts` das Feld und meldet
+`upc: 716165280293 -> (leer, steht jetzt in ean)`. Jeder andere Wert bleibt
+stehen. Die Storefront liest
 `ean` zuerst, prüft selbst nach und gibt die Nummer je nach Länge im
 Produkt-Schema als `gtin8`/`gtin12`/`gtin13`/`gtin14` aus. Ohne `gtin` (und
 ohne `ean`) im Katalog fasst `update-catalog.ts` die Spalte nicht an.
 
 Nur an der Ware geprüfte Nummern eintragen — `gtin-candidates.json` sind
 Vorschläge, keine Daten.
+
+Nur die GTINs einspielen — `nur=gtin` plant und schreibt ausschliesslich
+`variant.ean` (samt Aufräumen von `upc`/`barcode`), keine Preise, keine
+Texte, kein Bestand, weder Gewicht noch Marke. Probelauf:
+
+    docker compose exec medusa npx medusa exec \
+      ./src/scripts/update-catalog.js \
+      /app/data/catalog.json nur=gtin \
+      extra=/app/data/catalog-extra.json
+
+Anwenden:
+
+    docker compose exec medusa npx medusa exec \
+      ./src/scripts/update-catalog.js schreiben \
+      /app/data/catalog.json nur=gtin \
+      extra=/app/data/catalog-extra.json
 
 **`gtin` oder `ean`?** Beide Katalogfelder landen in derselben Spalte
 `variant.ean` und werden gleich geprüft (Länge 8/12/13/14, GS1-Prüfziffer,
@@ -151,15 +188,40 @@ Der Bericht fürs Terminal (Konsole, optional CSV zum Ausdrucken) liest nur:
 
 ## Nachziehen bestehender Produkte
 
+Probelauf — zeigt jede Änderung Feld für Feld, schreibt nichts:
+
     cd backend
-    npx medusa exec ./src/scripts/update-catalog.ts ../data/catalog.json \
+    npx medusa exec ./src/scripts/update-catalog.ts \
+      ../data/catalog.json \
       extra=../data/catalog-extra.json \
       content=../data/product-content.json \
-      inventory=../data/inventory.json \
-      dry-run
+      inventory=../data/inventory.json
 
-`dry-run` zeigt jede Änderung Feld für Feld; ohne die Option wird
-geschrieben. Das Script ist idempotent und legt nichts an — neue Produkte
+Anwenden — `schreiben` als erstes Argument nach dem Script-Pfad:
+
+    cd backend
+    npx medusa exec ./src/scripts/update-catalog.ts schreiben \
+      ../data/catalog.json \
+      extra=../data/catalog-extra.json \
+      content=../data/product-content.json \
+      inventory=../data/inventory.json
+
+Im Container (kompiliert, daher `.js` und `/app/data`):
+
+    docker compose exec medusa npx medusa exec \
+      ./src/scripts/update-catalog.js schreiben \
+      /app/data/catalog.json \
+      extra=/app/data/catalog-extra.json \
+      content=/app/data/product-content.json \
+      inventory=/app/data/inventory.json
+
+Geschrieben wird **nur** mit `schreiben`; die erste Ausgabezeile nennt den
+Modus (`MODUS: PROBELAUF …` bzw. `MODUS: SCHREIBEN`), die zweite den Bereich.
+`dry-run` bleibt als ausdrücklicher Probelauf erlaubt, ist aber ohne Wirkung.
+Mit `nur=gtin`, `nur=preise`, `nur=inhalt` oder `nur=bestand` beschränkt sich
+der Lauf auf einen Bereich; Gewicht und Marke laufen nur im Gesamtlauf mit.
+Ein unbekanntes Argument (Tippfehler, zweiter Pfad ohne `extra=`) bricht ab,
+bevor etwas gelesen wird. Das Script ist idempotent und legt nichts an — neue Produkte
 zuerst mit `import-catalog.ts` (auch mit `catalog-extra.json`) anlegen.
 `extra=` immer mitgeben: ohne die Datei würde der unvollständige
 OCB-Bio-Eintrag greifen (das Script sperrt das und warnt nur).
