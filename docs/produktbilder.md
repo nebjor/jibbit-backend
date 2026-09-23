@@ -68,13 +68,15 @@ Produkt wird zum Vorschaubild.
 cd /opt/jibbit/medusa-ecom
 docker compose cp ./backend/media medusa:/app/media
 
-# erst schauen
+# erst schauen — Probelauf ist der Normalfall
 docker compose exec medusa npx medusa exec \
-  ./src/scripts/import-product-images.js /app/media/product-images.json dry-run
+  ./src/scripts/import-product-images.js \
+  /app/media/product-images.json
 
-# dann schreiben
+# dann schreiben — `schreiben` als erstes Argument nach dem Script-Pfad
 docker compose exec medusa npx medusa exec \
-  ./src/scripts/import-product-images.js /app/media/product-images.json
+  ./src/scripts/import-product-images.js schreiben \
+  /app/media/product-images.json
 ```
 
 Achtung, **`.js` nicht `.ts`**: der Laufzeitcontainer enthält nur das Ergebnis

@@ -1,16 +1,26 @@
 /**
  * Legt die aus Odoo exportierten Kunden in Medusa an — Kunde plus Adressen.
  *
+ * PROBELAUF IST DER NORMALFALL — ohne das Wort `schreiben` wird nur gezählt
+ * (Hintergrund: script-args.ts):
+ *
  *   node scripts/odoo-export-customers.mjs ../odoo-export
  *   cd backend
  *   npx medusa exec ./src/scripts/import-customers.ts \
- *       ../odoo-export/partners.json country=ch dry-run
+ *     ../odoo-export/partners.json country=ch
+ *
+ * Anlegen — `schreiben` als ERSTES Argument gleich nach dem Script-Pfad:
+ *
+ *   npx medusa exec ./src/scripts/import-customers.ts schreiben \
+ *     ../odoo-export/partners.json country=ch
  *
  * Argumente OHNE Bindestrich-Präfix — `medusa exec` lehnt unbekannte Optionen
- * ab, siehe script-args.ts.
+ * ab, siehe script-args.ts. Unbekannte oder vertippte Argumente brechen den
+ * Lauf ab, bevor etwas gelesen oder geschrieben wird.
  *
  * Optionen:
- *   dry-run             nur zählen, nichts schreiben
+ *   schreiben           wirklich anlegen. Ohne dieses Wort: Probelauf.
+ *   dry-run             ausdrücklicher Probelauf — ohne Wirkung, bleibt erlaubt
  *   country=<code>      Ländercode für Adressen, denen Odoo keines mitgibt
  *                       (für jibbit: ch). Ohne die Option fallen solche
  *                       Adressen weg — der Kunde wird trotzdem angelegt.
@@ -67,7 +77,7 @@ import {
   createCustomerAddressesWorkflow,
 } from "@medusajs/medusa/core-flows"
 
-import { parseScriptArgs } from "./script-args"
+import { applyHint, parseScriptArgs, resolveRunMode } from "./script-args"
 import {
   OdooPartner,
   PlannedCustomer,
@@ -83,16 +93,30 @@ export default async function importCustomers({ container, args }: ExecArgs) {
 
   const opts = parseScriptArgs(args)
 
+  // Modus und Argumente ZUERST — ohne `schreiben` bleibt alles ein Probelauf.
+  const mode = resolveRunMode(
+    opts,
+    {
+      values: ["country", "limit"],
+      flags: ["include-inactive", "include-non-customers"],
+      file: ".json",
+    },
+    logger
+  )
+  if (!mode) {
+    return
+  }
+  const { dryRun } = mode
+
   const file = opts.file(".json")
   if (!file) {
     logger.error(
-      "Pfad zu partners.json fehlt. Beispiel:\n" +
-        "  npx medusa exec ./src/scripts/import-customers.ts ../odoo-export/partners.json country=ch dry-run"
+      "Pfad zu partners.json fehlt. Beispiel (Probelauf):\n" +
+        "  npx medusa exec ./src/scripts/import-customers.ts ../odoo-export/partners.json country=ch"
     )
     return
   }
 
-  const dryRun = opts.flag("dry-run")
   const country = opts.value("country")?.toLowerCase()
   const limitRaw = opts.value("limit")
   const limit = limitRaw ? Number(limitRaw) : undefined
@@ -252,6 +276,7 @@ export default async function importCustomers({ container, args }: ExecArgs) {
     logger.info(
       `Verteilung der Adressen nach Land: ${JSON.stringify(countryHistogram(toCreate))}`
     )
+    logger.info(applyHint(args))
     logger.info(
       "Alle importierten Kunden erhalten KEIN Passwort (has_account = false) " +
         "und müssen beim ersten Login über „Passwort vergessen“ gehen."

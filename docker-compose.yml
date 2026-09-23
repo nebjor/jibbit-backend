@@ -116,20 +116,14 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@jibbit.ch}
 
+      # Bestellungen: Betreiber-Mail und ntfy-Push (leer = kein Push)
+      ORDER_NOTIFICATION_TO: ${ORDER_NOTIFICATION_TO:-joris@jibbit.ch}
+      NTFY_URL: ${NTFY_URL:-}
+
       # Ablageort fuer hochgeladene Produktbilder. Muss mit dem Volume unten
       # uebereinstimmen — die ausfuehrliche Begruendung steht in
       # backend/medusa-config.ts.
       MEDUSA_UPLOAD_DIR: /app/static
-
-      # Bildoptimierung beim Upload (backend/src/modules/optimized-file).
-      # Alle drei optional — leer heisst: avif, Format-Standardqualitaet,
-      # max. 2000 px Kantenlaenge. UPLOAD_IMAGE_FORMAT=off schaltet ab.
-      # Diese Zeilen sind Pflicht, obwohl die Werte optional sind: Compose
-      # reicht NUR weiter, was hier unter environment: steht — ein Wert nur
-      # in der .env erreicht den Container nie, und der Fehler bleibt still.
-      UPLOAD_IMAGE_FORMAT: ${UPLOAD_IMAGE_FORMAT:-}
-      UPLOAD_IMAGE_QUALITY: ${UPLOAD_IMAGE_QUALITY:-}
-      UPLOAD_IMAGE_MAX_DIMENSION: ${UPLOAD_IMAGE_MAX_DIMENSION:-}
 
       # Nur fuer einen lokalen Mailfaenger. Bei NODE_ENV=production ignoriert
       # der SMTP-Provider den Schalter hart.
@@ -193,6 +187,14 @@ services:
       # Image gebacken. Der Schluessel wird zur Laufzeit serverseitig gelesen.
       POSTHOG_KEY: ${POSTHOG_KEY:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-https://eu.i.posthog.com}
+
+      # Indexierungs-Schalter der Storefront (jibbit-frontend,
+      # lib/seo/indexing.ts). Nur «true» macht die Seite indexierbar; leer,
+      # falsch oder vertippt heisst noindex (Header, Meta-Tag, leere Sitemap).
+      # Staging: leer lassen. PRODUKTION: SITE_INDEXABLE=true in .env — sonst
+      # verschwindet der Shop aus Google. Wird zur Laufzeit gelesen, ein
+      # Neustart des Containers genuegt.
+      SITE_INDEXABLE: ${SITE_INDEXABLE:-}
 
       BASE_DOMAIN: ${BASE_DOMAIN:-jibbit.app}
       CONTROL_PLANE_URL: ${CONTROL_PLANE_URL:-}
