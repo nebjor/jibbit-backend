@@ -33,7 +33,7 @@ bzw. das Partner-Wiki (confdg.atlassian.net, Login nötig).
 | Schritt | Werkzeug |
 |---|---|
 | Was fehlt noch? | `npx medusa exec ./src/scripts/galaxus-report.ts` |
-| Daten pflegen | `data/catalog.json` (`ean`, `weight_g`, `brand`) + `update-catalog.ts` |
+| Daten pflegen | Admin: Variante (EAN, Gewicht), Produkt-Metadaten (`brand`), Lager (Bestand) |
 | CSV-Exporte erzeugen | `npx medusa exec ./src/scripts/galaxus-export.ts` |
 | Hochladen | **bewusst nicht gebaut** — FTP-Zugang gibt es erst nach der Aufnahme |
 
@@ -54,61 +54,21 @@ läuft dasselbe über `docker compose exec medusa npx medusa exec
 
 - **EAN/GTIN je Variante.** Steht auf der Verpackung (Strichcode) oder kommt
   vom Lieferanten/Grossisten. Wichtig: Die Display-/Box-Variante hat eine
-  **eigene** EAN (die der Umverpackung), nicht die der Einzelpackung. Als
-  String mit führenden Nullen in `data/catalog.json` eintragen (`"ean"`).
+  **eigene** EAN (die der Umverpackung), nicht die der Einzelpackung. Im
+  Admin an der Variante im Feld EAN eintragen.
   Eigene EANs kaufen (GS1 Schweiz) ist nur nötig, falls ein Artikel wirklich
   keine hat — dann vorher mit Galaxus klären, ob ein `ManufacturerKey`
   reicht.
-- **Gewicht in Gramm je Variante** (`"weight_g"`): Produkt **inklusive
+- **Gewicht in Gramm je Variante** (Admin, Feld Gewicht): Produkt **inklusive
   Verpackung** wiegen (Galaxus-Pflichtfeld `WeightG`). Der Shop selbst
   rechnet einen einheitlichen Versandpreis, unabhängig vom Gewicht.
-- **Marke je Produkt** (`"brand"`): Gizeh, OCB, RAW, Elements, PURIZE … —
+- **Marke je Produkt** (Admin, Produkt-Metadaten `brand`): Gizeh, OCB, RAW, Elements, PURIZE … —
   Galaxus legt Produkte nur mit Marke an.
-- **Bestand**: `data/inventory.json` ausfüllen (Zahlen statt `null`).
+- **Bestand**: im Admin unter Lager erfassen.
 - **Bilder**: mindestens ein Bild pro Produkt, längste Kante ≥ 600 px,
   JPEG/PNG, frei zugängliche URL — die Medusa-Bilder unter
   `https://…/static/…` erfüllen das (siehe `docs/produktbilder.md`,
   `import-product-images.ts`).
-
-Dann einspielen (idempotent). Probelauf ist der Normalfall — ohne das Wort
-`schreiben` zeigt das Script nur jede Änderung Feld für Feld:
-
-    cd backend
-    npx medusa exec ./src/scripts/update-catalog.ts \
-      ../data/catalog.json \
-      extra=../data/catalog-extra.json \
-      content=../data/product-content.json \
-      inventory=../data/inventory.json
-
-Anwenden — `schreiben` als erstes Argument gleich nach dem Script-Pfad:
-
-    cd backend
-    npx medusa exec ./src/scripts/update-catalog.ts schreiben \
-      ../data/catalog.json \
-      extra=../data/catalog-extra.json \
-      content=../data/product-content.json \
-      inventory=../data/inventory.json
-
-Nur die GTINs auf dem Server (Container, kompiliert) — `nur=gtin` fasst
-weder Preise noch Texte noch Bestand an:
-
-    docker compose exec medusa npx medusa exec \
-      ./src/scripts/update-catalog.js \
-      /app/data/catalog.json nur=gtin \
-      extra=/app/data/catalog-extra.json
-
-    docker compose exec medusa npx medusa exec \
-      ./src/scripts/update-catalog.js schreiben \
-      /app/data/catalog.json nur=gtin \
-      extra=/app/data/catalog-extra.json
-
-Die Befehle sind bewusst in kurze Zeilen mit `\` gebrochen: ein langer
-Einzeiler, den das Terminal beim Einfügen umbricht, wird von der Shell als
-zwei Befehle ausgeführt. Deshalb hängt das Schreiben auch nicht mehr am
-letzten Wort der Zeile (siehe `backend/src/scripts/script-args.ts`).
-
-Beide Import-Skripte validieren die EANs (8/12/13/14 Ziffern, GS1-Prüfziffer,
-keine Duplikate) und brechen bei Fehlern ab, bevor etwas geschrieben wird.
 
 ### 3. Exporte erzeugen
 

@@ -81,7 +81,7 @@ docker compose exec medusa npx medusa exec \
 
 Achtung, **`.js` nicht `.ts`**: der Laufzeitcontainer enthält nur das Ergebnis
 von `medusa build`, und das sind ausschliesslich kompilierte Dateien. (Das gilt
-auch für `seed.js`, `import-catalog.js` und `import-price-tiers.js` — in
+auch für `seed.js` — in
 DEPLOY-HEUTE.md stehen die noch mit `.ts`.)
 
 Der Ordner muss mit `docker compose cp` in den Container, weil `medusa build`

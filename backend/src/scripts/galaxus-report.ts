@@ -14,8 +14,7 @@
  *                als Arbeitsliste zum Nachpflegen der Daten.
  *
  * Der Bericht liest NUR und schreibt nie in die Datenbank. Nachgepflegt
- * werden die Daten in data/catalog.json (ean, weight_g, brand) und über
- * update-catalog.ts — siehe docs/galaxus-marktplatz.md.
+ * werden die Daten im Admin — siehe docs/galaxus-marktplatz.md.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs"
@@ -38,7 +37,7 @@ export default async function galaxusReport({ container, args }: ExecArgs) {
   const snapshots = await loadVariantSnapshots(container)
   if (!snapshots.length) {
     logger.warn(
-      "Keine Varianten in der Datenbank — zuerst import-catalog.ts laufen lassen."
+      "Keine Varianten in der Datenbank."
     )
     return
   }
@@ -76,9 +75,9 @@ export default async function galaxusReport({ container, args }: ExecArgs) {
   }
   if (bereit.length < rows.length) {
     logger.info(
-      "  Nachpflegen: ean/weight_g/brand in data/catalog.json, Bestand in " +
-        "data/inventory.json, dann update-catalog.ts. Bilder über " +
-        "import-product-images.ts. Details: docs/galaxus-marktplatz.md"
+      "  Nachpflegen im Admin: EAN und Gewicht an der Variante, Marke " +
+        "(brand) in den Produkt-Metadaten, Bestand im Lager. " +
+        "Details: docs/galaxus-marktplatz.md"
     )
   }
 

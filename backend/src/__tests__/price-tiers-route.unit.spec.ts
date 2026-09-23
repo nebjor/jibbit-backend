@@ -1,7 +1,7 @@
 /**
  * /store/price-tiers — die Staffeltabelle der Produktseite.
  *
- * Hintergrund: Seit import-price-lists.ts liegen die Mengenstaffeln in der
+ * Hintergrund: Die Preistabelle legt die Mengenstaffeln in die
  * Preisliste „Aktionspreise jibbit.ch"; der Basispreis der Variante ist nur
  * noch der reguläre Einzelpreis. Die Route darf Preislisten deshalb nicht
  * mehr überspringen — aber sie darf auch nicht einfach alle Listen zeigen,
@@ -278,7 +278,7 @@ const price = (
   price_list_id: priceListId,
 })
 
-/** Die echten Greengo-Staffeln aus data/catalog.json. */
+/** Die echten Greengo-Staffeln (jibbit.ch). */
 const greengoListRows = (listId: string) => [
   price(1.95, 1, 9, listId),
   price(1.85, 10, 23, listId),
@@ -289,7 +289,7 @@ const greengoListRows = (listId: string) => [
 
 // ─── Fall 1: Staffeln liegen NUR in der Preisliste (heutiger Stand) ──
 
-test("Staffeln aus einer aktiven Sale-Preisliste erscheinen in der Tabelle", async () => {
+test("Staffeln aus einer aktiven Sale-Preisliste erscheinen in der Tabelle, mit regulärem Preis", async () => {
   const pricing = makePricingService(
     [price(2.5, 1, null), ...greengoListRows("pl_aktion")],
     [{ id: "pl_aktion", type: "sale", status: "active" }]
@@ -302,11 +302,11 @@ test("Staffeln aus einer aktiven Sale-Preisliste erscheinen in der Tabelle", asy
 
   expect(res.statusCode).toBe(200)
   expect((res.body as { tiers: Record<string, unknown[]> }).tiers[VARIANT]).toEqual([
-    { min_quantity: 1, max_quantity: 9, amount: 1.95, currency_code: "chf" },
-    { min_quantity: 10, max_quantity: 23, amount: 1.85, currency_code: "chf" },
-    { min_quantity: 24, max_quantity: 47, amount: 1.4, currency_code: "chf" },
-    { min_quantity: 48, max_quantity: 119, amount: 1.35, currency_code: "chf" },
-    { min_quantity: 120, max_quantity: null, amount: 1.3, currency_code: "chf" },
+    { min_quantity: 1, max_quantity: 9, amount: 1.95, original_amount: 2.5, currency_code: "chf" },
+    { min_quantity: 10, max_quantity: 23, amount: 1.85, original_amount: 2.5, currency_code: "chf" },
+    { min_quantity: 24, max_quantity: 47, amount: 1.4, original_amount: 2.5, currency_code: "chf" },
+    { min_quantity: 48, max_quantity: 119, amount: 1.35, original_amount: 2.5, currency_code: "chf" },
+    { min_quantity: 120, max_quantity: null, amount: 1.3, original_amount: 2.5, currency_code: "chf" },
   ])
 })
 
@@ -325,8 +325,8 @@ test("Staffeln im Basispreis funktionieren ohne Preisliste weiter", async () => 
   })
 
   expect((res.body as { tiers: Record<string, unknown[]> }).tiers[VARIANT]).toEqual([
-    { min_quantity: 1, max_quantity: 9, amount: 3.2, currency_code: "chf" },
-    { min_quantity: 10, max_quantity: null, amount: 3.0, currency_code: "chf" },
+    { min_quantity: 1, max_quantity: 9, amount: 3.2, original_amount: 3.2, currency_code: "chf" },
+    { min_quantity: 10, max_quantity: null, amount: 3.0, original_amount: 3.0, currency_code: "chf" },
   ])
 })
 
@@ -353,8 +353,8 @@ test("Existieren Basis-Staffeln UND eine Override-Preisliste, zeigt die Tabelle 
   // Die Basis-Sprungstelle bei 10 erzeugt KEINE eigene Stufe: der Warenkorb
   // verlangt dort 1.95 (Override), also zeigt die Tabelle dort auch 1.95.
   expect((res.body as { tiers: Record<string, unknown[]> }).tiers[VARIANT]).toEqual([
-    { min_quantity: 1, max_quantity: 23, amount: 1.95, currency_code: "chf" },
-    { min_quantity: 24, max_quantity: null, amount: 1.4, currency_code: "chf" },
+    { min_quantity: 1, max_quantity: 23, amount: 1.95, original_amount: 1.95, currency_code: "chf" },
+    { min_quantity: 24, max_quantity: null, amount: 1.4, original_amount: 1.4, currency_code: "chf" },
   ])
 })
 
@@ -382,7 +382,7 @@ const haendlerFixture = () =>
 const expectNoHaendlerPreise = (body: unknown) => {
   const tiers = (body as { tiers: Record<string, unknown[]> }).tiers[VARIANT]
   expect(tiers).toEqual([
-    { min_quantity: 1, max_quantity: null, amount: 2.5, currency_code: "chf" },
+    { min_quantity: 1, max_quantity: null, amount: 2.5, original_amount: 2.5, currency_code: "chf" },
   ])
   expect(JSON.stringify(body)).not.toContain("0.9")
   expect(JSON.stringify(body)).not.toContain('"amount":1')
@@ -481,7 +481,7 @@ test("Entwurfs- und abgelaufene Preislisten zählen nicht", async () => {
   })
 
   expect((res.body as { tiers: Record<string, unknown[]> }).tiers[VARIANT]).toEqual([
-    { min_quantity: 1, max_quantity: null, amount: 2.5, currency_code: "chf" },
+    { min_quantity: 1, max_quantity: null, amount: 2.5, original_amount: 2.5, currency_code: "chf" },
   ])
 })
 
@@ -520,15 +520,15 @@ describe("tiersFromProbes", () => {
     expect(
       tiersFromProbes(
         [
-          { quantity: 1, amount: 1.95, currency_code: "chf" },
-          { quantity: 10, amount: 1.95, currency_code: "chf" },
-          { quantity: 24, amount: 1.4, currency_code: "chf" },
+          { quantity: 1, amount: 1.95, original_amount: 1.95, currency_code: "chf" },
+          { quantity: 10, amount: 1.95, original_amount: 1.95, currency_code: "chf" },
+          { quantity: 24, amount: 1.4, original_amount: 1.4, currency_code: "chf" },
         ],
         "chf"
       )
     ).toEqual([
-      { min_quantity: 1, max_quantity: 23, amount: 1.95, currency_code: "chf" },
-      { min_quantity: 24, max_quantity: null, amount: 1.4, currency_code: "chf" },
+      { min_quantity: 1, max_quantity: 23, amount: 1.95, original_amount: 1.95, currency_code: "chf" },
+      { min_quantity: 24, max_quantity: null, amount: 1.4, original_amount: 1.4, currency_code: "chf" },
     ])
   })
 
@@ -536,15 +536,15 @@ describe("tiersFromProbes", () => {
     expect(
       tiersFromProbes(
         [
-          { quantity: 1, amount: 2.0, currency_code: "chf" },
+          { quantity: 1, amount: 2.0, original_amount: 2.0, currency_code: "chf" },
           { quantity: 10, amount: null, currency_code: null },
-          { quantity: 24, amount: 1.5, currency_code: "chf" },
+          { quantity: 24, amount: 1.5, original_amount: 1.5, currency_code: "chf" },
         ],
         "chf"
       )
     ).toEqual([
-      { min_quantity: 1, max_quantity: 9, amount: 2.0, currency_code: "chf" },
-      { min_quantity: 24, max_quantity: null, amount: 1.5, currency_code: "chf" },
+      { min_quantity: 1, max_quantity: 9, amount: 2.0, original_amount: 2.0, currency_code: "chf" },
+      { min_quantity: 24, max_quantity: null, amount: 1.5, original_amount: 1.5, currency_code: "chf" },
     ])
   })
 })
