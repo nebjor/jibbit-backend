@@ -14,7 +14,9 @@
 
 import {
   RESET_TOKEN_TTL_MINUTES,
+  buildAdminResetUrl,
   buildResetUrl,
+  renderAdminPasswordResetEmail,
   renderPasswordResetEmail,
 } from "../lib/password-reset-email"
 
@@ -112,5 +114,32 @@ describe("renderPasswordResetEmail", () => {
 
   it("nennt den Shop im Betreff", () => {
     expect(renderPasswordResetEmail(base).subject).toContain("jibbit")
+  })
+})
+
+describe("Admin-Reset", () => {
+  it("verlinkt die Reset-Seite des Dashboards unter /app", () => {
+    const url = new URL(buildAdminResetUrl("https://api.jibbit.ch", TOKEN))
+    expect(url.origin).toBe("https://api.jibbit.ch")
+    expect(url.pathname).toBe("/app/reset-password")
+    expect(url.searchParams.get("token")).toBe(TOKEN)
+  })
+
+  it("wirft ohne MEDUSA_BACKEND_URL oder Token", () => {
+    expect(() => buildAdminResetUrl(undefined, TOKEN)).toThrow(/MEDUSA_BACKEND_URL/)
+    expect(() => buildAdminResetUrl("https://api.jibbit.ch", " ")).toThrow(/Token/)
+  })
+
+  it("schickt den Dashboard-Link, nicht den Storefront-Link, und ohne Umzugshinweis", () => {
+    const mail = renderAdminPasswordResetEmail({
+      backendUrl: "https://api.jibbit.ch",
+      storeName: "jibbit",
+      token: TOKEN,
+    })
+    expect(mail.text).toContain(buildAdminResetUrl("https://api.jibbit.ch", TOKEN))
+    expect(mail.html).toContain("/app/reset-password")
+    expect(mail.text).not.toContain("konto/passwort-neu")
+    expect(mail.text).not.toContain("früheren Shop")
+    expect(mail.text).toContain("15 Minuten")
   })
 })

@@ -116,6 +116,10 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@jibbit.ch}
 
+      # Bestellungen: Betreiber-Mail und ntfy-Push (leer = kein Push)
+      ORDER_NOTIFICATION_TO: ${ORDER_NOTIFICATION_TO:-joris@jibbit.ch}
+      NTFY_URL: ${NTFY_URL:-}
+
       # Ablageort fuer hochgeladene Produktbilder. Muss mit dem Volume unten
       # uebereinstimmen — die ausfuehrliche Begruendung steht in
       # backend/medusa-config.ts.
