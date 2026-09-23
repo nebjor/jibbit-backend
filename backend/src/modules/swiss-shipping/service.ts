@@ -1,30 +1,13 @@
 /**
  * Swiss Shipping Fulfillment Provider
  *
- * Tarif (Stand 22.08.2026, deckungsgleich mit den AGB Ziffer 6):
- * - Ab CHF 69.00 Warenwert: gratis
- * - Kleinsendung im Briefformat: CHF 3.75
- * - Paket, z. B. eine ganze Box oder ein Display: CHF 9.00
+ * Ein Versandpreis für jede Bestellung (AGB Ziffer 6), gratis ab
+ * `freeShippingThreshold` Warenwert. Beträge als Dezimalzahlen
+ * (CHF 4.50 === 4.5), nicht in Rappen.
  *
- * Einheiten: Medusa v2 speichert und übergibt Beträge als Dezimalzahlen
- * (CHF 9.00 === 9), nicht in Rappen. Optionen entsprechend setzen.
- *
- * ─── WIE BRIEF VON PAKET UNTERSCHIEDEN WIRD ───────────────────────────────
- *
- * Über das GEWICHT. Medusa reicht an `calculatePrice` unter anderem
- * `items.variant.weight` und `items.product.weight` durch (siehe
- * cartFieldsForCalculateShippingOptionsPrices), das ist die einzige
- * physikalische Grösse, die hier ankommt — Variant-Metadaten kommen NICHT an.
- *
- * Gewichte gelten in Gramm, so wie Medusa sie im Admin führt. Liegt das
- * Summengewicht unter `letterMaxWeight`, ist es eine Kleinsendung.
- *
- * WICHTIG — der Vorgabewert bei fehlendem Gewicht ist PAKET, nicht Brief:
- * Solange an den Varianten kein Gewicht gepflegt ist, kostet jede Sendung
- * CHF 9.00. Das ist Absicht. Ein zu tief angesetzter Versand kostet bei
- * jeder Bestellung bares Geld und fällt niemandem auf; ein zu hoch
- * angesetzter ist im Warenkorb sichtbar und wird gemeldet. Sobald die
- * Gewichte im Admin stehen, greift der Brieftarif von selbst.
+ * Passt eine Bestellung in einen Brief, entscheidet das Team beim Packen und
+ * schreibt der Kundin die Differenz als Gutscheincode gut (Medusa-Promotion
+ * im Admin) — der Checkout kennt nur diesen einen Preis.
  */
 
 import { AbstractFulfillmentProviderService } from "@medusajs/framework/utils"
@@ -42,14 +25,10 @@ import type {
 } from "@medusajs/framework/types"
 
 export interface SwissShippingOptions {
-  /** Dezimalbetrag — 3.75 = CHF 3.75 */
-  letterPrice: number
-  /** Dezimalbetrag — 9 = CHF 9.00 */
-  parcelPrice: number
+  /** Dezimalbetrag — 4.5 = CHF 4.50 */
+  price: number
   /** Dezimalbetrag — 69 = CHF 69.00 */
   freeShippingThreshold: number
-  /** Gramm. Bis und mit diesem Gewicht gilt der Brieftarif. */
-  letterMaxWeight: number
 }
 
 type InjectedDependencies = {
@@ -125,46 +104,7 @@ class SwissShippingProviderService extends AbstractFulfillmentProviderService {
   }
 
   /**
-   * Summengewicht in Gramm — oder `null`, wenn an KEINER Position ein
-   * Gewicht hängt. `null` heisst «unbekannt», nicht «null Gramm»: nur so
-   * lässt sich ein leerer Warenkorb von ungepflegten Stammdaten trennen.
-   */
-  private resolveCartWeight(context: Record<string, unknown>): number | null {
-    const items = context?.["items"]
-    if (!Array.isArray(items) || !items.length) {
-      return null
-    }
-
-    let sum = 0
-    let known = false
-
-    for (const rawItem of items) {
-      const item = (rawItem ?? {}) as Record<string, unknown>
-      const variant = (item["variant"] ?? {}) as Record<string, unknown>
-      const product = (item["product"] ?? {}) as Record<string, unknown>
-
-      // Variante schlägt Produkt: die 50er-Box wiegt anderes als das
-      // Einzelheft desselben Produkts.
-      const raw = variant["weight"] ?? product["weight"]
-      const weight = Number(raw)
-      if (!Number.isFinite(weight) || weight <= 0) {
-        continue
-      }
-
-      const rawQuantity = Number(item["quantity"])
-      const quantity =
-        Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1
-
-      sum += weight * quantity
-      known = true
-    }
-
-    return known ? sum : null
-  }
-
-  /**
-   * Versandkosten berechnen.
-   * Gratis ab der Schwelle, sonst Brief- oder Pakettarif nach Gewicht.
+   * Versandkosten berechnen: gratis ab der Schwelle, sonst der Versandpreis.
    */
   async calculatePrice(
     optionData: CalculateShippingOptionPriceDTO["optionData"],
@@ -184,26 +124,8 @@ class SwissShippingProviderService extends AbstractFulfillmentProviderService {
       }
     }
 
-    const weight = this.resolveCartWeight(ctx)
-
-    if (weight === null) {
-      this.logger_.warn(
-        `No variant weight on any cart line — falling back to the parcel ` +
-          `rate (CHF ${this.options_.parcelPrice.toFixed(2)}). Maintain ` +
-          `weights in grams to unlock the letter rate.`
-      )
-      return {
-        calculated_amount: this.options_.parcelPrice,
-        is_calculated_price_tax_inclusive: true,
-      }
-    }
-
-    const isLetter = weight <= this.options_.letterMaxWeight
-
     return {
-      calculated_amount: isLetter
-        ? this.options_.letterPrice
-        : this.options_.parcelPrice,
+      calculated_amount: this.options_.price,
       is_calculated_price_tax_inclusive: true,
     }
   }
@@ -249,19 +171,17 @@ class SwissShippingProviderService extends AbstractFulfillmentProviderService {
       {
         id: "swiss-standard",
         name: "Standardversand Schweiz",
-        // Dezimalbetrag — CHF 9.00 === 9
-        price: this.options_.parcelPrice,
+        price: this.options_.price,
         currency: "CHF",
         description:
-          `Brief CHF ${this.options_.letterPrice.toFixed(2)}, ` +
-          `Paket CHF ${this.options_.parcelPrice.toFixed(2)} — ` +
+          `CHF ${this.options_.price.toFixed(2)} — ` +
           `ab CHF ${this.options_.freeShippingThreshold.toFixed(2)} gratis`,
       },
       {
         id: "swiss-standard-return",
         name: "Rücksendung Schweiz",
         is_return: true,
-        price: this.options_.parcelPrice,
+        price: this.options_.price,
         currency: "CHF",
       },
     ]

@@ -60,9 +60,8 @@ läuft dasselbe über `docker compose exec medusa npx medusa exec
   keine hat — dann vorher mit Galaxus klären, ob ein `ManufacturerKey`
   reicht.
 - **Gewicht in Gramm je Variante** (`"weight_g"`): Produkt **inklusive
-  Verpackung** wiegen. Doppelter Nutzen: Galaxus-Pflichtfeld `WeightG` und
-  der Brieftarif CHF 3.75 im Shop, der ohne Gewichte nie greift (ohne
-  Gewicht rechnet swiss-shipping immer Paket CHF 9.00).
+  Verpackung** wiegen (Galaxus-Pflichtfeld `WeightG`). Der Shop selbst
+  rechnet einen einheitlichen Versandpreis, unabhängig vom Gewicht.
 - **Marke je Produkt** (`"brand"`): Gizeh, OCB, RAW, Elements, PURIZE … —
   Galaxus legt Produkte nur mit Marke an.
 - **Bestand**: `data/inventory.json` ausfüllen (Zahlen statt `null`).
