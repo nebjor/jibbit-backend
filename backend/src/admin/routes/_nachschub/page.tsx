@@ -1,6 +1,10 @@
 /**
  * Admin-Seite «Nachschub» — die Einkaufsliste des Betreibers.
  *
+ * DERZEIT ABGESCHALTET: der Ordner heisst «_nachschub», und Ordner mit «_»
+ * sammelt der Admin-Build nicht ein — kein Menüpunkt, keine Route.
+ * Wieder einschalten: siehe src/admin/NACHSCHUB-ABGESCHALTET.md
+ *
  * Zeigt alle Varianten auf oder unter ihrem Meldebestand, die dringendsten
  * zuerst, jeweils mit Lieferant und dem Klick auf dessen Produktseite.
  * Die Lieferanten kommen vom PRODUKT (product.metadata.suppliers, mit
