@@ -194,6 +194,14 @@ services:
       POSTHOG_KEY: ${POSTHOG_KEY:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-https://eu.i.posthog.com}
 
+      # Indexierungs-Schalter der Storefront (jibbit-frontend,
+      # lib/seo/indexing.ts). Nur «true» macht die Seite indexierbar; leer,
+      # falsch oder vertippt heisst noindex (Header, Meta-Tag, leere Sitemap).
+      # Staging: leer lassen. PRODUKTION: SITE_INDEXABLE=true in .env — sonst
+      # verschwindet der Shop aus Google. Wird zur Laufzeit gelesen, ein
+      # Neustart des Containers genuegt.
+      SITE_INDEXABLE: ${SITE_INDEXABLE:-}
+
       BASE_DOMAIN: ${BASE_DOMAIN:-jibbit.app}
       CONTROL_PLANE_URL: ${CONTROL_PLANE_URL:-}
       CONTROL_PLANE_TOKEN: ${CONTROL_PLANE_TOKEN:-}
