@@ -181,13 +181,10 @@ module.exports = defineConfig({
             resolve: './src/modules/swiss-shipping',
             id: 'swiss-shipping',
             options: {
-              // Medusa v2 rechnet in Dezimalbeträgen, nicht in Rappen:
-              // 9 = CHF 9.00, 69 = CHF 69.00.
-              // Tarif wie AGB Ziffer 6. `letterMaxWeight` in GRAMM.
-              letterPrice: 3.75,
-              parcelPrice: 9,
+              // Dezimalbeträge (4.5 = CHF 4.50), wie AGB Ziffer 6.
+              // Muss mit SHIPPING in lib/config.ts der Storefront übereinstimmen.
+              price: 4.5,
               freeShippingThreshold: 69,
-              letterMaxWeight: 1000,
             },
           },
         ],
