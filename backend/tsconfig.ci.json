@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["**/*", ".medusa/types/*"],
+  "exclude": [
+    "node_modules",
+    ".medusa/server",
+    ".medusa/admin",
+    ".cache",
+    "src/admin"
+  ]
+}
