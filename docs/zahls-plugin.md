@@ -139,6 +139,61 @@ Auf dem Server ist dafür einmalig nötig:
 3. In der `.env` die drei `ZAHLS_*`-Pflichtwerte setzen (s. Kurzfassung
    oben); alte `PAYREXX_*`-Einträge können weg.
 
+## Fehlerbild: 500 unknown_error beim Bezahlen / Provider nicht registriert
+
+**Symptom:** Der Shop läuft, die Kasse zeigt zahls.ch als Zahlart an, aber
+jeder Klick auf «Bezahlen» endet mit «Die Zahlung liess sich nicht
+vorbereiten»; im Backend steht ein nackter `500 unknown_error`, im
+Payment-Modul dahinter «Unable to retrieve the payment provider with id:
+pp_zahls_zahls». Der Zustand ist unauffällig — es gibt keinen Absturz, nur
+eine Warnzeile beim Start.
+
+**Ursache (so geschehen, wochenlang unbemerkt):** Der Umstieg auf das
+offizielle Plugin (Commit `6385a4f`, 03.09.2026) hat den Namen des
+API-Schlüssels von `ZAHLS_API_SECRET` in `ZAHLS_API_KEY` umbenannt. Die
+`.env` auf dem Server wandert bei einem Deploy nicht mit und trug weiter den
+alten Namen. `medusa-config.ts` registriert den Provider nur, wenn alle drei
+Werte (`ZAHLS_INSTANCE`, `ZAHLS_API_KEY`, `ZAHLS_WEBHOOK_SECRET`) gesetzt
+sind — `ZAHLS_API_KEY` war leer, der Provider fehlte, die Verknüpfung an der
+Region blieb aber bestehen.
+
+Dasselbe gilt für alle Namen der beiden Vorgänger-Stände:
+
+| Alter Name | Heute | Bemerkung |
+|---|---|---|
+| `ZAHLS_API_SECRET` | `ZAHLS_API_KEY` | gleicher Wert, nur umbenennen |
+| `PAYREXX_INSTANCE` | `ZAHLS_INSTANCE` | Wert prüfen (zahls.ch-Instanz) |
+| `PAYREXX_API_SECRET` | `ZAHLS_API_KEY` | Wert prüfen (zahls.ch-Backend) |
+| `PAYREXX_WEBHOOK_SECRET` | `ZAHLS_WEBHOOK_SECRET` | Wert prüfen (zahls.ch-Backend) |
+| `ZAHLS_API_BASE_URL`, `ZAHLS_ENABLED_PSPS`, `PAYREXX_API_BASE_URL`, `PAYREXX_ENABLED_PSPS` | — | ohne Funktion, Zeile entfernen |
+
+**Was der Shop seither tut** (`backend/src/lib/zahls-plugin.ts`,
+`zahlsEnvHinweise()`):
+
+- Beim Start nennt die Warnung nicht nur, *was fehlt*, sondern auch, *welche
+  alte Zeile umzubenennen ist* (nur Namen, nie Werte).
+- Bei `NODE_ENV=production` **bricht der Start ab**, wenn ein umbenannter
+  Name gesetzt ist, während sein Nachfolger fehlt. Begründung: ein Shop, der
+  in Produktion still ohne Zahlungsanbieter läuft, ist schlimmer als ein
+  Shop, der nicht startet — Ersterer verliert jede Bestellung und meldet
+  nichts, Letzterer fällt beim Deploy sofort auf. Fehlen die Werte schlicht
+  komplett (Dev ohne Konto), bleibt es bei der Warnung.
+
+**Diagnose:**
+
+```bash
+# Startwarnung bzw. Abbruchgrund im Log:
+docker compose logs medusa | grep -i zahls
+
+# Vollständiger Abgleich Umgebung <-> Datenbank <-> Region; nennt auch die
+# veralteten Namen und die Zeile, die umzubenennen ist:
+docker compose exec medusa npx medusa exec ./src/scripts/check-payment-setup.ts
+```
+
+**Behebung:** Zeile in der `.env` umbenennen (`ZAHLS_API_SECRET=…` →
+`ZAHLS_API_KEY=…`, gleicher Wert), `docker compose up -d medusa`, dann das
+Diagnose-Script erneut laufen lassen, bis es «✓» meldet.
+
 ## Wenn die Kasse «Die Zahlung liess sich nicht vorbereiten» sagt
 
 Diese Meldung kommt aus der Storefront (`lib/checkout/server.ts`,
@@ -152,7 +207,9 @@ Es gibt genau zwei realistische Ursachen, und **von aussen sind sie nicht zu
 unterscheiden** — beide enden in einem nackten `500 unknown_error`:
 
 1. **Der laufende Prozess registriert den Provider nicht.** Fehlt einer der
-   drei `ZAHLS_*`-Werte in der Umgebung des Containers, lässt
+   drei `ZAHLS_*`-Werte in der Umgebung des Containers (typisch: die `.env`
+   trägt noch `ZAHLS_API_SECRET` statt `ZAHLS_API_KEY`, siehe Abschnitt
+   «Fehlerbild» oben), lässt
    `medusa-config.ts` den Provider weg. Die Verknüpfung
    `region_payment_provider` in der Datenbank bleibt aber bestehen, und
    `GET /store/payment-providers` liefert `pp_zahls_zahls` weiterhin aus.
