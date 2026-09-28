@@ -35,7 +35,13 @@
  * Umgebung des LAUFENDEN Prozesses.
  */
 
-import { isZahlsPluginConfigured, missingZahlsPluginEnv, ZAHLS_PROVIDER_ID } from "./zahls-plugin"
+import {
+  isZahlsPluginConfigured,
+  missingZahlsPluginEnv,
+  ZahlsPluginEnv,
+  zahlsEnvHinweise,
+  ZAHLS_PROVIDER_ID,
+} from "./zahls-plugin"
 
 /** Medusas eingebauter Provider — autorisiert OHNE Geldfluss. Dev/CI. */
 export const SYSTEM_DEFAULT_PROVIDER_ID = "pp_system_default"
@@ -53,11 +59,8 @@ export interface PaymentSetupInput {
   /** Provider-IDs, die dieser Prozess tatsächlich registriert hat. */
   registeredProviderIds: string[]
   /** `process.env` des laufenden Backends. */
-  env: {
+  env: ZahlsPluginEnv & {
     NODE_ENV?: string
-    ZAHLS_INSTANCE?: string
-    ZAHLS_API_KEY?: string
-    ZAHLS_WEBHOOK_SECRET?: string
   }
 }
 
@@ -162,6 +165,16 @@ export function analysePaymentSetup(input: PaymentSetupInput): Finding[] {
         `${fehlendeEnv.join(", ")}. Ohne alle drei Werte registriert ` +
         `medusa-config.ts den Provider nicht (dieselbe Warnung steht beim ` +
         `Start im Log).`,
+    })
+  }
+
+  // Der häufigste Grund für «es fehlt ZAHLS_API_KEY»: die .env trägt noch den
+  // Namen aus der Zeit vor dem offiziellen Plugin (ZAHLS_API_SECRET). Der
+  // Hinweis nennt die Zeile, die umzubenennen ist — nur den Namen.
+  for (const hinweis of zahlsEnvHinweise(env)) {
+    findings.push({
+      level: fehlendeEnv.length ? "fehler" : "warnung",
+      text: hinweis,
     })
   }
 
