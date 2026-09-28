@@ -139,6 +139,58 @@ Auf dem Server ist dafür einmalig nötig:
 3. In der `.env` die drei `ZAHLS_*`-Pflichtwerte setzen (s. Kurzfassung
    oben); alte `PAYREXX_*`-Einträge können weg.
 
+## Wenn die Kasse «Die Zahlung liess sich nicht vorbereiten» sagt
+
+Diese Meldung kommt aus der Storefront (`lib/checkout/server.ts`,
+`placeOrder`). Sie bedeutet: `POST /store/payment-collections/:id/payment-sessions`
+ist gescheitert. **Nicht** gemeint ist «die Region hat keine Zahlart» — dafür
+gibt es einen eigenen Satz («Für diese Region ist gerade keine Zahlungsart
+freigeschaltet»). Steht der generische Satz da, bietet die Region den Provider
+also noch an, und der Backend-Aufruf selbst ist gescheitert.
+
+Es gibt genau zwei realistische Ursachen, und **von aussen sind sie nicht zu
+unterscheiden** — beide enden in einem nackten `500 unknown_error`:
+
+1. **Der laufende Prozess registriert den Provider nicht.** Fehlt einer der
+   drei `ZAHLS_*`-Werte in der Umgebung des Containers, lässt
+   `medusa-config.ts` den Provider weg. Die Verknüpfung
+   `region_payment_provider` in der Datenbank bleibt aber bestehen, und
+   `GET /store/payment-providers` liefert `pp_zahls_zahls` weiterhin aus.
+   Medusa scheitert dann im Payment-Modul mit
+   «Unable to retrieve the payment provider with id: pp_zahls_zahls».
+2. **zahls.ch hat den Gateway-Aufruf abgelehnt** (Schlüssel, Betrag, Netz).
+
+### Der Weg, der es entscheidet
+
+```bash
+# 1. Sagt das Backend beim Start selbst, dass es den Provider weglässt?
+docker compose logs medusa | grep -i zahls
+#    "[zahls.ch] Provider nicht registriert — es fehlt: …"  → Ursache 1
+
+# 2. Vollständiger Abgleich Region <-> registrierte Provider:
+docker compose exec medusa npx medusa exec ./src/scripts/check-payment-setup.ts
+
+# 3. Der genaue Backend-Fehler, den der Kunde nie sieht, steht im Log der
+#    Storefront — sie ruft Medusa serverseitig auf:
+docker compose logs storefront | grep '\[checkout\]'
+```
+
+### Warum `is_enabled` dabei nichts nützt
+
+Man würde erwarten, dass ein nicht mehr registrierter Provider in der Tabelle
+`payment_provider` auf `is_enabled = false` fällt, und dass die Storefront ihn
+daran erkennen könnte. **Auf 2.13.6 passiert das nie.** Der Loader
+`@medusajs/payment/dist/loaders/providers.js` liest die vorhandenen Zeilen mit
+`list({ id: providersToLoad })` und setzt danach alles auf `false`, was
+*nicht* in `providersToLoad` steht — die gelesene Liste enthält per Filter
+aber ausschliesslich Einträge *aus* `providersToLoad`. Der Zweig ist
+unerreichbar. Ein Provider, der einmal registriert war, bleibt für immer
+`is_enabled = true`.
+
+Deshalb kann die Storefront diesen Fall nicht selbst erkennen, und deshalb
+gleicht `check-payment-setup.ts` gegen die Umgebung des laufenden Prozesses ab
+statt gegen ein Datenbankflag.
+
 ## Nicht verifiziert (ehrlicherweise)
 
 - Kein End-to-End-Test gegen ein echtes zahls.ch-Testkonto (Gateway anlegen,
