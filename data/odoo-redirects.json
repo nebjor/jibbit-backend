@@ -1,5 +1,5 @@
 {
-  "kommentar": "Zuordnung alte Odoo-URL -> neue Storefront-URL. Odoo akzeptiert für /shop/<slug>-<id> JEDEN Slug, solange die ID am Ende stimmt — die Weiterleitung sollte deshalb über die ID am Pfadende matchen (Regex ^/shop/.*-(\\d+)$), nicht über den exakten Slug. old_paths listet die beiden bekannten Slugs (Sitemap + kanonisch). variant_sku gesetzt = Odoo führte die Display/Box-Packung als eigenes Produkt; in Medusa ist sie eine Variante des Zielprodukts.",
+  "kommentar": "Zuordnung alte Odoo-URL -> neue Storefront-URL. Odoo akzeptiert für /shop/<slug>-<id> JEDEN Slug, solange die ID am Ende stimmt — die Weiterleitung sollte deshalb über die ID am Pfadende matchen (Regex ^/shop/.*-(\\d+)$), nicht über den exakten Slug. old_paths listet die beiden bekannten Slugs (Sitemap + kanonisch). variant_sku gesetzt = Odoo führte die Display/Box-Packung als eigenes Produkt; in Medusa ist sie eine Variante des Zielprodukts. Stand 2026-09-29: new_path gegen test.jibbit.ch geprüft (jedes Ziel antwortet mit 200); wo der neue Shop das Produkt nicht führt, ist das Ziel die Kategorie. 23, 36 und 37 stehen nicht in Odoos Sitemap, sind im Live-Shop aber erreichbar. Umgesetzt wird die Zuordnung in jibbit-frontend lib/seo/legacy-redirects.ts — beide Stellen gemeinsam ändern.",
   "redirects": [
     {
       "odoo_id": 2,
@@ -7,7 +7,7 @@
       "old_paths": [
         "/shop/raw-black-kss-papers-2"
       ],
-      "new_path": "/products/raw-black-kss-papers",
+      "new_path": "/products/raw-classic-king-size-slim",
       "variant_sku": null
     },
     {
@@ -16,7 +16,7 @@
       "old_paths": [
         "/shop/7-ocb-premium-rolls-slim-3"
       ],
-      "new_path": "/products/ocb-premium-rolls-slim",
+      "new_path": "/products/ocb-black-premium-rolls-slim",
       "variant_sku": null
     },
     {
@@ -25,7 +25,7 @@
       "old_paths": [
         "/shop/3-ocb-premium-kss-papers-mit-filter-7"
       ],
-      "new_path": "/products/ocb-premium-kss-papers-mit-filter",
+      "new_path": "/?kategorie=papers",
       "variant_sku": null
     },
     {
@@ -74,6 +74,15 @@
         "/shop/angel-slim-filters-13"
       ],
       "new_path": "/products/angel-slim-filters-6mm-120stk",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 23,
+      "odoo_name": "Black Leaf El Humeros Konische Hülsen KS 100X",
+      "old_paths": [
+        "/shop/1-black-leaf-el-humeros-konische-hulsen-ks-100x-23"
+      ],
+      "new_path": "/?kategorie=papers",
       "variant_sku": null
     },
     {
@@ -160,13 +169,32 @@
       "variant_sku": "SMO-BRO-KUR-DOU-WIN-D25"
     },
     {
+      "odoo_id": 36,
+      "odoo_name": "Purize Super SLIM White, 50er Pack, 5mm",
+      "old_paths": [
+        "/shop/purize-super-slim-white-50er-pack-5mm-36",
+        "/shop/purize-xtra-slim-white-50er-pack-5mm-36"
+      ],
+      "new_path": "/products/purize-super-slim-white-o5mm",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 37,
+      "odoo_name": "Gizeh DW Extra Fine",
+      "old_paths": [
+        "/shop/gizeh-dw-extra-fine-37"
+      ],
+      "new_path": "/products/gizeh-dw-extra-fine",
+      "variant_sku": null
+    },
+    {
       "odoo_id": 40,
       "odoo_name": "OCB Bio Slim Organic Hemp Rolls (24)",
       "old_paths": [
         "/shop/ocb-bio-slim-organic-hemp-rolls-40",
         "/shop/ocb-bio-slim-organic-hemp-rolls-24-40"
       ],
-      "new_path": "/products/ocb-bio-slim-organic-hemp-rolls",
+      "new_path": "/?kategorie=papers",
       "variant_sku": null
     },
     {
@@ -186,7 +214,7 @@
         "/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-47",
         "/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-kopie-47"
       ],
-      "new_path": "/products/black-leaf-el-humeros-konische-huelsen-ks-100x",
+      "new_path": "/?kategorie=papers",
       "variant_sku": null
     },
     {
@@ -242,7 +270,7 @@
         "/shop/purize-xtra-slim-xmas-6mm-54",
         "/shop/purize-xtra-slim-xmas-5-9mm-54"
       ],
-      "new_path": "/products/purize-xtra-slim-xmas-o-6mm",
+      "new_path": "/products/purize-xtra-slim-6mm",
       "variant_sku": null
     },
     {
@@ -252,7 +280,7 @@
         "/shop/silikon-dose-22mm-55",
         "/shop/silikon-dose-22mm-hellgrun-55"
       ],
-      "new_path": "/products/silikon-dose-o-22mm-hellgruen",
+      "new_path": "/products/silikon-dose-22-mm",
       "variant_sku": null
     },
     {
@@ -262,7 +290,7 @@
         "/shop/elements-king-slim-size-ultra-thin-56",
         "/shop/elements-king-size-ultra-thin-56"
       ],
-      "new_path": "/products/elements-king-slim-size-ultra-thin",
+      "new_path": "/products/elements-ultra-thin-king-size-slim-kss",
       "variant_sku": null
     },
     {
@@ -271,7 +299,7 @@
       "old_paths": [
         "/shop/box-50x-elements-king-slim-size-ultra-thin-57"
       ],
-      "new_path": "/products/elements-king-slim-size-ultra-thin",
+      "new_path": "/products/elements-ultra-thin-king-size-slim-kss",
       "variant_sku": "ELE-KIN-SLI-SIZ-ULT-THI-BX50"
     },
     {
@@ -298,7 +326,7 @@
       "old_paths": [
         "/shop/purize-aktivkohlefilter-9mm-60"
       ],
-      "new_path": "/products/purize-aktivkohlefilter-o-9mm",
+      "new_path": "/products/purize-aktivkohlefilter-6mm",
       "variant_sku": null
     },
     {
