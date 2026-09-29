@@ -68,16 +68,21 @@ interface Line {
 
 const PLACEHOLDER_VARIANTS = new Set(["Standard", "Default", "Default variant"])
 
+/** Artikelname für die Mail: Produkt, dazu die Variante, wenn sie etwas aussagt. */
+export function itemLabel(item: OrderItem): string {
+  const product = item.product_title || item.title || "Artikel"
+  const variant =
+    item.variant_title && item.variant_title !== product && !PLACEHOLDER_VARIANTS.has(item.variant_title)
+      ? ` – ${item.variant_title}`
+      : ""
+  return `${product}${variant}`
+}
+
 function lines(order: OrderView): Line[] {
   return (order.items ?? []).map((item) => {
-    const product = item.product_title || item.title || "Artikel"
-    const variant =
-      item.variant_title && item.variant_title !== product && !PLACEHOLDER_VARIANTS.has(item.variant_title)
-        ? ` – ${item.variant_title}`
-        : ""
     const quantity = Number(item.quantity ?? 1)
     return {
-      label: `${product}${variant}`,
+      label: itemLabel(item),
       quantity: Number.isFinite(quantity) ? quantity : 1,
       unitPrice: Number(item.unit_price ?? 0),
     }
@@ -88,7 +93,7 @@ export function itemCount(order: OrderView): number {
   return lines(order).reduce((sum, line) => sum + line.quantity, 0)
 }
 
-function addressLines(address: OrderAddress | null | undefined): string[] {
+export function addressLines(address: OrderAddress | null | undefined): string[] {
   if (!address) return []
   return [
     [address.first_name, address.last_name].filter(Boolean).join(" "),
@@ -114,10 +119,10 @@ function shippingLabel(order: OrderView): string {
 
 const STYLE_BODY =
   "margin:0;padding:24px;background:#ffffff;font:15px/1.5 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#1c1a15"
-const STYLE_CELL = "padding:6px 0;border-bottom:1px solid #eeeeee;vertical-align:top"
-const STYLE_MUTED = "color:#6b6557"
+export const STYLE_CELL = "padding:6px 0;border-bottom:1px solid #eeeeee;vertical-align:top"
+export const STYLE_MUTED = "color:#6b6557"
 
-function htmlDocument(inner: string): string {
+export function htmlDocument(inner: string): string {
   return `<!doctype html>
 <html lang="de-CH"><body style="${STYLE_BODY}">
 <div style="max-width:560px;margin:0 auto">
