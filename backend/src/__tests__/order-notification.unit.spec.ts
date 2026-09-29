@@ -11,7 +11,6 @@ import {
 
 const settings = {
   storeName: "jibbit",
-  storeUrl: "https://jibbit.ch",
   backendUrl: "https://api.jibbit.ch",
 }
 
@@ -85,15 +84,20 @@ describe("renderOrderConfirmation", () => {
     }
   })
 
-  it("enthält MWST-Hinweis, Lieferadresse, Kontakt und Rückgabelink", () => {
+  it("enthält MWST-Hinweis, Lieferadresse, Kontakt", () => {
     for (const body of [mail.text, mail.html]) {
       expect(body).toContain("keine MWST ausgewiesen (nicht mehrwertsteuerpflichtig)")
       expect(body).toContain("Bahnhofstrasse 1")
       expect(body).toContain("8001 Zürich")
       expect(body).toContain("info@jibbit.ch")
-      expect(body).toContain("https://jibbit.ch/service/rueckgabe")
     }
     expect(mail.text).not.toMatch(/MwSt\.?:/)
+  })
+
+  it("verlinkt keine Rückgabe und nennt kein Widerrufsrecht", () => {
+    for (const body of [mail.text, mail.html]) {
+      expect(body).not.toMatch(/Rückgabe|Widerruf|rueckgabe|Retoure/i)
+    }
   })
 
   it("schreibt Schweizer Hochdeutsch ohne ß und grüsst mit Vornamen", () => {
