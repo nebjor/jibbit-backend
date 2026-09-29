@@ -57,7 +57,6 @@ export default async function orderPlacedHandler({
   const current = order
   const settings: OrderMailSettings = {
     storeName: process.env.STORE_NAME || "jibbit",
-    storeUrl: process.env.STORE_URL || "https://jibbit.ch",
     backendUrl: process.env.MEDUSA_BACKEND_URL || "http://localhost:9000",
   }
   const mail = { trigger: "order.placed", resourceId: current.id, data: { order_id: current.id } }
