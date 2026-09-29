@@ -40,6 +40,38 @@ services:
     image: redis:7-alpine
     container_name: jibbit-redis
     restart: unless-stopped
+    # Redis ist hier KEIN Wegwerf-Cache mehr: Event-Bus und Workflow-Engine
+    # legen ihre Warteschlangen darin ab (backend/src/lib/redis-modules.ts).
+    # Ein Ereignis, das beim Neustart von Redis noch wartet, ist eine
+    # Bestellbestaetigung, die sonst nie verschickt wird. Deshalb:
+    #
+    # --appendonly yes / --appendfsync everysec
+    #   Ohne Konfiguration schreibt das Image nur RDB-Snapshots (fruehestens
+    #   nach 60 s und 10000 Aenderungen, sonst nach 5 min bzw. 1 h) — bei
+    #   einem Absturz ist alles seit dem letzten Snapshot weg. Mit AOF geht
+    #   hoechstens die letzte Sekunde verloren. Die Snapshots bleiben
+    #   zusaetzlich aktiv. Redis 7 uebernimmt beim ersten Start mit AOF den
+    #   vorhandenen Snapshot, bestehende Sessions bleiben also erhalten.
+    #
+    # --maxmemory-policy noeviction
+    #   Pflicht fuer BullMQ: jede andere Policy darf bei Speicherdruck
+    #   beliebige Schluessel loeschen, also auch wartende Jobs. Mit noeviction
+    #   lehnt Redis stattdessen Schreibzugriffe ab — das faellt im Log auf,
+    #   ein still verschwundener Job nicht.
+    #
+    # --maxmemory
+    #   Deckel, damit Redis auf der kleinen VPS nicht Postgres und Medusa den
+    #   Speicher wegnimmt. Der Shop braucht wenige MB; in der .env anpassbar.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-128mb}
+      - --maxmemory-policy
+      - noeviction
     ports:
       # Siehe postgres. Bei Konflikt in der .env:  REDIS_HOST_PORT=6380
       - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
