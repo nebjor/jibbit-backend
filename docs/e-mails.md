@@ -19,6 +19,7 @@ E-Mail-Adresse.
 | Passwort zurücksetzen | Kundin | `auth.password_reset` (`actor_type: customer`) | `password-reset.ts` | `customer-password-reset` |
 | Passwort zurücksetzen | Admin-Benutzer | `auth.password_reset` (`actor_type: user`) | `password-reset.ts` | `admin-password-reset` |
 | Einladung ins Admin | neue Mitarbeitende | `invite.created`, `invite.resent` | `invite-created.ts` | `admin-invite` |
+| E-Mail-Adresse korrigiert | Kundin, an die neue Adresse | kein Event: Widget «E-Mail-Adresse korrigieren» im Admin, siehe `docs/kunden-email-aendern.md` | Route `admin/customers/[id]/email` | `customer-email-corrected` |
 
 Keine dieser Mails verlinkt oder erwähnt eine Rückgabe oder ein Widerrufsrecht: Beides gibt es nicht (AGB §9).
 
