@@ -187,12 +187,54 @@ docker compose logs medusa | grep -i zahls
 
 # Vollständiger Abgleich Umgebung <-> Datenbank <-> Region; nennt auch die
 # veralteten Namen und die Zeile, die umzubenennen ist:
-docker compose exec medusa npx medusa exec ./src/scripts/check-payment-setup.ts
+docker compose exec medusa npx medusa exec ./src/scripts/check-payment-setup.js
 ```
 
 **Behebung:** Zeile in der `.env` umbenennen (`ZAHLS_API_SECRET=…` →
 `ZAHLS_API_KEY=…`, gleicher Wert), `docker compose up -d medusa`, dann das
 Diagnose-Script erneut laufen lassen, bis es «✓» meldet.
+
+> **`.js` im Container, `.ts` lokal.** Der Laufzeitcontainer enthält nur das
+> Ergebnis von `medusa build`, also kompilierten Code — dort heisst das Script
+> `./src/scripts/check-payment-setup.js`. Der Aufruf mit `.ts` endet im
+> Container mit «File /app/src/scripts/check-payment-setup.ts doesn't exist».
+> Lokal aus dem Quellbaum (`cd backend`, `medusa develop` bzw.
+> `npx medusa exec ./src/scripts/check-payment-setup.ts`) gilt `.ts`. Das gilt
+> für alle Scripts unter `backend/src/scripts/`.
+
+## Fehlerbild: 400 — «API is not included in your license»
+
+**Symptom:** Die Kasse bietet zahls.ch an, «Bezahlen» scheitert. Im Log der
+Storefront (`docker compose logs storefront | grep '\[checkout\]'`) steht
+**kein** nackter 500, sondern eine Antwort mit Klartext:
+
+```
+[checkout] could not create a payment session — provider=pp_zahls_zahls | … | status=400 | message=An error occurred: API is not included in your license.
+```
+
+**Ursache:** Das Abo des zahls.ch-Kontos. Entweder ist die Testphase (Trial,
+30 Tage) abgelaufen, oder der gewählte Plan enthält keinen API-Zugang. Die
+Meldung ist die Antwort **von zahls.ch** — der Provider ist registriert, die
+Zugangsdaten sind angekommen, zahls.ch lehnt den Aufruf ab.
+
+**Behebung:** Im zahls.ch-Backend unter Abo/Lizenz den Plan prüfen und auf
+einen Plan mit API-Zugang wechseln bzw. das abgelaufene Trial in ein Abo
+überführen. **Kein Deploy, kein Neustart, keine Änderung an der `.env`
+nötig** — die nächste Zahlung geht durch, sobald das Konto die API wieder
+freigibt.
+
+**Abgrenzung zum Fall oben:**
+
+| | 500 `unknown_error` | 400 mit Meldung |
+|---|---|---|
+| Wer antwortet | Medusa (Payment-Modul) | zahls.ch |
+| Bedeutung | Provider nicht registriert (`ZAHLS_*` fehlt in der Umgebung) | Provider registriert, zahls.ch lehnt ab |
+| Wo beheben | `.env` auf dem Server, danach `docker compose up -d medusa` | zahls.ch-Backend (Abo/Lizenz), kein Deploy |
+| `check-payment-setup.js` | meldet den fehlenden Wert | meldet «✓» — das Script prüft die Registrierung, nicht das Konto |
+
+Andere 4xx mit Meldung folgen demselben Muster: die Meldung ist die Antwort
+von zahls.ch. Bei 401/403 oder Meldungen zu API-Key/Instance `ZAHLS_API_KEY`
+und `ZAHLS_INSTANCE` gegen das zahls.ch-Backend prüfen.
 
 ## Wenn die Kasse «Die Zahlung liess sich nicht vorbereiten» sagt
 
@@ -203,8 +245,10 @@ gibt es einen eigenen Satz («Für diese Region ist gerade keine Zahlungsart
 freigeschaltet»). Steht der generische Satz da, bietet die Region den Provider
 also noch an, und der Backend-Aufruf selbst ist gescheitert.
 
-Es gibt genau zwei realistische Ursachen, und **von aussen sind sie nicht zu
-unterscheiden** — beide enden in einem nackten `500 unknown_error`:
+Es gibt zwei realistische Ursachen. Für den Kunden sehen sie gleich aus; im
+Log der Storefront unterscheiden sie sich oft am Status — ein nackter
+`500 unknown_error` spricht für Ursache 1, ein 4xx mit Klartext-Meldung für
+Ursache 2:
 
 1. **Der laufende Prozess registriert den Provider nicht.** Fehlt einer der
    drei `ZAHLS_*`-Werte in der Umgebung des Containers (typisch: die `.env`
@@ -215,7 +259,9 @@ unterscheiden** — beide enden in einem nackten `500 unknown_error`:
    `GET /store/payment-providers` liefert `pp_zahls_zahls` weiterhin aus.
    Medusa scheitert dann im Payment-Modul mit
    «Unable to retrieve the payment provider with id: pp_zahls_zahls».
-2. **zahls.ch hat den Gateway-Aufruf abgelehnt** (Schlüssel, Betrag, Netz).
+2. **zahls.ch hat den Gateway-Aufruf abgelehnt** (Abo/Lizenz, Schlüssel,
+   Betrag, Netz) — siehe Abschnitt «Fehlerbild: 400 — API is not included in
+   your license» oben.
 
 ### Der Weg, der es entscheidet
 
@@ -224,12 +270,14 @@ unterscheiden** — beide enden in einem nackten `500 unknown_error`:
 docker compose logs medusa | grep -i zahls
 #    "[zahls.ch] Provider nicht registriert — es fehlt: …"  → Ursache 1
 
-# 2. Vollständiger Abgleich Region <-> registrierte Provider:
-docker compose exec medusa npx medusa exec ./src/scripts/check-payment-setup.ts
+# 2. Vollständiger Abgleich Region <-> registrierte Provider
+#    (.js im Container; lokal aus dem Quellbaum .ts):
+docker compose exec medusa npx medusa exec ./src/scripts/check-payment-setup.js
 
 # 3. Der genaue Backend-Fehler, den der Kunde nie sieht, steht im Log der
 #    Storefront — sie ruft Medusa serverseitig auf:
 docker compose logs storefront | grep '\[checkout\]'
+#    "status=400 | message=… not included in your license"  → Ursache 2
 ```
 
 ### Warum `is_enabled` dabei nichts nützt
