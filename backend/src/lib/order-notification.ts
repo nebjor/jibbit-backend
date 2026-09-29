@@ -1,9 +1,8 @@
 import type { EmailContent, PushMessage } from "./notify"
-import { absoluteUrl, adminUrl, escapeHtml, formatChf } from "./email-format"
+import { adminUrl, escapeHtml, formatChf } from "./email-format"
 
 export const DEFAULT_ORDER_NOTIFICATION_TO = "joris@jibbit.ch"
 export const CONTACT_EMAIL = "info@jibbit.ch"
-export const RETURNS_PATH = "/service/rueckgabe"
 export const VAT_NOTE = "keine MWST ausgewiesen (nicht mehrwertsteuerpflichtig)"
 
 export interface OrderAddress {
@@ -39,7 +38,6 @@ export interface OrderView {
 
 export interface OrderMailSettings {
   storeName: string
-  storeUrl: string | undefined
   backendUrl: string | undefined
 }
 
@@ -161,7 +159,6 @@ function itemsText(order: OrderView): string[] {
 export function renderOrderConfirmation(order: OrderView, settings: OrderMailSettings): EmailContent {
   const nr = orderNumber(order)
   const store = settings.storeName
-  const returnsUrl = absoluteUrl(settings.storeUrl, "STORE_URL", RETURNS_PATH).toString()
   const name = order.shipping_address?.first_name?.trim()
   const greeting = name ? `Hallo ${name}` : "Hallo"
   const address = addressLines(order.shipping_address)
@@ -179,7 +176,6 @@ export function renderOrderConfirmation(order: OrderView, settings: OrderMailSet
     `Hinweis: ${VAT_NOTE}.`,
     ...(address.length ? [``, `Lieferadresse:`, ...address] : []),
     ``,
-    `Rückgabe und Widerruf: ${returnsUrl}`,
     `Fragen zu deiner Bestellung? Schreib uns an ${CONTACT_EMAIL}.`,
     ``,
     `Liebe Grüsse`,
@@ -196,8 +192,7 @@ ${
     ? `<p style="margin:0 0 4px;font-weight:bold">Lieferadresse</p>
 <p style="margin:0 0 20px">${address.map(escapeHtml).join("<br>")}</p>`
     : ""
-}<p>Rückgabe und Widerruf: <a href="${escapeHtml(returnsUrl)}">${escapeHtml(returnsUrl)}</a></p>
-<p>Fragen zu deiner Bestellung? Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
+}<p>Fragen zu deiner Bestellung? Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
 <p>Liebe Grüsse<br>${escapeHtml(store)}</p>`)
 
   return { subject, text, html }
