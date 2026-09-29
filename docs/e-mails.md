@@ -13,8 +13,14 @@ E-Mail-Adresse.
 | Bestellbestätigung | Kundin | `order.placed` | `order-placed.ts` | `order-confirmation` |
 | Neue Bestellung | Betreiber (`ORDER_NOTIFICATION_TO`), dazu Push über ntfy (`NTFY_URL`) | `order.placed` | `order-placed.ts` | `order-notification` |
 | Versandbestätigung | Kundin | `shipment.created` | `shipment-created.ts` | `shipping-confirmation` |
+| Bestellung storniert | Kundin | `order.canceled` | `order-canceled.ts` | `order-canceled` |
+| Bestellung storniert | Betreiber (`ORDER_NOTIFICATION_TO`) | `order.canceled` | `order-canceled.ts` | `order-canceled-notification` |
+| Rückerstattung | Kundin | `payment.refunded` | `payment-refunded.ts` | `refund-confirmation` |
 | Passwort zurücksetzen | Kundin | `auth.password_reset` (`actor_type: customer`) | `password-reset.ts` | `customer-password-reset` |
 | Passwort zurücksetzen | Admin-Benutzer | `auth.password_reset` (`actor_type: user`) | `password-reset.ts` | `admin-password-reset` |
+| Einladung ins Admin | neue Mitarbeitende | `invite.created`, `invite.resent` | `invite-created.ts` | `admin-invite` |
+
+Keine dieser Mails verlinkt oder erwähnt eine Rückgabe oder ein Widerrufsrecht: Beides gibt es nicht (AGB §9).
 
 ## Versandbestätigung
 
@@ -43,21 +49,93 @@ Die Mail geht raus, sobald im Admin ein Fulfillment als versendet markiert wird 
 3. Mail prüfen: Artikel, Adresse, Link zur Sendungsverfolgung. Im Log steht `[smtp] Vorlage "shipping-confirmation" versendet.`
 4. Zweite Bestellung ohne Sendungsnummer versenden, dritte mit abgeschalteter Benachrichtigung (es darf keine Mail kommen).
 
+## Bestellung storniert
+
+Die Mail geht raus, sobald im Admin eine Bestellung storniert wird (Bestellung → «Bestellung stornieren»). Medusa löst
+`order.canceled` aus, mit der ID der Bestellung. Stornieren geht nur, solange kein Fulfillment offen ist.
+
+- **Inhalt (Kundin):** Bestellnummer, dass die Bestellung storniert ist, die Artikel mit Menge, ein Satz zur Zahlung,
+  Kontakt info@jibbit.ch.
+- **Satz zur Zahlung:** richtet sich nach den Abbuchungen (`captures`) an der Bestellung, nicht nach einem Status.
+  Wurde abgebucht: Betrag in CHF, er geht auf das ursprüngliche Zahlungsmittel zurück, das kann ein paar Werktage
+  dauern. Wurde nichts abgebucht: «nichts belastet», eine Reservation wird freigegeben. Sind die Zahlungsdaten nicht
+  geladen: «Falls du bereits bezahlt hast, …». Der Satz behauptet nie, die Rückerstattung sei schon ausgeführt.
+- **Rückerstattung beim Stornieren:** Medusa erstattet abgebuchte Zahlungen beim Stornieren selbst (über
+  `refundPaymentsWorkflow`). Dafür kommt **kein** `payment.refunded`, es geht also keine zweite Mail raus.
+- **Betreiber:** kurze Mail an `ORDER_NOTIFICATION_TO` mit Zahlungsstand (abgebucht, erstattet, offen) und Link ins
+  Admin. Steht dort «Offen», hat die Rückerstattung bei zahls.ch nicht geklappt und muss von Hand nachgeholt werden.
+- **Keine Mail an die Kundin:** wenn die Bestellung keine E-Mail-Adresse hat oder das Event `no_notification` trägt
+  (Medusa 2.13.6 schickt das bei `order.canceled` nicht mit, der Admin hat dafür keinen Schalter).
+- **Kein Doppelversand:** Schlüssel `order-canceled:<Bestell-ID>` bzw. `order-canceled-notification:<Bestell-ID>:<n>`.
+- **Fehler** brechen das Stornieren nicht ab. Sie stehen im Log unter `[order.canceled]` oder `[notify]`.
+
+### Auf Staging testen
+
+1. Testbestellung mit eigener E-Mail-Adresse aufgeben und bezahlen (zahls.ch im Testmodus).
+2. Im Admin die Bestellung öffnen und stornieren.
+3. Mail prüfen: Artikel, Betrag, Satz zum Zahlungsmittel. Betreiber-Mail: «abgebucht und vollständig erstattet». Im
+   Log steht `[smtp] Vorlage "order-canceled" versendet.` Es darf keine Rückerstattungs-Mail dazukommen.
+4. Wenn sich eine Bestellung ohne Abbuchung herstellen lässt (Zahlung nur autorisiert): stornieren, die Mail muss
+   «nichts belastet» sagen.
+
+## Rückerstattung
+
+Die Mail geht raus, wenn im Admin eine Zahlung ganz oder teilweise zurückerstattet wird (Bestellung → Zahlung →
+«Rückerstattung»). Medusa löst `payment.refunded` aus, mit der ID der **Zahlung**. Der Subscriber geht von dort über
+die Payment Collection zur Bestellung.
+
+- **Inhalt:** Bestellnummer, rückerstatteter Betrag in CHF, dass er auf das Zahlungsmittel zurückgeht, mit dem
+  bezahlt wurde, und dass das ein paar Werktage dauern kann. Kontakt info@jibbit.ch.
+- **Teilbeträge und mehrere Rückerstattungen:** Jede Rückerstattung bekommt eine eigene Mail mit ihrem Betrag. Weil
+  das Event nur die Zahlung nennt, nimmt der Subscriber alle Rückerstattungen dieser Zahlung aus der letzten Stunde
+  (`REFUND_WINDOW_MS`), sonst die jüngste.
+- **Kein Doppelversand:** Schlüssel `refund-confirmation:<Refund-ID>`. Eine Rückerstattung, die schon eine Mail hat,
+  bekommt keine zweite, auch wenn sie noch im Zeitfenster liegt.
+- **Keine Mail:** wenn die Bestellung keine E-Mail-Adresse hat, wenn zur Zahlung keine Bestellung gehört oder das
+  Event `no_notification` trägt.
+- **Fehler** brechen die Rückerstattung nicht ab. Sie stehen im Log unter `[payment.refunded]` oder `[notify]`.
+
+### Auf Staging testen
+
+Achtung: Die Rückerstattung im Admin löst bei zahls.ch eine echte Rückerstattung aus. Nur mit Testzahlungen.
+
+1. Testbestellung mit eigener E-Mail-Adresse aufgeben und bezahlen.
+2. Im Admin bei der Zahlung einen Teilbetrag zurückerstatten. Mail prüfen: Teilbetrag, Bestellnummer.
+3. Den Rest zurückerstatten. Es kommt eine zweite Mail mit dem zweiten Betrag, die erste nicht noch einmal.
+   Im Log steht je `[smtp] Vorlage "refund-confirmation" versendet.`
+
+## Einladung ins Admin
+
+Die Mail geht raus, wenn im Admin unter Einstellungen → Benutzer jemand eingeladen wird (`invite.created`) oder die
+Einladung erneut gesendet wird (`invite.resent`).
+
+- **Inhalt:** Einladung auf Deutsch, Link auf `<MEDUSA_BACKEND_URL>/app/invite?token=…`, Gültigkeit (aus `expires_at`
+  der Einladung gerechnet, Vorgabe von Medusa: 24 Stunden).
+- **Link:** Die Basis kommt wie beim Passwort-Reset aus `MEDUSA_BACKEND_URL`, nie aus dem Request. Fehlt die
+  Variable, geht keine Mail raus und im Log steht der Grund.
+- **Token:** steht nur im Text der Mail, nicht in der Datenbank der Notifications und nicht im Log.
+- **Kein Doppelversand:** Schlüssel `admin-invite:<Invite-ID>:<Ablaufzeit>`. Erneutes Senden setzt ein neues
+  Ablaufdatum und lässt damit eine neue Mail durch.
+- **Keine Mail:** wenn die Einladung schon angenommen ist oder Adresse oder Token fehlen.
+
+### Auf Staging testen
+
+1. Im Admin unter Einstellungen → Benutzer eine eigene zweite Adresse einladen.
+2. Mail prüfen, Link öffnen: Er muss auf die Einladungsseite des Admins führen und das Anlegen des Zugangs erlauben.
+3. Bei einer zweiten Einladung «Einladung erneut senden» wählen: Es kommt eine neue Mail mit neuem Link.
+
 ## Was noch fehlt
 
 Nicht umgesetzt. Die Events gibt es in Medusa 2.13.6, es fehlt jeweils der Subscriber.
 
 | Mail | An | Event |
 |---|---|---|
-| Bestellung storniert | Kundin | `order.canceled` |
-| Rückerstattung | Kundin | `payment.refunded` |
 | Sendung storniert | Kundin | `order.fulfillment_canceled` |
 | Sendung zugestellt | Kundin | `delivery.created` |
 | Konto erstellt / Willkommen | Kundin | `customer.created` |
-| Einladung für Admin-Benutzer | neue Mitarbeitende | `invite.created`, `invite.resent` |
 | Bestellung an anderes Konto übertragen | Kundin | `order.transfer_requested` |
 | Zahlung eingegangen | Betreiber | `payment.captured` |
-| Bestellung storniert oder rückerstattet | Betreiber | `order.canceled`, `payment.refunded` |
+| Rückerstattung | Betreiber | `payment.refunded` |
 
 Rücksendung, Umtausch und Reklamation (`order.return_requested`, `order.exchange_created`, `order.claim_created`)
 haben ebenfalls keine Mail. Ohne Rückgaberecht (AGB §9) braucht es sie vorerst nicht.
