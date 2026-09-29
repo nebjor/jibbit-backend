@@ -6,6 +6,8 @@ import {
   buildZahlsProviderOptions,
   isZahlsPluginConfigured,
   missingZahlsPluginEnv,
+  veralteteZahlsEnvNamen,
+  zahlsEnvHinweise,
 } from './src/lib/zahls-plugin'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
@@ -60,18 +62,51 @@ const fileBackendUrl = `${(
  * Ohne vollständige Werte startet Medusa deshalb normal, nur eben ohne den
  * zahls.ch-Provider; die Warnung unten sagt im Log, was fehlt.
  *
+ * AUSNAHME — veralteter Variablenname in Produktion: Der Umstieg auf das
+ * Plugin (6385a4f, 03.09.2026) hat ZAHLS_API_SECRET in ZAHLS_API_KEY
+ * umbenannt; die .env auf dem Server behielt den alten Namen. Der Shop lief
+ * danach wochenlang «normal», nur registrierte er den Provider nie — die
+ * Region bot ihn weiter an, und jede Zahlung endete in 500 unknown_error.
+ * Die einzige Spur war die Warnung hier, die niemand liest.
+ *
+ * Ein Shop, der in Produktion still ohne Zahlungsanbieter läuft, ist
+ * schlimmer als ein Shop, der nicht startet: Ersterer verliert jede
+ * Bestellung und meldet nichts, Letzterer fällt beim Deploy sofort auf.
+ * Deshalb bricht der Start ab, wenn NODE_ENV=production ist UND ein
+ * umbenannter Name gesetzt ist, während sein Nachfolger fehlt — das ist ein
+ * eindeutiger Konfigurationsfehler, kein «noch nicht eingerichtet». Fehlen
+ * die Werte schlicht komplett (Dev ohne Konto), bleibt es bei der Warnung.
+ *
  * Provider-Kennung: pp_zahls_zahls (siehe src/lib/zahls-plugin.ts).
  * Webhook-Adresse:  https://<API_DOMAIN>/hooks/payment/zahls_zahls
  */
 const zahlsConfigured = isZahlsPluginConfigured(process.env)
+// Hinweise zu veralteten Namen (nur Namen, nie Werte) — auch bei
+// vollständiger Konfiguration nützlich, wenn noch Reste in der .env stehen.
+const zahlsHinweise = zahlsEnvHinweise(process.env)
 if (!zahlsConfigured) {
   const missing = missingZahlsPluginEnv(process.env)
+  const veraltet = veralteteZahlsEnvNamen(process.env)
+  const meldung =
+    `[zahls.ch] Provider nicht registriert — es fehlt: ${missing.join(', ')}.` +
+    zahlsHinweise.map((h) => `\n[zahls.ch]   ${h}`).join('')
+
+  if (process.env.NODE_ENV === 'production' && veraltet.length) {
+    throw new Error(
+      `${meldung}\n[zahls.ch] Startabbruch: in Produktion darf der Shop nicht ` +
+        `still ohne Zahlungsanbieter laufen (jede Zahlung endete in ` +
+        `500 unknown_error). Veralteter Name gesetzt: ${veraltet.join(', ')}. ` +
+        `Zeile in der .env umbenennen und neu starten — siehe docs/zahls-plugin.md.`
+    )
+  }
+
   // console statt Logger: der Medusa-Logger existiert an dieser Stelle noch
   // nicht — medusa-config wird vor allen Loadern ausgewertet.
   console.warn(
-    `[zahls.ch] Provider nicht registriert — es fehlt: ${missing.join(', ')}. ` +
-      `Der Shop startet ohne zahls.ch-Zahlarten (Plugin-Checkout).`
+    `${meldung}\n[zahls.ch] Der Shop startet ohne zahls.ch-Zahlarten (Plugin-Checkout).`
   )
+} else if (zahlsHinweise.length) {
+  console.warn(zahlsHinweise.map((h) => `[zahls.ch] ${h}`).join('\n'))
 }
 
 module.exports = defineConfig({

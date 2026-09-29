@@ -277,7 +277,7 @@ Noch von Hand, in dieser Reihenfolge:
 
  5. Migrationen, Seed, Admin-Benutzer:
       docker compose exec medusa npx medusa db:migrate
-      docker compose exec medusa npx medusa exec ./src/scripts/seed.ts
+      docker compose exec medusa npx medusa exec ./src/scripts/seed.js
       docker compose exec medusa npx medusa user -e du@example.ch -p '<passwort>'
     Publishable Key aus https://api.jibbit.ch/app -> Einstellungen holen,
     in STATIC_TENANTS eintragen (Schritt 3).

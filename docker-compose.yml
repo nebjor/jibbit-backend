@@ -91,8 +91,18 @@ services:
       # der nur in der .env existiert, erreicht den Container nie, und der
       # Fehler bleibt still (der Provider wird dann einfach nicht
       # registriert). Deshalb stehen alle ZAHLS_-Variablen hier.
+      # UMBENENNUNG (03.09.2026, Umstieg aufs offizielle Plugin): der
+      # API-Schluessel heisst ZAHLS_API_KEY, frueher ZAHLS_API_SECRET. Eine
+      # .env mit dem alten Namen laesst den Provider still weg — jede
+      # Zahlung endet in 500 unknown_error. Damit medusa-config.ts das
+      # erkennen und bei NODE_ENV=production den Start abbrechen kann, werden
+      # die alten Namen hier bewusst mit durchgereicht (leer = harmlos).
       # Webhook-Adresse im zahls.ch-Backend:
       #   https://<API_DOMAIN>/hooks/payment/zahls_zahls
+      ZAHLS_API_SECRET: ${ZAHLS_API_SECRET:-}
+      PAYREXX_INSTANCE: ${PAYREXX_INSTANCE:-}
+      PAYREXX_API_SECRET: ${PAYREXX_API_SECRET:-}
+      PAYREXX_WEBHOOK_SECRET: ${PAYREXX_WEBHOOK_SECRET:-}
       ZAHLS_INSTANCE: ${ZAHLS_INSTANCE:-}
       ZAHLS_API_KEY: ${ZAHLS_API_KEY:-}
       ZAHLS_WEBHOOK_SECRET: ${ZAHLS_WEBHOOK_SECRET:-}

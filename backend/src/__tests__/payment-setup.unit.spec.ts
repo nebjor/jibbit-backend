@@ -94,6 +94,24 @@ describe("analysePaymentSetup", () => {
       ])
   })
 
+  it("nennt bei veraltetem Variablennamen die Zeile, die umzubenennen ist", () => {
+    const findings = analysePaymentSetup({
+      regions: region([ZAHLS_PROVIDER_ID]),
+      registeredProviderIds: [SYSTEM_DEFAULT_PROVIDER_ID],
+      env: { ...VOLLE_ENV, ZAHLS_API_KEY: "", ZAHLS_API_SECRET: "alter-wert" },
+    })
+
+    const fehler = findings.filter((f) => f.level === "fehler").map((f) => f.text)
+    expect(fehler).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("es fehlt: ZAHLS_API_KEY"),
+        expect.stringContaining("ZAHLS_API_SECRET wurde am 03.09.2026 in ZAHLS_API_KEY umbenannt"),
+      ])
+    )
+    // Nie den Wert.
+    expect(findings.map((f) => f.text).join("\n")).not.toContain("alter-wert")
+  })
+
   it("warnt in Produktion, solange pp_system_default an der Region haengt", () => {
     const findings = analysePaymentSetup({
       regions: region([SYSTEM_DEFAULT_PROVIDER_ID, ZAHLS_PROVIDER_ID]),
