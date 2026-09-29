@@ -1,29 +1,41 @@
 {
-  "kommentar": "Zuordnung alte Odoo-URL -> neue Storefront-URL. Odoo akzeptiert für /shop/<slug>-<id> JEDEN Slug, solange die ID am Ende stimmt — die Weiterleitung sollte deshalb über die ID am Pfadende matchen (Regex ^/shop/.*-(\\d+)$), nicht über den exakten Slug. old_paths listet die beiden bekannten Slugs (Sitemap + kanonisch). variant_sku gesetzt = Odoo führte die Display/Box-Packung als eigenes Produkt; in Medusa ist sie eine Variante des Zielprodukts. Stand 2026-09-29: new_path gegen test.jibbit.ch geprüft (jedes Ziel antwortet mit 200); wo der neue Shop das Produkt nicht führt, ist das Ziel die Kategorie. 23, 36 und 37 stehen nicht in Odoos Sitemap, sind im Live-Shop aber erreichbar. Umgesetzt wird die Zuordnung in jibbit-frontend lib/seo/legacy-redirects.ts — beide Stellen gemeinsam ändern.",
+  "kommentar": "Zuordnung alte Odoo-URL -> neue Storefront-URL. Odoo akzeptiert für /shop/<slug>-<id> JEDEN Slug, solange die ID am Ende stimmt — die Weiterleitung matcht deshalb über die ID am Pfadende (Regex ^/shop/.*-(\\d+)$), nicht über den Slug. old_paths listet alle Slugs, die die Google Search Console je Produkt kennt (Stand 2026-09-29; Odoo hat IDs über die Zeit für andere Produkte wiederverwendet — massgebend ist das heutige Produkt). variant_sku gesetzt = Odoo führte die Display/Box-Packung als eigenes Produkt; in Medusa ist sie eine Variante des Zielprodukts. Stand 2026-09-29: new_path gegen die Handles auf test.jibbit.ch geprüft; wo der neue Shop das Produkt nicht führt (IDs 5, 7), ist das Ziel die Kategorie. unveroeffentlicht = true: das Produkt ist im Admin angelegt, aber noch Entwurf — die Zielseite antwortet bis zum Veröffentlichen mit 404, das muss vor dem Go-live erledigt sein. Alle 37 IDs der Search Console sind erfasst. Umgesetzt wird die Zuordnung in jibbit-frontend lib/seo/legacy-redirects.data.json — beide Stellen gemeinsam ändern; geprüft mit `npm run smoke -- --base-url=…` im Frontend-Repo.",
   "redirects": [
     {
       "odoo_id": 2,
       "odoo_name": "RAW Black KSS Papers",
       "old_paths": [
-        "/shop/raw-black-kss-papers-2"
+        "/shop/raw-black-kss-papers-2",
+        "/shop/https://www.jibbit.ch/en/contactus-2"
       ],
-      "new_path": "/products/raw-classic-king-size-slim",
+      "new_path": "/products/raw-black-classic-king-size-slim",
       "variant_sku": null
     },
     {
       "odoo_id": 3,
       "odoo_name": "OCB Premium Rolls Slim",
       "old_paths": [
-        "/shop/7-ocb-premium-rolls-slim-3"
+        "/shop/7-ocb-premium-rolls-slim-3",
+        "/shop/https://jibbit.ch/de_CH/shop/cart-3"
       ],
       "new_path": "/products/ocb-black-premium-rolls-slim",
+      "variant_sku": null
+    },
+    {
+      "odoo_id": 5,
+      "odoo_name": "OCB Premium KSS Papers Filter (Vorgänger von ID 7)",
+      "old_paths": [
+        "/shop/http://jibbit.ch/website/info-5"
+      ],
+      "new_path": "/?kategorie=papers",
       "variant_sku": null
     },
     {
       "odoo_id": 7,
       "odoo_name": "OCB Premium KSS Papers mit Filter",
       "old_paths": [
-        "/shop/3-ocb-premium-kss-papers-mit-filter-7"
+        "/shop/3-ocb-premium-kss-papers-mit-filter-7",
+        "/shop/ocb-premium-kss-papers-mit-filter-7"
       ],
       "new_path": "/?kategorie=papers",
       "variant_sku": null
@@ -32,7 +44,9 @@
       "odoo_id": 8,
       "odoo_name": "RAW Classic Rolls Slim",
       "old_paths": [
-        "/shop/4-raw-classic-rolls-slim-8"
+        "/shop/4-raw-classic-rolls-slim-8",
+        "/shop/50-purize-xtra-slim-size-white-8",
+        "/shop/raw-classic-rolls-slim-8"
       ],
       "new_path": "/products/raw-classic-rolls-slim",
       "variant_sku": null
@@ -41,7 +55,8 @@
       "odoo_id": 9,
       "odoo_name": "OCB Premium kurz",
       "old_paths": [
-        "/shop/5-ocb-premium-kurz-9"
+        "/shop/5-ocb-premium-kurz-9",
+        "/shop/ocb-premium-kurz-9"
       ],
       "new_path": "/products/ocb-premium-kurz",
       "variant_sku": null
@@ -51,7 +66,9 @@
       "odoo_name": "PURIZE White, 50er Pack",
       "old_paths": [
         "/shop/6-purize-xtra-slim-white-50er-pack-5-9mm-10",
-        "/shop/6-purize-white-50er-pack-10"
+        "/shop/6-purize-white-50er-pack-10",
+        "/shop/6-purize-slim-white-50er-pack-5-9mm-10",
+        "/shop/purize-white-50er-pack-10"
       ],
       "new_path": "/products/purize-xtra-slim-white-50er-pack-5-9mm",
       "variant_sku": null
@@ -71,7 +88,8 @@
       "odoo_name": "Angel Slim Filters",
       "old_paths": [
         "/shop/angel-slim-filters-6mm-120stk-13",
-        "/shop/angel-slim-filters-13"
+        "/shop/angel-slim-filters-13",
+        "/shop/2-angel-slim-filters-13"
       ],
       "new_path": "/products/angel-slim-filters-6mm-120stk",
       "variant_sku": null
@@ -80,10 +98,13 @@
       "odoo_id": 23,
       "odoo_name": "Black Leaf El Humeros Konische Hülsen KS 100X",
       "old_paths": [
-        "/shop/1-black-leaf-el-humeros-konische-hulsen-ks-100x-23"
+        "/shop/1-black-leaf-el-humeros-konische-hulsen-ks-100x-23",
+        "/shop/1-black-leaf-el-humeros-konische-hulsen-ks-23",
+        "/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-23"
       ],
-      "new_path": "/?kategorie=papers",
-      "variant_sku": null
+      "new_path": "/products/black-leaf-el-humeros-konische-huelsen-ks-100x",
+      "variant_sku": null,
+      "unveroeffentlicht": true
     },
     {
       "odoo_id": 24,
@@ -127,7 +148,8 @@
       "odoo_id": 29,
       "odoo_name": "Kailar Filter 9mm BIG  100 stk schwarz",
       "old_paths": [
-        "/shop/kailar-filter-9mm-big-100-stk-schwarz-29"
+        "/shop/kailar-filter-9mm-big-100-stk-schwarz-29",
+        "/shop/https://jibbit.ch/web/image/product.template/10/image_1920?unique=8d486df-29"
       ],
       "new_path": "/products/kailar-filter-9mm-big-100-stk-schwarz",
       "variant_sku": null
@@ -175,7 +197,7 @@
         "/shop/purize-super-slim-white-50er-pack-5mm-36",
         "/shop/purize-xtra-slim-white-50er-pack-5mm-36"
       ],
-      "new_path": "/products/purize-super-slim-white-o5mm",
+      "new_path": "/products/purize-super-slim-white-5mm",
       "variant_sku": null
     },
     {
@@ -194,8 +216,9 @@
         "/shop/ocb-bio-slim-organic-hemp-rolls-40",
         "/shop/ocb-bio-slim-organic-hemp-rolls-24-40"
       ],
-      "new_path": "/?kategorie=papers",
-      "variant_sku": null
+      "new_path": "/products/ocb-bio-slim-organic-hemp-rolls",
+      "variant_sku": null,
+      "unveroeffentlicht": true
     },
     {
       "odoo_id": 41,
@@ -214,8 +237,9 @@
         "/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-47",
         "/shop/black-leaf-el-humeros-konische-hulsen-ks-100x-kopie-47"
       ],
-      "new_path": "/?kategorie=papers",
-      "variant_sku": null
+      "new_path": "/products/black-leaf-el-humeros-konische-huelsen-ks-100x",
+      "variant_sku": null,
+      "unveroeffentlicht": true
     },
     {
       "odoo_id": 48,
@@ -224,7 +248,7 @@
         "/shop/purize-super-slim-white-5mm-48",
         "/shop/purize-super-slim-white-50er-pack-5mm-kopie-48"
       ],
-      "new_path": "/products/purize-super-slim-white-o5mm",
+      "new_path": "/products/purize-super-slim-white-5mm",
       "variant_sku": null
     },
     {
@@ -233,7 +257,7 @@
       "old_paths": [
         "/shop/dubi-aktivkohlefilter-7mm-49"
       ],
-      "new_path": "/products/dubi-aktivkohlefilter-o7mm",
+      "new_path": "/products/dubi-aktivkohlefilter-7mm",
       "variant_sku": null
     },
     {
