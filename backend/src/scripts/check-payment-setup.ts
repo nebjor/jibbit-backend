@@ -4,9 +4,10 @@
  *   cd backend
  *   npx medusa exec ./src/scripts/check-payment-setup.ts
  *
- * Auf dem Server:
+ * Auf dem Server — im Container liegt nur kompilierter Code (`medusa build`),
+ * dort heisst die Datei `.js`; `.ts` gilt nur lokal aus dem Quellbaum:
  *
- *   docker compose exec medusa npx medusa exec ./src/scripts/check-payment-setup.ts
+ *   docker compose exec medusa npx medusa exec ./src/scripts/check-payment-setup.js
  *
  * Der Bericht liest NUR. Er nennt in einem Durchgang:
  *
