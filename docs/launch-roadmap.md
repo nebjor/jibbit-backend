@@ -34,7 +34,7 @@ Was noch fehlt, ist überschaubar. Mit den offenen PRs sind es realistisch **1�
 | Katalog-Import | 🟡 | 28 Produkte / 35 Varianten in `data/catalog*.json`, Skripte idempotent. Fehlt: geprobter Lauf «leere DB → fertiger Katalog», Bilder für ~19 Produkte (nur 9 zugeordnet). Import-Aufräumen als PR offen. |
 | Kaufpfad | 🟡 | Code vollständig (Medusa-Warenkorb, Kasse, Redirect-Zahlung, Bestellseite, Kontopflicht). Automatische Versandwahl als PR offen. Testkauf fehlt. |
 | Zahlung | ✅ | zahls.ch über das offizielle Plugin, Schlüssel gesetzt. Region: `pp_zahls_zahls` zuweisen, `pp_system_default` entfernen. |
-| Mails & Meldungen | 🟡 | Bestellbestätigung, Meldung an joris@jibbit.ch, ntfy-Push und Admin-Passwort-Reset als PR offen. Versandbestätigung fehlt (P1). SPF/DKIM prüfen. |
+| Mails & Meldungen | 🟡 | Bestellbestätigung, Meldung an joris@jibbit.ch, ntfy-Push und Admin-Passwort-Reset als PR offen. Versandbestätigung als PR offen (`docs/e-mails.md`). SPF/DKIM prüfen. |
 | Versand | 🟡 | Ein Preis: Paket CHF 4.50, gratis ab CHF 69. Passt ein Auftrag in einen Brief, schickt ihn das Team als Brief und gibt die Differenz als Gutscheincode (Medusa Promotions). Keine Gewichts- oder Brieflogik mehr. Texte als PR offen. |
 | Fulfilment | 🟡 | Standard-Admin (Bestellung → Fulfillment → versendet). Etiketten manuell über die Post. Bestand wird nicht geführt (0 von 35 gezählt), also auch nicht abgebucht. Entscheid nötig. |
 | Recht | 🟡 | Impressum, AGB, Datenschutz, Widerruf, Service-Seiten da. Kontakt info@jibbit.ch + Hotline Mo–Fr 9–17 und eigene Rechtsprüfung als PR offen. **Keine MWST-Pflicht:** 8.1 % entfernt Joris an der Region, der Seed wird per PR korrigiert. Firmenangaben/UID im Impressum prüfen. |
@@ -80,7 +80,7 @@ Aufwand: S ≤ 2 h · M 2–6 h · L > 6 h. ∥ = parallel möglich.
 
 ### P1 — erste Woche
 
-- Versandbestätigung per Mail (Code, M)
+- Versandbestätigung per Mail (Code, M): als PR offen, auf Staging testen (`docs/e-mails.md`)
 - Uptime-Monitor auf `jibbit.ch/healthz` und `api.jibbit.ch/health` (Code, S)
 - Error-Tracking (Sentry/GlitchTip) (Code, M)
 - RAM beobachten, VPS bei Bedarf vergrössern (Joris, S)

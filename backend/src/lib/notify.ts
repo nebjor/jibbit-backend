@@ -23,6 +23,12 @@ export interface EmailMessage {
   resourceId?: string
   /** Wird in der Datenbank gespeichert — nur Unkritisches, niemals Tokens. */
   data?: Record<string, unknown>
+  /**
+   * Schutz vor Doppelversand: Gibt es zu diesem Schlüssel schon eine
+   * erfolgreich versendete Notification, verschickt das Notification-Modul
+   * keine zweite. Fehlgeschlagene Versuche sperren nicht.
+   */
+  idempotencyKey?: string
 }
 
 export interface PushMessage {
@@ -42,7 +48,7 @@ export function describeError(err: unknown): string {
 
 export async function sendEmail(
   container: MedusaContainer,
-  { to, template, content, trigger, resourceId, data }: EmailMessage
+  { to, template, content, trigger, resourceId, data, idempotencyKey }: EmailMessage
 ): Promise<boolean> {
   const logger: Logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   try {
@@ -54,6 +60,7 @@ export async function sendEmail(
       resource_id: resourceId,
       data,
       content,
+      ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
     })
     return true
   } catch (err) {
