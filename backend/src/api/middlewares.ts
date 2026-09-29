@@ -10,6 +10,7 @@ import { z } from "@medusajs/framework/zod"
 import { sammleNachschubMetadataFehler } from "../lib/nachschub"
 import { schuetzePreistabelle } from "../lib/preistabelle-schutz"
 import { PostPreistabelleSchema } from "./admin/products/[id]/preistabelle/validators"
+import { PostKundenEmailSchema } from "./admin/customers/[id]/email/validators"
 
 const addressSchema = z.object({
   postal_code: z.string().min(4, "Postal code is required (min 4 chars)"),
@@ -105,6 +106,12 @@ export default defineMiddlewares({
       matcher: "/hooks/payment/zahls_zahls",
       method: "POST",
       bodyParser: { preserveRawBody: true },
+    },
+    {
+      // E-Mail-Adresse korrigieren, siehe docs/kunden-email-aendern.md.
+      matcher: "/admin/customers/:id/email",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostKundenEmailSchema)],
     },
     {
       matcher: "/admin/customers/:id/addresses",
