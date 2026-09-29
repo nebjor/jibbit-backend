@@ -2,6 +2,7 @@ import { join } from 'node:path'
 
 import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
+import { buildRedisModules } from './src/lib/redis-modules'
 import {
   buildZahlsProviderOptions,
   isZahlsPluginConfigured,
@@ -151,6 +152,13 @@ module.exports = defineConfig({
     },
   },
   modules: [
+    // Event-Bus, Workflow-Engine und Locking auf Redis — aber nur, wenn
+    // REDIS_URL gesetzt ist (im Compose-Betrieb immer). Ohne die Variable ist
+    // die Liste leer und Medusa nimmt seine In-Memory-Standardmodule; damit
+    // laufen lokale Entwicklung, Tests und `medusa build` ohne Redis.
+    // `redisUrl` oben in projectConfig bedient NUR den Session-Store.
+    // Begründung und Optionen: src/lib/redis-modules.ts, Betrieb: docs/redis.md
+    ...buildRedisModules(process.env),
     // Ohne diesen Eintrag lädt Medusa das file-Modul zwar mit dem
     // local-Provider vor, aber mit dessen Defaults: Ablage relativ zu
     // process.cwd() und backend_url = http://localhost:9000/static. Beides ist
