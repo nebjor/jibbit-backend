@@ -8,10 +8,17 @@
  * Passt eine Bestellung in einen Brief, entscheidet das Team beim Packen und
  * schreibt der Kundin die Differenz als Gutscheincode gut (Medusa-Promotion
  * im Admin) — der Checkout kennt nur diesen einen Preis.
+ *
+ * Dazu die Abholung im Laden: eine zweite Shipping Option desselben
+ * Providers, `flat` mit Preis 0 und `data.pickup = true` (siehe
+ * src/lib/pickup.ts). `calculatePrice` wird für sie nie gefragt; der Provider
+ * stempelt ihr beim Hinzufügen zum Warenkorb nur den Marker in die
+ * Versandmethode, damit Bestellung und Mails sie ohne Namensvergleich erkennen.
  */
 
 import { AbstractFulfillmentProviderService } from "@medusajs/framework/utils"
 import { Logger } from "@medusajs/framework/types"
+import { PICKUP_FULFILLMENT_OPTION_ID, isPickupShippingOption } from "../../lib/pickup"
 import type {
   CalculatedShippingOptionPrice,
   CalculateShippingOptionPriceDTO,
@@ -130,12 +137,23 @@ class SwissShippingProviderService extends AbstractFulfillmentProviderService {
     }
   }
 
+  /**
+   * Was auf der Versandmethode des Warenkorbs als `data` landet (und von dort
+   * auf die Bestellung kopiert wird). `optionData` ist das `data` der Shipping
+   * Option. Ist die Option die Abholung, trägt die Methode `pickup: true` —
+   * egal, was die Storefront mitgeschickt hat. Alles andere geht unverändert
+   * durch.
+   */
   async validateFulfillmentData(
     optionData: Record<string, unknown>,
     data: Record<string, unknown>,
     context: ValidateFulfillmentDataContext
   ): Promise<any> {
-    return data
+    const method: Record<string, unknown> = { ...(data ?? {}) }
+    if (isPickupShippingOption({ data: optionData })) {
+      method["pickup"] = true
+    }
+    return method
   }
 
   async validateOption(data: Record<string, unknown>): Promise<boolean> {
@@ -176,6 +194,17 @@ class SwissShippingProviderService extends AbstractFulfillmentProviderService {
         description:
           `CHF ${this.options_.price.toFixed(2)} — ` +
           `ab CHF ${this.options_.freeShippingThreshold.toFixed(2)} gratis`,
+      },
+      {
+        // Abholung im Laden: gratis, keine Post. Die Shipping Option dazu
+        // trägt `data: { id: "swiss-pickup", pickup: true, address }`
+        // (Seed und Admin), siehe src/lib/pickup.ts.
+        id: PICKUP_FULFILLMENT_OPTION_ID,
+        name: "Abholung im Laden",
+        pickup: true,
+        price: 0,
+        currency: "CHF",
+        description: "Unterwegli 1, 8404 Winterthur — gratis",
       },
       {
         id: "swiss-standard-return",
