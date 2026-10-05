@@ -7,6 +7,7 @@ import {
   type ShipmentView,
   renderShippingConfirmation,
 } from "../lib/shipping-notification"
+import { resolvePickup } from "../lib/pickup"
 
 /**
  * Versandbestätigung an die Kundin, sobald ein Fulfillment im Admin als
@@ -43,6 +44,9 @@ const ORDER_FIELDS = [
   "items.variant.inventory_items.required_quantity",
   "items.variant.inventory_items.inventory.id",
   "shipping_address.*",
+  // Abholung im Laden: dann heisst «versendet» hier «abholbereit», siehe ../lib/pickup.ts.
+  "shipping_methods.*",
+  "metadata",
 ]
 
 type LoadedShipment = ShipmentView & {
@@ -67,8 +71,8 @@ export default async function shipmentCreatedHandler({
 
   let shipment: LoadedShipment | undefined
   let order: ShipmentOrderView | undefined
+  const query = container.resolve(ContainerRegistrationKeys.QUERY)
   try {
-    const query = container.resolve(ContainerRegistrationKeys.QUERY)
     const { data: fulfillments } = await query.graph({
       entity: "fulfillment",
       fields: FULFILLMENT_FIELDS,
@@ -107,6 +111,10 @@ export default async function shipmentCreatedHandler({
     return
   }
 
+  // Bei Abholung ist «Als versendet markieren» im Admin das Signal
+  // «abholbereit»; die Mail sagt dann das und nicht «unterwegs».
+  order.pickup = await resolvePickup(query, order, logger)
+
   let content: EmailContent
   try {
     content = renderShippingConfirmation(shipment, order, {
@@ -121,7 +129,8 @@ export default async function shipmentCreatedHandler({
 
   await sendEmail(container, {
     to: order.email,
-    template: "shipping-confirmation",
+    // Zwei Namen für dasselbe Event, damit das Log sagt, welche Mail es war.
+    template: order.pickup ? "pickup-ready" : "shipping-confirmation",
     content,
     trigger: "shipment.created",
     resourceId: shipment.id,

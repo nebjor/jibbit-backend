@@ -1,5 +1,6 @@
 import type { EmailContent, PushMessage } from "./notify"
 import { adminUrl, escapeHtml, formatChf } from "./email-format"
+import { PICKUP_ADDRESS_LINES, PICKUP_HOURS, isPickupOrder } from "./pickup"
 
 export const DEFAULT_ORDER_NOTIFICATION_TO = "joris@jibbit.ch"
 export const CONTACT_EMAIL = "info@jibbit.ch"
@@ -33,8 +34,26 @@ export interface OrderView {
   shipping_total?: unknown
   items?: OrderItem[] | null
   shipping_address?: OrderAddress | null
-  shipping_methods?: Array<{ name?: string | null } | null> | null
+  shipping_methods?: Array<{
+    name?: string | null
+    shipping_option_id?: string | null
+    /** `pickup: true` bei Abholung im Laden, siehe ./pickup.ts */
+    data?: Record<string, unknown> | null
+  } | null> | null
+  metadata?: Record<string, unknown> | null
+  /**
+   * Abholung im Laden statt Versand. Setzt der Subscriber, nachdem er die
+   * Shipping Option geprüft hat (resolvePickup); fehlt das Feld, entscheiden
+   * die Marker an der Bestellung selbst (isPickupOrder).
+   */
+  pickup?: boolean
 }
+
+export function isPickup(order: OrderView): boolean {
+  return order.pickup ?? isPickupOrder(order)
+}
+
+export const PICKUP_LABEL = "Abholung im Laden"
 
 export interface OrderMailSettings {
   storeName: string
@@ -111,8 +130,29 @@ function customerName(order: OrderView): string {
 }
 
 function shippingLabel(order: OrderView): string {
+  if (isPickup(order)) return PICKUP_LABEL
   const method = order.shipping_methods?.find((m) => m?.name)?.name
   return method ? `Versand (${method})` : "Versand"
+}
+
+/**
+ * Der Adressblock der Kundenmails: bei Versand die Lieferadresse, bei
+ * Abholung der Laden mit Abholzeiten. Die Lieferadresse einer Abholbestellung
+ * ist die Ladenadresse selbst (die Storefront füllt sie so, weil Medusa eine
+ * Adresse in der Service-Zone verlangt) — sie der Kundin als «Lieferadresse»
+ * zu zeigen, wäre falsch.
+ */
+export function deliveryBlock(order: OrderView, address: OrderAddress | null | undefined): {
+  title: string
+  lines: string[]
+} {
+  if (isPickup(order)) {
+    return {
+      title: PICKUP_LABEL,
+      lines: [...PICKUP_ADDRESS_LINES, `Abholzeiten: ${PICKUP_HOURS}`],
+    }
+  }
+  return { title: "Lieferadresse", lines: addressLines(address) }
 }
 
 const STYLE_BODY =
@@ -161,20 +201,24 @@ export function renderOrderConfirmation(order: OrderView, settings: OrderMailSet
   const store = settings.storeName
   const name = order.shipping_address?.first_name?.trim()
   const greeting = name ? `Hallo ${name}` : "Hallo"
-  const address = addressLines(order.shipping_address)
+  const pickup = isPickup(order)
+  const delivery = deliveryBlock(order, order.shipping_address)
 
   const subject = `Deine Bestellung ${nr} bei ${store}`
+  const intro = pickup
+    ? `Vielen Dank für deine Bestellung bei ${store}. Wir haben sie erhalten. Du holst sie bei uns im Laden ab – wir melden uns, sobald die Bestellung abholbereit ist.`
+    : `Vielen Dank für deine Bestellung bei ${store}. Wir haben sie erhalten und schicken sie so bald wie möglich los.`
 
   const text = [
     greeting,
     ``,
-    `Vielen Dank für deine Bestellung bei ${store}. Wir haben sie erhalten und schicken sie so bald wie möglich los.`,
+    intro,
     ``,
     `Bestellnummer: ${nr}`,
     ``,
     ...itemsText(order),
     `Hinweis: ${VAT_NOTE}.`,
-    ...(address.length ? [``, `Lieferadresse:`, ...address] : []),
+    ...(delivery.lines.length ? [``, `${delivery.title}:`, ...delivery.lines] : []),
     ``,
     `Fragen zu deiner Bestellung? Schreib uns an ${CONTACT_EMAIL}.`,
     ``,
@@ -183,14 +227,14 @@ export function renderOrderConfirmation(order: OrderView, settings: OrderMailSet
   ].join("\n")
 
   const html = htmlDocument(`<p>${escapeHtml(greeting)}</p>
-<p>Vielen Dank für deine Bestellung bei ${escapeHtml(store)}. Wir haben sie erhalten und schicken sie so bald wie möglich los.</p>
+<p>${escapeHtml(intro)}</p>
 <h1 style="font-size:18px;margin:24px 0 8px">Bestellung ${escapeHtml(nr)}</h1>
 ${itemsTable(order)}
 <p style="${STYLE_MUTED};font-size:13px;margin:0 0 20px">Hinweis: ${escapeHtml(VAT_NOTE)}.</p>
 ${
-  address.length
-    ? `<p style="margin:0 0 4px;font-weight:bold">Lieferadresse</p>
-<p style="margin:0 0 20px">${address.map(escapeHtml).join("<br>")}</p>`
+  delivery.lines.length
+    ? `<p style="margin:0 0 4px;font-weight:bold">${escapeHtml(delivery.title)}</p>
+<p style="margin:0 0 20px">${delivery.lines.map(escapeHtml).join("<br>")}</p>`
     : ""
 }<p>Fragen zu deiner Bestellung? Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
 <p>Liebe Grüsse<br>${escapeHtml(store)}</p>`)
@@ -206,12 +250,20 @@ export function renderOrderNotification(order: OrderView, settings: OrderMailSet
     .filter(Boolean)
     .join(" ")
 
-  const subject = `Neue Bestellung ${nr} – ${formatChf(order.total)}`
+  const pickup = isPickup(order)
+  // Bei Abholung ist die «Lieferadresse» der Laden selbst — der Ort sagt dem
+  // Team nichts, der Hinweis «Abholung» dagegen alles: nicht verpacken für
+  // die Post, sondern bereitstellen und die Kundin benachrichtigen.
+  const where = pickup ? ` – ${PICKUP_LABEL}` : city ? ` (${city})` : ""
+  const pickupNote = `${PICKUP_LABEL}: nicht versenden. Bereitstellen und im Admin als versendet markieren – das schickt die Abholbereit-Mail.`
+
+  const subject = `Neue Bestellung ${nr} – ${formatChf(order.total)}${pickup ? ` – ${PICKUP_LABEL}` : ""}`
 
   const text = [
     `Neue Bestellung ${nr}`,
     `Total: ${formatChf(order.total)}`,
-    `Kunde: ${customer}${city ? ` (${city})` : ""}`,
+    `Kunde: ${customer}${where}`,
+    ...(pickup ? [pickupNote] : []),
     ``,
     ...lines(order).map((line) => `${line.quantity} × ${line.label}`),
     ``,
@@ -220,7 +272,8 @@ export function renderOrderNotification(order: OrderView, settings: OrderMailSet
 
   const html = htmlDocument(`<h1 style="font-size:18px;margin:0 0 8px">Neue Bestellung ${escapeHtml(nr)}</h1>
 <p style="margin:0 0 4px"><strong>Total: ${escapeHtml(formatChf(order.total))}</strong></p>
-<p style="margin:0 0 16px">Kunde: ${escapeHtml(customer)}${city ? ` (${escapeHtml(city)})` : ""}</p>
+<p style="margin:0 0 ${pickup ? "4px" : "16px"}">Kunde: ${escapeHtml(customer)}${escapeHtml(where)}</p>
+${pickup ? `<p style="margin:0 0 16px"><strong>${escapeHtml(pickupNote)}</strong></p>\n` : ""}
 <ul style="margin:0 0 16px;padding-left:20px">
 ${lines(order)
   .map((line) => `<li>${line.quantity} × ${escapeHtml(line.label)}</li>`)
@@ -234,8 +287,9 @@ ${lines(order)
 export function renderOrderPush(order: OrderView, settings: OrderMailSettings): PushMessage {
   const count = itemCount(order)
   return {
+    // Der Titel bleibt ASCII (HTTP-Header); der Abholhinweis steht in der Nachricht.
     title: `Neue Bestellung ${orderNumber(order)}`,
-    message: `${formatChf(order.total)} · ${count} Artikel`,
+    message: `${formatChf(order.total)} · ${count} Artikel${isPickup(order) ? ` · ${PICKUP_LABEL}` : ""}`,
     click: adminOrderUrl(settings.backendUrl, order.id),
     tags: "package",
   }
