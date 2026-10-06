@@ -9,6 +9,7 @@ import {
   renderOrderNotification,
   renderOrderPush,
 } from "../lib/order-notification"
+import { resolvePickup } from "../lib/pickup"
 
 /**
  * Bei jeder Bestellung: Bestätigung an die Kundin, Mail an den Betreiber,
@@ -29,6 +30,9 @@ const ORDER_FIELDS = [
   "items.adjustments.*",
   "shipping_methods.*",
   "shipping_address.*",
+  // Abholung im Laden: `metadata.pickup` bzw. `shipping_methods.data.pickup`,
+  // siehe ../lib/pickup.ts.
+  "metadata",
 ]
 
 export default async function orderPlacedHandler({
@@ -38,8 +42,9 @@ export default async function orderPlacedHandler({
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   let order: OrderView | undefined
+  const query = container.resolve(ContainerRegistrationKeys.QUERY)
   try {
-    const { data: orders } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
+    const { data: orders } = await query.graph({
       entity: "order",
       fields: ORDER_FIELDS,
       filters: { id: data.id },
@@ -53,6 +58,10 @@ export default async function orderPlacedHandler({
     logger.error(`[order.placed] Bestellung ${data.id} nicht gefunden.`)
     return
   }
+
+  // Abholung oder Versand entscheidet Anrede, Adressblock und den Hinweis an
+  // das Team. Scheitert die Nachfrage, gilt Versand — die Mail geht trotzdem.
+  order.pickup = await resolvePickup(query, order, logger)
 
   const current = order
   const settings: OrderMailSettings = {

@@ -46,6 +46,11 @@ import {
   isZahlsPluginConfigured,
   ZAHLS_PROVIDER_ID,
 } from "../lib/zahls-plugin";
+import {
+  PICKUP_ADDRESS_LINES,
+  PICKUP_FULFILLMENT_OPTION_ID,
+  PICKUP_TYPE_CODE,
+} from "../lib/pickup";
 
 // Der Stock-Seed importierte `ApiKey` aus ../../.medusa/types/query-entry-points.
 // Diese Datei wird generiert und existiert vor dem ersten Build nicht — der
@@ -61,6 +66,8 @@ const REGION_NAME = "Schweiz";
 const STOCK_LOCATION_NAME = "Lager Zürich";
 const FULFILLMENT_SET_NAME = "Versand Schweiz";
 const FULFILLMENT_PROVIDER_ID = "swiss-shipping_swiss-shipping";
+// Genau dieser Name steht auch im Staging-Admin (so_01M45H9J4SFSZ6WMABCR0BBNER).
+const PICKUP_OPTION_NAME = "Abholung im Laden";
 
 // Der Stock-Seed definierte hier einen eigenen "update-store-currencies"
 // Workflow, der nur `updateStoresStep` aufruft. Das reicht hier NICHT:
@@ -362,6 +369,65 @@ export default async function seedJibbitData({ container }: ExecArgs) {
     });
   } else {
     logger.info(`Fulfillment set "${FULFILLMENT_SET_NAME}" exists — skipped.`);
+  }
+
+  // ─── Abholung im Laden ───────────────────────────────────────
+  // Zweite Option auf derselben Service-Zone, FLAT mit Preis 0, am selben
+  // Provider. Erkannt wird sie an `type.code = "pickup"` und
+  // `data.pickup = true` (siehe src/lib/pickup.ts), nie am Namen. Bewusst
+  // KEIN eigenes Fulfillment-Set vom Typ "pickup": Das brächte nur eine
+  // zweite Service-Zone und einen anderen Admin-Reiter, aber keinen Nutzen —
+  // Storefront und Mails lesen die Marker an der Option bzw. Bestellung.
+  //
+  // Eigener Block, nicht im `if (!fulfillmentSet)` oben: So bekommt auch eine
+  // bestehende Installation die Option beim nächsten Seed-Lauf.
+  const pickupServiceZoneId = fulfillmentSet.service_zones?.[0]?.id;
+  if (pickupServiceZoneId) {
+    const existingOptions = await fulfillmentModuleService.listShippingOptions(
+      { service_zone: { id: pickupServiceZoneId } },
+      { relations: ["type"] }
+    );
+    const hasPickup = existingOptions.some(
+      (option) =>
+        option.type?.code === PICKUP_TYPE_CODE ||
+        (option.data as Record<string, unknown> | null)?.["pickup"] === true
+    );
+    if (!hasPickup) {
+      await createShippingOptionsWorkflow(container).run({
+        input: [
+          {
+            name: PICKUP_OPTION_NAME,
+            price_type: "flat",
+            provider_id: FULFILLMENT_PROVIDER_ID,
+            service_zone_id: pickupServiceZoneId,
+            shipping_profile_id: shippingProfile.id,
+            type: {
+              label: "Abholung",
+              description: `Abholung im Laden, ${PICKUP_ADDRESS_LINES.slice(1).join(", ")} – gratis`,
+              code: PICKUP_TYPE_CODE,
+            },
+            data: {
+              id: PICKUP_FULFILLMENT_OPTION_ID,
+              pickup: true,
+              address: PICKUP_ADDRESS_LINES.slice(1).join(", "),
+            },
+            // Preis 0 für die Währung UND die Region: Medusa wählt den
+            // Regionspreis, wenn es einen gibt, sonst den Währungspreis.
+            prices: [
+              { currency_code: CURRENCY, amount: 0 },
+              { region_id: region.id, amount: 0 },
+            ],
+            rules: [
+              { attribute: "enabled_in_store", value: "true", operator: "eq" },
+              { attribute: "is_return", value: "false", operator: "eq" },
+            ],
+          },
+        ],
+      });
+      logger.info(`Shipping option "${PICKUP_OPTION_NAME}" created.`);
+    } else {
+      logger.info(`Shipping option "${PICKUP_OPTION_NAME}" exists — skipped.`);
+    }
   }
   logger.info("Finished seeding fulfillment data.");
 
