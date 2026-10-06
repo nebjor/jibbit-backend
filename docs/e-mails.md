@@ -13,6 +13,7 @@ E-Mail-Adresse.
 | Bestellbestätigung | Kundin | `order.placed` | `order-placed.ts` | `order-confirmation` |
 | Neue Bestellung | Betreiber (`ORDER_NOTIFICATION_TO`), dazu Push über ntfy (`NTFY_URL`) | `order.placed` | `order-placed.ts` | `order-notification` |
 | Versandbestätigung | Kundin | `shipment.created` | `shipment-created.ts` | `shipping-confirmation` |
+| Abholbereit (Abholung im Laden) | Kundin | `shipment.created`, wenn die Bestellung abgeholt wird (`docs/abholung-im-laden.md`) | `shipment-created.ts` | `pickup-ready` |
 | Bestellung storniert | Kundin | `order.canceled` | `order-canceled.ts` | `order-canceled` |
 | Bestellung storniert | Betreiber (`ORDER_NOTIFICATION_TO`) | `order.canceled` | `order-canceled.ts` | `order-canceled-notification` |
 | Rückerstattung | Kundin | `payment.refunded` | `payment-refunded.ts` | `refund-confirmation` |
@@ -41,6 +42,11 @@ Die Mail geht raus, sobald im Admin ein Fulfillment als versendet markiert wird 
   Event für dieselbe Sendung noch einmal, verschickt das Notification-Modul keine zweite Mail. Ein fehlgeschlagener
   Versuch sperrt nicht.
 - **Fehler** brechen das Versenden im Admin nicht ab. Sie stehen im Log unter `[shipment.created]` oder `[notify]`.
+- **Abholung im Laden:** Dieselbe Aktion («Als versendet markieren») heisst dann «abholbereit». Die Mail sagt
+  «Deine Bestellung … ist abholbereit», nennt Laden und Abholzeiten und keine Sendungsnummer (auch wenn eine
+  eingetragen wurde). Vorlage im Log: `pickup-ready`, derselbe Schlüssel `shipping-confirmation:<Fulfillment-ID>`.
+  Auch die Bestellbestätigung und die Betreiber-Meldung unterscheiden Abholung und Versand. Wie die Abholung erkannt
+  wird: `docs/abholung-im-laden.md`.
 
 ### Auf Staging testen
 

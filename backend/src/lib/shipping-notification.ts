@@ -4,6 +4,11 @@
  * Eine Sendung ist in Medusa ein Fulfillment, das als versendet markiert
  * wurde. Sie kann die ganze Bestellung enthalten oder nur einen Teil davon;
  * die Mail nennt deshalb die Artikel der SENDUNG, nicht die der Bestellung.
+ *
+ * Bei Abholung im Laden (order.pickup, siehe ./pickup.ts) ist dieselbe
+ * Admin-Aktion «Als versendet markieren» das Signal «abholbereit»: Die Mail
+ * sagt dann, dass die Bestellung im Laden bereitliegt, nennt Adresse und
+ * Abholzeiten und keine Sendungsnummer.
  */
 
 import type { EmailContent } from "./notify"
@@ -15,8 +20,9 @@ import {
   type OrderView,
   STYLE_CELL,
   STYLE_MUTED,
-  addressLines,
+  deliveryBlock,
   htmlDocument,
+  isPickup,
   itemLabel,
   orderNumber,
 } from "./order-notification"
@@ -165,25 +171,40 @@ export function renderShippingConfirmation(
 ): EmailContent {
   const nr = orderNumber(order)
   const store = settings.storeName
-  const address = addressLines(shipment.delivery_address ?? order.shipping_address)
+  const pickup = isPickup(order)
+  const delivery = deliveryBlock(order, shipment.delivery_address ?? order.shipping_address)
   const name = (shipment.delivery_address ?? order.shipping_address)?.first_name?.trim()
   const greeting = name ? `Hallo ${name}` : "Hallo"
   const lines = shippedLines(shipment, order)
-  const tracking = trackings(shipment)
+  // Eine Abholung hat keine Sendungsnummer — auch wenn im Admin eine steht.
+  const tracking = pickup ? [] : trackings(shipment)
   const partial = isPartialShipment(shipment, order)
 
-  const intro = partial
-    ? `Ein Teil deiner Bestellung ${nr} ist unterwegs: Wir haben die Sendung der Post übergeben.`
-    : `Deine Bestellung ${nr} ist unterwegs: Wir haben sie der Post übergeben.`
-  const partialNote = "Die übrigen Artikel deiner Bestellung kommen in einer separaten Sendung."
+  const intro = pickup
+    ? partial
+      ? `Ein Teil deiner Bestellung ${nr} ist abholbereit: Du kannst ihn bei uns im Laden abholen.`
+      : `Deine Bestellung ${nr} ist abholbereit: Du kannst sie bei uns im Laden abholen.`
+    : partial
+      ? `Ein Teil deiner Bestellung ${nr} ist unterwegs: Wir haben die Sendung der Post übergeben.`
+      : `Deine Bestellung ${nr} ist unterwegs: Wir haben sie der Post übergeben.`
+  const partialNote = pickup
+    ? "Die übrigen Artikel deiner Bestellung legen wir separat bereit – du bekommst dann noch einmal eine Mail."
+    : "Die übrigen Artikel deiner Bestellung kommen in einer separaten Sendung."
+  const itemsTitle = pickup ? "Zur Abholung bereit" : "In dieser Sendung"
   const trackingTitle = tracking.length > 1 ? "Sendungsnummern" : "Sendungsnummer"
   const trackingHint = "Bis die Post die Sendung erfasst hat und der Link etwas anzeigt, kann es ein paar Stunden dauern."
   const noTracking =
     "Diese Sendung ist ohne Sendungsverfolgung unterwegs, zum Beispiel als Brief. Eine Sendungsnummer gibt es deshalb nicht."
+  const pickupHint = "Bitte nimm die Bestellbestätigung (auf dem Handy reicht) mit. Bezahlt ist schon alles."
+  const questions = pickup ? "Fragen zur Abholung?" : "Fragen zu deiner Sendung?"
 
-  const subject = partial
-    ? `Ein Teil deiner Bestellung ${nr} bei ${store} ist unterwegs`
-    : `Deine Bestellung ${nr} bei ${store} ist unterwegs`
+  const subject = pickup
+    ? partial
+      ? `Ein Teil deiner Bestellung ${nr} bei ${store} ist abholbereit`
+      : `Deine Bestellung ${nr} bei ${store} ist abholbereit`
+    : partial
+      ? `Ein Teil deiner Bestellung ${nr} bei ${store} ist unterwegs`
+      : `Deine Bestellung ${nr} bei ${store} ist unterwegs`
 
   const text = [
     greeting,
@@ -192,16 +213,18 @@ export function renderShippingConfirmation(
     ``,
     `Bestellnummer: ${nr}`,
     ``,
-    `In dieser Sendung:`,
+    `${itemsTitle}:`,
     ...lines.map((line) => `${line.quantity} × ${line.label}`),
     ...(partial ? [``, partialNote] : []),
     ``,
-    ...(tracking.length
-      ? [`${trackingTitle}:`, ...tracking.map((t) => `${t.number}: ${t.url}`), trackingHint]
-      : [noTracking]),
-    ...(address.length ? [``, `Lieferadresse:`, ...address] : []),
+    ...(pickup
+      ? [pickupHint]
+      : tracking.length
+        ? [`${trackingTitle}:`, ...tracking.map((t) => `${t.number}: ${t.url}`), trackingHint]
+        : [noTracking]),
+    ...(delivery.lines.length ? [``, `${delivery.title}:`, ...delivery.lines] : []),
     ``,
-    `Fragen zu deiner Sendung? Schreib uns an ${CONTACT_EMAIL}.`,
+    `${questions} Schreib uns an ${CONTACT_EMAIL}.`,
     ``,
     `Liebe Grüsse`,
     store,
@@ -210,25 +233,27 @@ export function renderShippingConfirmation(
   const html = htmlDocument(`<p>${escapeHtml(greeting)}</p>
 <p>${escapeHtml(intro)}</p>
 <h1 style="font-size:18px;margin:24px 0 8px">Bestellung ${escapeHtml(nr)}</h1>
-<p style="margin:0 0 4px;font-weight:bold">In dieser Sendung</p>
+<p style="margin:0 0 4px;font-weight:bold">${escapeHtml(itemsTitle)}</p>
 <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px">
 ${lines.map((line) => `<tr><td style="${STYLE_CELL}">${line.quantity} × ${escapeHtml(line.label)}</td></tr>`).join("\n")}
 </table>
 ${partial ? `<p style="margin:0 0 20px">${escapeHtml(partialNote)}</p>\n` : ""}${
-    tracking.length
-      ? `<p style="margin:0 0 4px;font-weight:bold">${trackingTitle}</p>
+    pickup
+      ? `<p style="margin:0 0 20px">${escapeHtml(pickupHint)}</p>`
+      : tracking.length
+        ? `<p style="margin:0 0 4px;font-weight:bold">${trackingTitle}</p>
 <p style="margin:0 0 4px">${tracking
-          .map((t) => `<a href="${escapeHtml(t.url)}">${escapeHtml(t.number)}</a>`)
-          .join("<br>")}</p>
+            .map((t) => `<a href="${escapeHtml(t.url)}">${escapeHtml(t.number)}</a>`)
+            .join("<br>")}</p>
 <p style="${STYLE_MUTED};font-size:13px;margin:0 0 20px">${escapeHtml(trackingHint)}</p>`
-      : `<p style="margin:0 0 20px">${escapeHtml(noTracking)}</p>`
+        : `<p style="margin:0 0 20px">${escapeHtml(noTracking)}</p>`
   }
 ${
-  address.length
-    ? `<p style="margin:0 0 4px;font-weight:bold">Lieferadresse</p>
-<p style="margin:0 0 20px">${address.map(escapeHtml).join("<br>")}</p>`
+  delivery.lines.length
+    ? `<p style="margin:0 0 4px;font-weight:bold">${escapeHtml(delivery.title)}</p>
+<p style="margin:0 0 20px">${delivery.lines.map(escapeHtml).join("<br>")}</p>`
     : ""
-}<p>Fragen zu deiner Sendung? Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
+}<p>${escapeHtml(questions)} Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
 <p>Liebe Grüsse<br>${escapeHtml(store)}</p>`)
 
   return { subject, text, html }
