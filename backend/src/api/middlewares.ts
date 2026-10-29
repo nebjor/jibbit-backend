@@ -9,6 +9,7 @@ import { z } from "@medusajs/framework/zod"
 
 import { sammleNachschubMetadataFehler } from "../lib/nachschub"
 import { schuetzePreistabelle } from "../lib/preistabelle-schutz"
+import { sperreAlsGeliefertMarkieren } from "../lib/zugestellt-schutz"
 import { PostPreistabelleSchema } from "./admin/products/[id]/preistabelle/validators"
 import { PostKundenEmailSchema } from "./admin/customers/[id]/email/validators"
 
@@ -112,6 +113,12 @@ export default defineMiddlewares({
       matcher: "/admin/customers/:id/email",
       method: "POST",
       middlewares: [validateAndTransformBody(PostKundenEmailSchema)],
+    },
+    {
+      // «Als geliefert markieren» ist nicht vorgesehen, siehe lib/zugestellt-schutz.ts.
+      matcher: "/admin/orders/:id/fulfillments/:fulfillment_id/mark-as-delivered",
+      method: "POST",
+      middlewares: [sperreAlsGeliefertMarkieren],
     },
     {
       matcher: "/admin/customers/:id/addresses",
