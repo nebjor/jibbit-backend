@@ -75,14 +75,20 @@ export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) 
         "shipping_address.country_code",
         "payment_collection.payment_sessions.id",
         "subtotal",
+        "item_total",
         "total",
+        "completed_at",
+        "deleted_at",
       ],
       filters: { id: ids },
     })
-    const nachId = new Map((data as unknown as RohWarenkorb[]).map((c) => [c.id, c]))
+    const nachId = new Map(
+      ((data ?? []) as unknown as RohWarenkorb[]).filter((c) => !!c).map((c) => [c.id, c])
+    )
     carts = ids
       .map((id) => nachId.get(id))
-      .filter((c): c is RohWarenkorb => !!c)
+      // Zusätzliche Absicherung: nie abgeschlossene oder gelöschte Warenkörbe.
+      .filter((c): c is RohWarenkorb => !!c && !c.completed_at && !c.deleted_at)
       .map(formatiereWarenkorb)
   }
 
