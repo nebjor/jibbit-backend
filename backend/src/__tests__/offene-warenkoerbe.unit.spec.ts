@@ -116,3 +116,56 @@ describe("GET /admin/offene-warenkoerbe", () => {
     expect(res.json.mock.calls[0][0]).toMatchObject({ carts: [], count: 0 })
   })
 })
+
+// ---------------------------------------------------------------------------
+// Echte Form aus query.graph (Medusa v2): total/subtotal/unit_price/quantity
+// sind BigNumber-INSTANZEN (Getter numeric, raw.value, valueOf), kein `value`.
+// Der Betrag war deshalb überall CHF 0.00. Live nicht prüfbar (Browser-
+// Verbindung fehlte), Form aus dem Dashboard-Fix (PR #71) übernommen.
+// ---------------------------------------------------------------------------
+import { BigNumber } from "@medusajs/framework/utils"
+
+describe("BigNumber-Beträge", () => {
+  const bn = (n: number) => new BigNumber(n) as never
+
+  it("liest total, subtotal, unit_price und quantity aus BigNumber-Instanzen", () => {
+    const c = formatiereWarenkorb({
+      ...roh,
+      items: [
+        { id: "i1", title: "A", quantity: bn(2), unit_price: bn(5) },
+        { id: "i2", title: "B", quantity: bn(1), unit_price: bn(12.5) },
+      ],
+      subtotal: bn(22.5),
+      total: bn(22.5),
+    })
+    expect(c.total).toBe(22.5)
+    expect(c.subtotal).toBe(22.5)
+    expect(c.item_count).toBe(3)
+    expect(c.items.map((i) => i.unit_price)).toEqual([5, 12.5])
+    expect(c.items.map((i) => i.quantity)).toEqual([2, 1])
+  })
+
+  it("fällt bei leerem total auf item_total bzw. Positionssumme zurück", () => {
+    expect(formatiereWarenkorb({ ...roh, total: bn(0), item_total: bn(20) }).total).toBe(20)
+    expect(formatiereWarenkorb({ ...roh, total: null, subtotal: null }).total).toBe(22.5)
+  })
+
+  it("Route liefert Beträge als Zahlen, Arrays immer, und überspringt abgeschlossene", async () => {
+    const raw = jest
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ id: "a" }, { id: "b" }] })
+      .mockResolvedValueOnce({ rows: [{ count: 2 }] })
+    const graph = jest.fn().mockResolvedValue({
+      data: [
+        { ...roh, id: "a", total: bn(22.5), items: undefined, payment_collection: null },
+        { ...roh, id: "b", completed_at: "2026-10-03T00:00:00Z" },
+      ],
+    })
+    const scope = { resolve: (k: string) => (k === "query" ? { graph } : { raw }) }
+    const res: any = { json: jest.fn() }
+    await GET({ scope, query: {} } as any, res)
+    const body = res.json.mock.calls[0][0]
+    expect(body.carts).toHaveLength(1)
+    expect(body.carts[0]).toMatchObject({ id: "a", total: 22.5, items: [], status: "nur_warenkorb" })
+  })
+})
