@@ -236,6 +236,12 @@ services:
       # Image gebacken. Der Schluessel wird zur Laufzeit serverseitig gelesen.
       POSTHOG_KEY: ${POSTHOG_KEY:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-https://eu.i.posthog.com}
+      # Google Kundenrezensionen und Google-Profil (Werte in der .env; leer = aus).
+      GOOGLE_KUNDENREZENSIONEN_MERCHANT_ID: ${GOOGLE_KUNDENREZENSIONEN_MERCHANT_ID:-}
+      GOOGLE_KUNDENREZENSIONEN_BADGE: ${GOOGLE_KUNDENREZENSIONEN_BADGE:-0}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      GOOGLE_PLACE_ID: ${GOOGLE_PLACE_ID:-}
+      GOOGLE_PLACES_ENDPOINT: ${GOOGLE_PLACES_ENDPOINT:-}
 
       # Indexierungs-Schalter der Storefront (jibbit-frontend,
       # lib/seo/indexing.ts). Nur «true» macht die Seite indexierbar; leer,
