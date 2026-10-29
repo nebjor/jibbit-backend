@@ -271,3 +271,105 @@ describe("GET /admin/dashboard/verkauf", () => {
     expect(res.statusCode).toBe(400)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Echte Form aus query.graph (Medusa v2, am 2026-10-29 auf api.jibbit.ch
+// beobachtet): total/shipping_total/quantity/amount sind BigNumber-INSTANZEN
+// (Getter `numeric`, `raw.value`, `valueOf()`), kein Feld `value`. Erst die
+// HTTP-Serialisierung (toJSON) macht daraus Zahlen. Anonymisiert.
+// ---------------------------------------------------------------------------
+import { BigNumber } from "@medusajs/framework/utils"
+import { betrag, berechneKennzahlen } from "../lib/dashboard-verkauf"
+
+function echt(
+  id: string,
+  nr: number,
+  datum: string,
+  total: number,
+  versand: number,
+  menge: number,
+  bezahlt: boolean
+): RohBestellung {
+  return {
+    id,
+    display_id: nr,
+    created_at: datum,
+    status: "pending",
+    total: new BigNumber(total) as never,
+    shipping_total: new BigNumber(versand) as never,
+    items: [
+      {
+        quantity: new BigNumber(menge) as never,
+        title: "Artikel",
+        product_id: "prod_1",
+        unit_price: new BigNumber((total - versand) / menge) as never,
+        total: new BigNumber(total - versand) as never,
+      },
+    ],
+    payment_collections: [
+      {
+        status: bezahlt ? "completed" : "not_paid",
+        payments: bezahlt
+          ? [{ captures: [{ amount: new BigNumber(total) as never }], refunds: [] }]
+          : [],
+      },
+    ],
+  }
+}
+
+describe("betrag mit echten Formen", () => {
+  it("liest BigNumber-Instanzen, Strings, Zahlen, rohe Werte", () => {
+    expect(betrag(new BigNumber(8.28) as never)).toBe(8.28)
+    expect(betrag(new BigNumber("17.25") as never)).toBe(17.25)
+    expect(betrag({ value: "9", precision: 20 } as never)).toBe(9)
+    expect(betrag({ numeric: 3.75 })).toBe(3.75)
+    expect(betrag({ raw: { value: "4.5" } })).toBe(4.5)
+    expect(betrag("8.65")).toBe(8.65)
+    expect(betrag(8.28)).toBe(8.28)
+    expect(betrag(null)).toBe(0)
+    expect(betrag(undefined)).toBe(0)
+  })
+})
+
+describe("Auswertung mit BigNumber-Bestellungen (Bestellungen #1 bis #4)", () => {
+  const alle = [
+    echt("o1", 1, "2026-09-03T22:17:06.127Z", 71.4, 9, 48, false),
+    echt("o2", 2, "2026-09-03T22:25:03.933Z", 17.25, 3.75, 10, true),
+    echt("o3", 3, "2026-09-04T18:29:29.503Z", 8.65, 3.75, 4, true),
+    echt("o4", 4, "2026-10-29T14:16:20.722Z", 8.28, 4.5, 3, true),
+  ]
+  const jetzt = Date.parse("2026-10-29T20:00:00Z")
+
+  it("#1 ist nicht bezahlt, #2 bis #4 schon", () => {
+    expect(alle.map(istBezahlt)).toEqual([false, true, true, true])
+  })
+
+  it("30 Tage (Widget): 1 Bestellung, CHF 8.28, Durchschnitt 8.28", () => {
+    const z = bestimmeZeitraum(undefined, undefined, jetzt) as ReturnType<typeof bestimmeZeitraum> & {
+      von: number
+    }
+    const a = werteAus(alle, z as never).aktuell
+    expect(a.bestellungen).toBe(1)
+    expect(a.umsatz_brutto).toBe(8.28)
+    expect(a.durchschnitt_auftrag).toBe(8.28)
+    expect(a.versand).toBe(4.5)
+    expect(a.stueck_gesamt).toBe(3)
+  })
+
+  it("ab 2026-09-01: 3 Bestellungen, Summe 34.18", () => {
+    const z = bestimmeZeitraum("2026-09-01", "2026-10-30", jetzt) as never
+    const r = werteAus(alle, z)
+    expect(r.aktuell.bestellungen).toBe(3)
+    expect(r.aktuell.umsatz_brutto).toBe(34.18)
+    expect(r.top_bestellungen[0].total).toBe(17.25)
+    expect(r.top_produkte_umsatz[0].umsatz).toBeGreaterThan(0)
+  })
+
+  it("Rückerstattungen als BigNumber", () => {
+    const b = echt("o9", 9, "2026-10-01T10:00:00Z", 10, 0, 1, true)
+    b.payment_collections![0]!.payments![0]!.refunds = [{ amount: new BigNumber(2.5) as never }]
+    const k = berechneKennzahlen([b])
+    expect(k.rueckerstattungen).toBe(2.5)
+    expect(k.umsatz_netto).toBe(7.5)
+  })
+})
