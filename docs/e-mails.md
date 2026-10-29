@@ -138,11 +138,12 @@ Nicht umgesetzt. Die Events gibt es in Medusa 2.13.6, es fehlt jeweils der Subsc
 | Mail | An | Event |
 |---|---|---|
 | Sendung storniert | Kundin | `order.fulfillment_canceled` |
-| Sendung zugestellt | Kundin | `delivery.created` |
 | Konto erstellt / Willkommen | Kundin | `customer.created` |
 | Bestellung an anderes Konto übertragen | Kundin | `order.transfer_requested` |
 | Zahlung eingegangen | Betreiber | `payment.captured` |
 | Rückerstattung | Betreiber | `payment.refunded` |
+
+«Sendung zugestellt» (`delivery.created`) gibt es bewusst nicht: Die Inhaberin weiss, wann sie versendet hat, nicht wann die Post zustellt. «Als geliefert markieren» ist im Admin ausgeblendet und die API-Route gesperrt (`backend/src/lib/zugestellt-schutz.ts`).
 
 Rücksendung, Umtausch und Reklamation (`order.return_requested`, `order.exchange_created`, `order.claim_created`)
 haben ebenfalls keine Mail. Ohne Rückgaberecht (AGB §9) braucht es sie vorerst nicht.
