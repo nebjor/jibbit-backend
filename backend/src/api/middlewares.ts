@@ -12,6 +12,7 @@ import { schuetzePreistabelle } from "../lib/preistabelle-schutz"
 import { sperreAlsGeliefertMarkieren } from "../lib/zugestellt-schutz"
 import { PostPreistabelleSchema } from "./admin/products/[id]/preistabelle/validators"
 import { PostKundenEmailSchema } from "./admin/customers/[id]/email/validators"
+import { PostProduktwunschSchema } from "./store/produktwunsch/validators"
 import { PostBestellungLoeschenSchema } from "./admin/orders/[id]/loeschen/validators"
 
 const addressSchema = z.object({
@@ -131,6 +132,12 @@ export default defineMiddlewares({
       matcher: "/admin/customers/:id/addresses",
       method: "POST",
       middlewares: [validateAddress],
+    },
+    {
+      // Produktwunsch aus dem Shop, siehe docs/e-mails.md.
+      matcher: "/store/produktwunsch",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostProduktwunschSchema)],
     },
     {
       matcher: "/store/customers/me/addresses",

@@ -21,6 +21,7 @@ E-Mail-Adresse.
 | Passwort zurücksetzen | Admin-Benutzer | `auth.password_reset` (`actor_type: user`) | `password-reset.ts` | `admin-password-reset` |
 | Einladung ins Admin | neue Mitarbeitende | `invite.created`, `invite.resent` | `invite-created.ts` | `admin-invite` |
 | E-Mail-Adresse korrigiert | Kundin, an die neue Adresse | kein Event: Widget «E-Mail-Adresse korrigieren» im Admin, siehe `docs/kunden-email-aendern.md` | Route `admin/customers/[id]/email` | `customer-email-corrected` |
+| Produktwunsch | Betreiber (`ORDER_NOTIFICATION_TO`), dazu Push über ntfy (`NTFY_URL`) | kein Event: Formular «Nicht gefunden, was du suchst?» im Shop, `POST /store/produktwunsch` | Route `store/produktwunsch` | `produktwunsch` |
 
 Keine dieser Mails verlinkt oder erwähnt eine Rückgabe oder ein Widerrufsrecht: Beides gibt es nicht (AGB §9).
 
@@ -130,6 +131,22 @@ Einladung erneut gesendet wird (`invite.resent`).
 1. Im Admin unter Einstellungen → Benutzer eine eigene zweite Adresse einladen.
 2. Mail prüfen, Link öffnen: Er muss auf die Einladungsseite des Admins führen und das Anlegen des Zugangs erlauben.
 3. Bei einer zweiten Einladung «Einladung erneut senden» wählen: Es kommt eine neue Mail mit neuem Link.
+
+## Produktwunsch
+
+Unter jeder Produktliste (Startseite, Kategorien, Suchergebnisse) steht das Formular «Nicht gefunden, was du suchst?».
+Die Storefront schickt es per Server Action an `POST /store/produktwunsch`; die Route
+(`backend/src/api/store/produktwunsch/`) antwortet mit 204.
+
+- **Inhalt der Mail** (Betreff «Produktwunsch aus dem Shop», Klartext und HTML): Wunsch, E-Mail-Adresse (falls
+  angegeben, zum Antworten), Kategorie oder Suchbegriff, Seiten-URL, Zeitpunkt. Besuchertext wird im HTML escaped.
+  Die Mail geht an `ORDER_NOTIFICATION_TO`, dazu ein Push über `NTFY_URL`, falls gesetzt.
+- **Grenzen:** Wunsch höchstens 500 Zeichen, E-Mail 254, Kategorie 120, Suchbegriff 200, URL 500.
+- **Rate-Limit** im Arbeitsspeicher (geht beim Neustart verloren): 5 Wünsche pro Stunde und Adresse, 60 pro Stunde
+  insgesamt. Darüber und ohne erkennbare Adresse antwortet die Route mit 429. Die Adresse des Besuchers kommt von der
+  Storefront im Header `x-jibbit-client-ip`, sonst aus `x-forwarded-for`.
+- **Fehler:** Ging keine Mail raus (SMTP), antwortet die Route mit 502 und die Storefront zeigt eine freundliche
+  Meldung. Im Log steht nur «[produktwunsch] gesendet» oder «[produktwunsch] nicht versendet», nie Wunsch oder Adresse.
 
 ## Was noch fehlt
 
