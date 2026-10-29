@@ -167,6 +167,11 @@ services:
       # backend/medusa-config.ts.
       MEDUSA_UPLOAD_DIR: /app/static
 
+      # Ablage der Stichtags-Schnappschuesse (Buchhaltung). Eigenes Volume und
+      # bewusst NICHT unter /app/static: dieses Verzeichnis wird oeffentlich
+      # ausgeliefert, die Schnappschuesse enthalten Einstandspreise.
+      BUCHHALTUNG_DIR: /app/buchhaltung
+
       # Nur fuer einen lokalen Mailfaenger. Bei NODE_ENV=production ignoriert
       # der SMTP-Provider den Schalter hart.
       SMTP_ALLOW_INSECURE: ${SMTP_ALLOW_INSECURE:-}
@@ -184,6 +189,8 @@ services:
       # Volume war leer, und jedes hochgeladene Bild lag im
       # Container-Dateisystem und war beim naechsten `docker compose up` weg.
       - medusa_data:/app/static
+      # Stichtags-Schnappschuesse (docs/buchhaltung.md); in die Backups aufnehmen.
+      - medusa_buchhaltung:/app/buchhaltung
 
   # ─── Storefront (Next.js 16) ───────────────────────────────────
   # Der Build-Context liegt im NACHBAR-Repository. Auf der VPS müssen
@@ -292,5 +299,6 @@ volumes:
   postgres_data:
   redis_data:
   medusa_data:
+  medusa_buchhaltung:
   caddy_data:
   caddy_config:
