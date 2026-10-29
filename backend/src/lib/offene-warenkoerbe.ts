@@ -4,6 +4,8 @@
  * ohne Medusa-Instanz testen lassen.
  */
 
+import { betrag } from "./dashboard-verkauf"
+
 export const STANDARD_LIMIT = 20
 export const MAX_LIMIT = 100
 
@@ -35,13 +37,9 @@ export function parseWarenkorbFilter(q: Record<string, unknown>): WarenkorbFilte
   }
 }
 
-type Betrag = number | string | { value?: string | number } | null | undefined
-
-function betrag(b: Betrag): number {
-  if (b === null || b === undefined) return 0
-  if (typeof b === "object") return Number(b.value ?? 0) || 0
-  return Number(b) || 0
-}
+// Beträge aus query.graph sind BigNumber-Instanzen (Getter numeric/raw.value,
+// kein Feld `value`) — der gemeinsame Helfer kennt alle Formen.
+type Betrag = import("./dashboard-verkauf").Betrag
 
 /** Rohdaten aus query.graph("cart") — nur die Felder, die wir lesen. */
 export type RohWarenkorb = {
@@ -63,21 +61,25 @@ export type RohWarenkorb = {
     product_title?: string | null
     variant_title?: string | null
     variant_sku?: string | null
-    quantity?: number | null
+    quantity?: Betrag
     unit_price?: Betrag
     thumbnail?: string | null
   } | null> | null
   shipping_address?: { city?: string | null; country_code?: string | null } | null
   payment_collection?: { payment_sessions?: Array<{ id: string } | null> | null } | null
   subtotal?: Betrag
+  item_total?: Betrag
+  deleted_at?: string | Date | null
+  completed_at?: string | Date | null
   total?: Betrag
 }
 
 export function formatiereWarenkorb(c: RohWarenkorb) {
-  const items = (c.items ?? []).filter((i): i is NonNullable<typeof i> => !!i)
+  const items = (Array.isArray(c.items) ? c.items : []).filter((i): i is NonNullable<typeof i> => !!i)
   const kunde = c.customer
   const name = [kunde?.first_name, kunde?.last_name].filter(Boolean).join(" ") || null
-  const kasseBegonnen = !!c.payment_collection?.payment_sessions?.some((s) => !!s)
+  const sitzungen = c.payment_collection?.payment_sessions
+  const kasseBegonnen = Array.isArray(sitzungen) && sitzungen.some((s) => !!s)
 
   return {
     id: c.id,
@@ -89,18 +91,20 @@ export function formatiereWarenkorb(c: RohWarenkorb) {
       : null,
     region: c.region?.name ?? null,
     currency_code: c.currency_code ?? null,
-    item_count: items.reduce((summe, i) => summe + (i.quantity ?? 0), 0),
+    item_count: items.reduce((summe, i) => summe + betrag(i.quantity), 0),
     items: items.map((i) => ({
       id: i.id,
       title: i.product_title || i.title || "",
       variant_title: i.variant_title ?? null,
       sku: i.variant_sku ?? null,
-      quantity: i.quantity ?? 0,
+      quantity: betrag(i.quantity),
       unit_price: betrag(i.unit_price),
       thumbnail: i.thumbnail ?? null,
     })),
     subtotal: betrag(c.subtotal),
-    total: betrag(c.total),
+    // Fallback: ist `total` leer/0, aber Positionen vorhanden, Summe der Positionen.
+    total: betrag(c.total) || betrag(c.item_total) || betrag(c.subtotal) ||
+      items.reduce((summe, i) => summe + betrag(i.unit_price) * betrag(i.quantity), 0),
     shipping_city: c.shipping_address?.city ?? null,
     shipping_country: c.shipping_address?.country_code ?? null,
     checkout_started: kasseBegonnen,
