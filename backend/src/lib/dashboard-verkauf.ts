@@ -20,12 +20,41 @@ export const MAX_BESTELLUNGEN = 5000
 export const SEITENGROESSE = 100
 export const TOP_LIMIT = 10
 
-export type Betrag = number | string | { value?: string | number } | null | undefined
+/**
+ * Betragsformen, die vorkommen können:
+ *  - number / numerischer String (z. B. nach JSON-Serialisierung der HTTP-API),
+ *  - BigNumber-Instanz aus query.graph (Medusa v2): Getter `numeric`, `raw.value`,
+ *    `valueOf()` — aber KEIN Feld `value`!,
+ *  - rohes `{ value, precision }` (z. B. `raw_total`),
+ *  - einfaches `{ numeric }`.
+ */
+export type Betrag =
+  | number
+  | string
+  | {
+      value?: string | number
+      numeric?: number
+      raw?: { value?: string | number } | null
+    }
+  | null
+  | undefined
 
 export function betrag(b: Betrag): number {
   if (b === null || b === undefined) return 0
-  if (typeof b === "object") return Number(b.value ?? 0) || 0
-  return Number(b) || 0
+  if (typeof b === "number") return Number.isFinite(b) ? b : 0
+  if (typeof b === "string") return Number(b) || 0
+  if (typeof b === "object") {
+    // Reihenfolge: numeric (BigNumber-Getter), raw.value (exakt), value, valueOf().
+    const kandidaten: unknown[] = [b.numeric, b.raw?.value, b.value]
+    for (const k of kandidaten) {
+      if (k === null || k === undefined) continue
+      const n = Number(k)
+      if (Number.isFinite(n)) return n
+    }
+    const prim = Number(b)
+    return Number.isFinite(prim) ? prim : 0
+  }
+  return 0
 }
 
 /** Rundet auf Rappen. */

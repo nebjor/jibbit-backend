@@ -13,6 +13,7 @@ import { sperreAlsGeliefertMarkieren } from "../lib/zugestellt-schutz"
 import { PostPreistabelleSchema } from "./admin/products/[id]/preistabelle/validators"
 import { PostKundenEmailSchema } from "./admin/customers/[id]/email/validators"
 import { PostProduktwunschSchema } from "./store/produktwunsch/validators"
+import { PostBestellungLoeschenSchema } from "./admin/orders/[id]/loeschen/validators"
 
 const addressSchema = z.object({
   postal_code: z.string().min(4, "Postal code is required (min 4 chars)"),
@@ -108,6 +109,12 @@ export default defineMiddlewares({
       matcher: "/hooks/payment/zahls_zahls",
       method: "POST",
       bodyParser: { preserveRawBody: true },
+    },
+    {
+      // Bestellung löschen, siehe docs/bestellungen-loeschen.md.
+      matcher: "/admin/orders/:id/loeschen",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostBestellungLoeschenSchema)],
     },
     {
       // E-Mail-Adresse korrigieren, siehe docs/kunden-email-aendern.md.
