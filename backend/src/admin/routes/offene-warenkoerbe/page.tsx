@@ -79,7 +79,7 @@ const spalten = [
   }),
   col.accessor("total", {
     header: "Total",
-    cell: ({ row }) => geld(row.original.total, row.original.currency_code),
+    cell: ({ row }) => geld(Number(row.original.total) || 0, row.original.currency_code),
   }),
   col.accessor("status", {
     header: "Status",
@@ -100,7 +100,7 @@ const OffeneWarenkoerbeSeite = () => {
   const [nurMitEmail, setNurMitEmail] = useState(false)
   const [offen, setOffen] = useState<OffenerWarenkorb | null>(null)
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, error } = useQuery({
     queryKey: ["offene-warenkoerbe", pagination.pageIndex, nurMitEmail],
     queryFn: () =>
       sdk.client.fetch<Antwort>("/admin/offene-warenkoerbe", {
@@ -112,12 +112,17 @@ const OffeneWarenkoerbeSeite = () => {
       }),
   })
 
+  // Antwort defensiv lesen: fehlendes/umbenanntes Feld darf die Seite nie abstürzen lassen.
+  const carts = useMemo(
+    () => (Array.isArray(data?.carts) ? data.carts.filter((c) => !!c) : []),
+    [data]
+  )
   const columns = useMemo(() => spalten, [])
   const table = useDataTable({
     columns,
-    data: data?.carts ?? [],
+    data: carts,
     getRowId: (c) => c.id,
-    rowCount: data?.count ?? 0,
+    rowCount: typeof data?.count === "number" ? data.count : carts.length,
     isLoading: isPending,
     pagination: { state: pagination, onPaginationChange: setPagination },
     onRowClick: (_e, row) => setOffen(row),
@@ -149,10 +154,11 @@ const OffeneWarenkoerbeSeite = () => {
         {isError ? (
           <div className="px-6 py-4">
             <Text size="small" leading="compact" className="text-ui-fg-error">
-              Warenkörbe konnten nicht geladen werden.
+              Warenkörbe konnten nicht geladen werden
+              {error instanceof Error && error.message ? `: ${error.message}` : "."}
             </Text>
           </div>
-        ) : !isPending && !data?.carts.length ? (
+        ) : !isPending && !carts.length ? (
           <div className="px-6 py-8">
             <Text size="small" leading="compact" className="text-ui-fg-subtle">
               Keine offenen Warenkörbe — aktuell hat niemand Artikel
@@ -211,7 +217,7 @@ const OffeneWarenkoerbeSeite = () => {
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
-                    {offen.items.map((i) => (
+                    {(offen.items ?? []).map((i) => (
                       <Table.Row key={i.id}>
                         <Table.Cell>
                           <div className="flex items-center gap-x-3">
@@ -239,7 +245,7 @@ const OffeneWarenkoerbeSeite = () => {
                         </Table.Cell>
                         <Table.Cell className="text-right">{i.quantity}</Table.Cell>
                         <Table.Cell className="text-right">
-                          {geld(i.unit_price, offen.currency_code)}
+                          {geld(Number(i.unit_price) || 0, offen.currency_code)}
                         </Table.Cell>
                       </Table.Row>
                     ))}
@@ -250,7 +256,7 @@ const OffeneWarenkoerbeSeite = () => {
                     Total
                   </Text>
                   <Text size="small" leading="compact" weight="plus">
-                    {geld(offen.total, offen.currency_code)}
+                    {geld(Number(offen.total) || 0, offen.currency_code)}
                   </Text>
                 </div>
               </Drawer.Body>
