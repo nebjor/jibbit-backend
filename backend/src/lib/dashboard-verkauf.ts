@@ -20,16 +20,16 @@ export const MAX_BESTELLUNGEN = 5000
 export const SEITENGROESSE = 100
 export const TOP_LIMIT = 10
 
-type Betrag = number | string | { value?: string | number } | null | undefined
+export type Betrag = number | string | { value?: string | number } | null | undefined
 
-function betrag(b: Betrag): number {
+export function betrag(b: Betrag): number {
   if (b === null || b === undefined) return 0
   if (typeof b === "object") return Number(b.value ?? 0) || 0
   return Number(b) || 0
 }
 
 /** Rundet auf Rappen. */
-function rappen(n: number): number {
+export function rappen(n: number): number {
   return Math.round(n * 100) / 100
 }
 
@@ -249,7 +249,7 @@ function zeit(b: RohBestellung): number {
   return new Date(b.created_at).getTime()
 }
 
-function kundenName(b: RohBestellung): string {
+export function kundenName(b: RohBestellung): string {
   const name = (a?: Person | null) =>
     [a?.first_name, a?.last_name].filter(Boolean).join(" ").trim()
   return name(b.customer) || name(b.shipping_address) || b.customer?.email || b.email || "Gast"

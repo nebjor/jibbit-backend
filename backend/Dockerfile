@@ -69,7 +69,8 @@ ENV NODE_ENV=production
 # medusa-config.ts). Es muss VOR dem Volume-Mount existieren und `node`
 # gehoeren: Docker legt ein fehlendes Mount-Ziel sonst als root an, und der
 # Upload scheitert mit EACCES.
-RUN mkdir -p /app/static && chown node:node /app /app/static
+# /app/buchhaltung: Schnappschuesse der Buchhaltung (BUCHHALTUNG_DIR), gleiche Regel.
+RUN mkdir -p /app/static /app/buchhaltung && chown node:node /app /app/static /app/buchhaltung
 USER node
 
 # nur das Build-Ergebnis übernehmen
