@@ -18,7 +18,7 @@ import { GetSnapshotsSchema } from "../../validators"
 export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) {
   const parsed = GetSnapshotsSchema.safeParse(req.query)
   if (!parsed.success) {
-    res.status(400).json({ message: parsed.error.errors.map((e) => e.message).join(", ") })
+    res.status(400).json({ message: parsed.error.issues.map((e) => e.message).join(", ") })
     return
   }
   const dir = snapshotVerzeichnis()

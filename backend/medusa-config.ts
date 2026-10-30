@@ -110,6 +110,29 @@ if (!zahlsConfigured) {
   console.warn(zahlsHinweise.map((h) => `[zahls.ch] ${h}`).join('\n'))
 }
 
+/**
+ * Session-Secrets. Kein Fallback wie "supersecret" mehr: ein vergessener Wert
+ * hätte in Produktion mit einem öffentlich bekannten Schlüssel Tokens und
+ * Cookies signiert. In Produktion bricht der Start ab; `medusa build` und
+ * die Tests brauchen keine echten Secrets. Ausserhalb von Produktion gilt ein
+ * eindeutig benannter Dev-Wert (mit Warnung), damit lokal alles startet.
+ */
+function requireSecret(name: 'JWT_SECRET' | 'COOKIE_SECRET'): string {
+  const value = process.env[name]
+  if (value) return value
+  const isBuild = process.argv.includes('build')
+  if (process.env.NODE_ENV === 'production' && !isBuild) {
+    throw new Error(
+      `[Sicherheit] ${name} ist nicht gesetzt. In Produktion ist das Pflicht — ` +
+        `Wert erzeugen mit: openssl rand -base64 32`
+    )
+  }
+  if (process.env.NODE_ENV !== 'test' && !isBuild) {
+    console.warn(`[Sicherheit] ${name} nicht gesetzt — nutze unsicheren Dev-Wert. Nur lokal erlaubt.`)
+  }
+  return `insecure-dev-only-${name.toLowerCase()}`
+}
+
 module.exports = defineConfig({
   plugins: [
     // Offizielles zahls.ch-Plugin. Der Eintrag lädt die Plugin-Ressourcen
@@ -147,8 +170,8 @@ module.exports = defineConfig({
       storeCors: process.env.STORE_CORS!,
       adminCors: process.env.ADMIN_CORS!,
       authCors: process.env.AUTH_CORS!,
-      jwtSecret: process.env.JWT_SECRET || "supersecret",
-      cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+      jwtSecret: requireSecret('JWT_SECRET'),
+      cookieSecret: requireSecret('COOKIE_SECRET'),
     },
   },
   modules: [
