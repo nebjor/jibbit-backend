@@ -15,7 +15,7 @@
     "prepare-images": "node scripts/prepare-product-images.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.22.0"
   },
   "devDependencies": {
     "sharp": "^0.35.5"
