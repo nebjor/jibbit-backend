@@ -32,7 +32,7 @@ async function validateAddress(
     const result = addressSchema.safeParse(addressData)
     if (!result.success) {
       res.status(400).json({
-        message: result.error.errors.map((e) => e.message).join(", "),
+        message: result.error.issues.map((e) => e.message).join(", "),
       })
       return
     }
