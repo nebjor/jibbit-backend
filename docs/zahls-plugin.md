@@ -84,7 +84,7 @@ Zwei Konsequenzen:
    `backend/.npmrc`, letzteres wandert in beide Docker-Stages). `overrides`
    in package.json greifen bei Peer-Konflikten nicht. Beim Upgrade auf
    2.18.x den Schalter wieder entfernen.
-2. **Eine bekannte, harmlose Lücke:** `PaymentActions.PENDING_AUTHORIZATION`
+2. **Eine bekannte, harmlose Lücke (seit dem Upgrade auf Medusa 2.22.2 geschlossen, Text nur historisch):** `PaymentActions.PENDING_AUTHORIZATION`
    und `PaymentSessionStatus.PENDING_AUTHORIZATION` existieren in 2.13.6
    nicht — für den Status `waiting` liefert das Plugin deshalb `undefined`.
    Folgen: ein `waiting`-Webhook erzeugt einen wirkungslosen (ggf. als

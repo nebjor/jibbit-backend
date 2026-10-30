@@ -38,6 +38,6 @@ export const PostProduktwunschSchema = z.object({
       url: optionalText(KONTEXT_URL_MAX),
     })
     .optional()
-    .default({}),
+    .default({ kategorie: undefined, suche: undefined, url: undefined }),
 })
 export type PostProduktwunschBody = z.infer<typeof PostProduktwunschSchema>

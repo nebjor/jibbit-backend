@@ -135,7 +135,7 @@ describe("zahls-Plugin: Webhook-Betrag kommt als Dezimalbetrag bei Medusa an", (
   })
 })
 
-describe("zahls-Plugin: Status → Medusa-Webhook-Aktion (auf 2.13.6)", () => {
+describe("zahls-Plugin: Status → Medusa-Webhook-Aktion (Medusa 2.22.2)", () => {
   it("confirmed → 'captured' (PaymentActions.SUCCESSFUL)", () => {
     expect(utils.mapZahlsStatusToWebhookAction("confirmed")).toBe("captured")
   })
@@ -152,12 +152,8 @@ describe("zahls-Plugin: Status → Medusa-Webhook-Aktion (auf 2.13.6)", () => {
     expect(utils.mapZahlsStatusToWebhookAction("declined")).toBe("failed")
   })
 
-  it("BEKANNTE LÜCKE auf 2.13.6: waiting → undefined (PENDING_AUTHORIZATION fehlt)", () => {
-    // Auf Medusa ≥ 2.14 wäre das "pending_authorization". Schlägt dieser
-    // Test nach einem Medusa-Upgrade fehl, ist die Lücke geschlossen —
-    // dann diesen Test anpassen und den Hinweis in docs/zahls-plugin.md
-    // (Abschnitt «Bekannte Einschränkungen») entfernen.
-    expect(utils.mapZahlsStatusToWebhookAction("waiting")).toBeUndefined()
+  it("waiting → 'pending_authorization' (Lücke aus 2.13.6 seit 2.14+ geschlossen)", () => {
+    expect(utils.mapZahlsStatusToWebhookAction("waiting")).toBe("pending_authorization")
   })
 
   it("unbekannte Stati → 'not_supported' (werden ignoriert, nie verbucht)", () => {
