@@ -15,7 +15,7 @@ services:
     environment:
       POSTGRES_DB: medusa
       POSTGRES_USER: medusa
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medusa_dev_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD muss gesetzt sein}
     ports:
       # Nur Loopback, und der Host-Port ist verschiebbar.
       #
@@ -101,7 +101,7 @@ services:
         condition: service_healthy
     environment:
       # Core
-      DATABASE_URL: postgres://medusa:${POSTGRES_PASSWORD:-medusa_dev_password}@postgres:5432/medusa
+      DATABASE_URL: postgres://medusa:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD muss gesetzt sein}@postgres:5432/medusa
       REDIS_URL: redis://redis:6379
       NODE_ENV: ${NODE_ENV:-development}
 
@@ -113,8 +113,8 @@ services:
       # Medusa
       MEDUSA_BACKEND_URL: ${MEDUSA_BACKEND_URL:-http://localhost:9000}
 
-      # Session-Secrets: ohne diese fällt medusa-config.ts auf
-      # "supersecret" zurück — in Produktion inakzeptabel.
+      # Session-Secrets: ohne diese Werte kennt medusa-config.ts
+      # keinen Fallback mehr — in Produktion bricht medusa-config.ts den Start ab.
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET muss gesetzt sein}
       COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET muss gesetzt sein}
 

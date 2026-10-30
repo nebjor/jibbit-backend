@@ -26,7 +26,7 @@ import { GetUmsatzSchema } from "../validators"
 export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) {
   const parsed = GetUmsatzSchema.safeParse(req.query)
   if (!parsed.success) {
-    res.status(400).json({ message: parsed.error.errors.map((e) => e.message).join(", ") })
+    res.status(400).json({ message: parsed.error.issues.map((e) => e.message).join(", ") })
     return
   }
   const jahr = parsed.data.jahr ?? Number(zuerichTag(Date.now()).slice(0, 4))
