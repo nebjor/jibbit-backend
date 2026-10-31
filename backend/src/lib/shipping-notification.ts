@@ -12,9 +12,9 @@
  */
 
 import type { EmailContent } from "./notify"
+import { getShopConfig } from "./shop-config"
 import { escapeHtml } from "./email-format"
 import {
-  CONTACT_EMAIL,
   type OrderAddress,
   type OrderItem,
   type OrderView,
@@ -224,7 +224,7 @@ export function renderShippingConfirmation(
         : [noTracking]),
     ...(delivery.lines.length ? [``, `${delivery.title}:`, ...delivery.lines] : []),
     ``,
-    `${questions} Schreib uns an ${CONTACT_EMAIL}.`,
+    `${questions} Schreib uns an ${getShopConfig().contactEmail}.`,
     ``,
     `Liebe Grüsse`,
     store,
@@ -253,7 +253,7 @@ ${
     ? `<p style="margin:0 0 4px;font-weight:bold">${escapeHtml(delivery.title)}</p>
 <p style="margin:0 0 20px">${delivery.lines.map(escapeHtml).join("<br>")}</p>`
     : ""
-}<p>${escapeHtml(questions)} Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
+}<p>${escapeHtml(questions)} Schreib uns an <a href="mailto:${getShopConfig().contactEmail}">${getShopConfig().contactEmail}</a>.</p>
 <p>Liebe Grüsse<br>${escapeHtml(store)}</p>`)
 
   return { subject, text, html }

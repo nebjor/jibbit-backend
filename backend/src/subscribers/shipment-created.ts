@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework/subscribers"
+import { getShopConfig } from "../lib/shop-config"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import type { EmailContent } from "../lib/notify"
 import { describeError, sendEmail } from "../lib/notify"
@@ -118,7 +119,7 @@ export default async function shipmentCreatedHandler({
   let content: EmailContent
   try {
     content = renderShippingConfirmation(shipment, order, {
-      storeName: process.env.STORE_NAME || "jibbit",
+      storeName: getShopConfig().storeName,
     })
   } catch (err) {
     logger.error(

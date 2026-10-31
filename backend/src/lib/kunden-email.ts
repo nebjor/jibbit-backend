@@ -27,8 +27,9 @@
  */
 
 import type { EmailContent } from "./notify"
+import { getShopConfig } from "./shop-config"
 import { escapeHtml } from "./email-format"
-import { CONTACT_EMAIL, htmlDocument } from "./order-notification"
+import { htmlDocument } from "./order-notification"
 
 export const EMAILPASS = "emailpass"
 
@@ -331,7 +332,7 @@ export function renderEmailKorrigiert(input: EmailKorrigiertInput): EmailContent
         ? "Die Versandbestätigung zu deiner offenen Bestellung kommt ebenfalls hierhin."
         : "Die Versandbestätigungen zu deinen offenen Bestellungen kommen ebenfalls hierhin."
       : null
-  const contact = `Stimmt etwas nicht? Schreib uns an ${CONTACT_EMAIL}.`
+  const contact = `Stimmt etwas nicht? Schreib uns an ${getShopConfig().contactEmail}.`
 
   const text = [
     greeting,
@@ -350,7 +351,7 @@ export function renderEmailKorrigiert(input: EmailKorrigiertInput): EmailContent
       `<p>${escapeHtml(greeting)}</p>`,
       `<p>${escapeHtml(intro)}</p>`,
       ...(orders ? [`<p>${escapeHtml(orders)}</p>`] : []),
-      `<p>Stimmt etwas nicht? Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>`,
+      `<p>Stimmt etwas nicht? Schreib uns an <a href="mailto:${getShopConfig().contactEmail}">${getShopConfig().contactEmail}</a>.</p>`,
       `<p>Liebe Grüsse<br>${escapeHtml(store)}</p>`,
     ].join("\n")
   )

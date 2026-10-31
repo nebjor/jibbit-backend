@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework/subscribers"
+import { getShopConfig } from "../lib/shop-config"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { describeError, sendEmail, sendPush } from "../lib/notify"
 import {
@@ -65,7 +66,7 @@ export default async function orderPlacedHandler({
 
   const current = order
   const settings: OrderMailSettings = {
-    storeName: process.env.STORE_NAME || "jibbit",
+    storeName: getShopConfig().storeName,
     backendUrl: process.env.MEDUSA_BACKEND_URL || "http://localhost:9000",
   }
   const mail = { trigger: "order.placed", resourceId: current.id, data: { order_id: current.id } }
