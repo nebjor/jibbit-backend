@@ -1,6 +1,6 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
-import { leseStufenExtras, tabelleAusPreisen } from "../../../../../lib/preistabelle"
+import { aktionspreisliste, leseStufenExtras, tabelleAusPreisen } from "../../../../../lib/preistabelle"
 import { ladePreistabelleDaten } from "../../../../../lib/preistabelle-daten"
 import { setzePreistabelleWorkflow } from "../../../../../workflows/preistabelle/setze-preistabelle"
 import { PostPreistabelleBody } from "./validators"
@@ -12,12 +12,12 @@ async function antwort(req: AuthenticatedMedusaRequest, productId: string) {
 
   if (daten.liste.length && daten.preisliste?.status !== "active") {
     hinweise.push(
-      "Die Preisliste «Aktionspreise jibbit.ch» ist nicht aktiv — im Shop gilt nur der reguläre Preis."
+      `Die Preisliste «${aktionspreisliste().title}» ist nicht aktiv — im Shop gilt nur der reguläre Preis.`
     )
   }
   if (daten.liste.length && daten.preisliste?.hat_regeln) {
     hinweise.push(
-      "Die Preisliste «Aktionspreise jibbit.ch» hat Bedingungen — sie gilt nicht für alle Kunden."
+      `Die Preisliste «${aktionspreisliste().title}» hat Bedingungen — sie gilt nicht für alle Kunden.`
     )
   }
 

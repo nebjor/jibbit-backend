@@ -1,10 +1,10 @@
 import type { EmailContent, PushMessage } from "./notify"
 import { adminUrl, escapeHtml, formatChf } from "./email-format"
-import { PICKUP_ADDRESS_LINES, PICKUP_HOURS, isPickupOrder } from "./pickup"
+import { isPickupOrder } from "./pickup"
 
-export const DEFAULT_ORDER_NOTIFICATION_TO = "joris@jibbit.ch"
-export const CONTACT_EMAIL = "info@jibbit.ch"
-export const VAT_NOTE = "keine MWST ausgewiesen (nicht mehrwertsteuerpflichtig)"
+import { JIBBIT_DEFAULTS, getShopConfig } from "./shop-config"
+
+export const DEFAULT_ORDER_NOTIFICATION_TO = JIBBIT_DEFAULTS.orderNotificationTo
 
 export interface OrderAddress {
   first_name?: string | null
@@ -147,9 +147,10 @@ export function deliveryBlock(order: OrderView, address: OrderAddress | null | u
   lines: string[]
 } {
   if (isPickup(order)) {
+    const cfg = getShopConfig()
     return {
       title: PICKUP_LABEL,
-      lines: [...PICKUP_ADDRESS_LINES, `Abholzeiten: ${PICKUP_HOURS}`],
+      lines: [...cfg.pickupAddressLines, ...(cfg.pickupHours ? [`Abholzeiten: ${cfg.pickupHours}`] : [])],
     }
   }
   return { title: "Lieferadresse", lines: addressLines(address) }
@@ -203,6 +204,7 @@ export function renderOrderConfirmation(order: OrderView, settings: OrderMailSet
   const greeting = name ? `Hallo ${name}` : "Hallo"
   const pickup = isPickup(order)
   const delivery = deliveryBlock(order, order.shipping_address)
+  const { vatNote, contactEmail } = getShopConfig()
 
   const subject = `Deine Bestellung ${nr} bei ${store}`
   const intro = pickup
@@ -217,10 +219,10 @@ export function renderOrderConfirmation(order: OrderView, settings: OrderMailSet
     `Bestellnummer: ${nr}`,
     ``,
     ...itemsText(order),
-    `Hinweis: ${VAT_NOTE}.`,
+    ...(vatNote ? [`Hinweis: ${vatNote}.`] : []),
     ...(delivery.lines.length ? [``, `${delivery.title}:`, ...delivery.lines] : []),
     ``,
-    `Fragen zu deiner Bestellung? Schreib uns an ${CONTACT_EMAIL}.`,
+    `Fragen zu deiner Bestellung? Schreib uns an ${contactEmail}.`,
     ``,
     `Liebe Grüsse`,
     store,
@@ -230,13 +232,13 @@ export function renderOrderConfirmation(order: OrderView, settings: OrderMailSet
 <p>${escapeHtml(intro)}</p>
 <h1 style="font-size:18px;margin:24px 0 8px">Bestellung ${escapeHtml(nr)}</h1>
 ${itemsTable(order)}
-<p style="${STYLE_MUTED};font-size:13px;margin:0 0 20px">Hinweis: ${escapeHtml(VAT_NOTE)}.</p>
-${
+${vatNote ? `<p style="${STYLE_MUTED};font-size:13px;margin:0 0 20px">Hinweis: ${escapeHtml(vatNote)}.</p>
+` : ""}${
   delivery.lines.length
     ? `<p style="margin:0 0 4px;font-weight:bold">${escapeHtml(delivery.title)}</p>
 <p style="margin:0 0 20px">${delivery.lines.map(escapeHtml).join("<br>")}</p>`
     : ""
-}<p>Fragen zu deiner Bestellung? Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
+}<p>Fragen zu deiner Bestellung? Schreib uns an <a href="mailto:${contactEmail}">${contactEmail}</a>.</p>
 <p>Liebe Grüsse<br>${escapeHtml(store)}</p>`)
 
   return { subject, text, html }

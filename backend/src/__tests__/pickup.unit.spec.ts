@@ -4,13 +4,12 @@
  */
 
 import {
-  PICKUP_ADDRESS_LINES,
   PICKUP_FULFILLMENT_OPTION_ID,
-  PICKUP_HOURS,
   isPickupOrder,
   isPickupShippingOption,
   resolvePickup,
 } from "../lib/pickup"
+import { getShopConfig } from "../lib/shop-config"
 import {
   type OrderView,
   renderOrderConfirmation,
@@ -26,6 +25,8 @@ import SwissShippingProviderService from "../modules/swiss-shipping/service"
 import orderPlacedHandler from "../subscribers/order-placed"
 import shipmentCreatedHandler from "../subscribers/shipment-created"
 
+const PICKUP_ADDRESS_LINES = getShopConfig().pickupAddressLines
+const PICKUP_HOURS = getShopConfig().pickupHours
 const settings = { storeName: "jibbit", backendUrl: "https://api.jibbit.ch" }
 
 // Die Storefront füllt die Lieferadresse einer Abholbestellung mit dem Laden

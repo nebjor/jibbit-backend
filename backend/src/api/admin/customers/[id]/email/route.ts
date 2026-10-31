@@ -1,4 +1,5 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { getShopConfig } from "../../../../../lib/shop-config"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 
 import {
@@ -81,7 +82,7 @@ export async function POST(
       to: plan.neu,
       template: "customer-email-corrected",
       content: renderEmailKorrigiert({
-        storeName: process.env.STORE_NAME || "jibbit",
+        storeName: getShopConfig().storeName,
         firstName: vorname,
         mitAnmeldung: plan.hat_anmeldung,
         bestellungen: plan.bestellung_ids.length,

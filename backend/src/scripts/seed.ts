@@ -1,5 +1,5 @@
 /**
- * Seed für jibbit.ch — Schweizer Headshop.
+ * Seed für einen Schweizer Shop (Namen/Adresse aus der Shop-Konfiguration; Katalog ist jibbit-spezifisch).
  *
  * Ersetzt den Medusa-Demo-Seed (Europe/EUR, Kopenhagen, Medusa-T-Shirts).
  *
@@ -47,10 +47,10 @@ import {
   ZAHLS_PROVIDER_ID,
 } from "../lib/zahls-plugin";
 import {
-  PICKUP_ADDRESS_LINES,
   PICKUP_FULFILLMENT_OPTION_ID,
   PICKUP_TYPE_CODE,
 } from "../lib/pickup";
+import { getShopConfig } from "../lib/shop-config";
 
 // Der Stock-Seed importierte `ApiKey` aus ../../.medusa/types/query-entry-points.
 // Diese Datei wird generiert und existiert vor dem ersten Build nicht — der
@@ -76,6 +76,8 @@ const PICKUP_OPTION_NAME = "Abholung im Laden";
 // upgesertet. Deshalb wird direkt der Core-Workflow verwendet.
 
 export default async function seedJibbitData({ container }: ExecArgs) {
+  const shop = getShopConfig();
+  const pickupAddress = shop.pickupAddressLines.slice(1).join(", ");
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
   const link = container.resolve(ContainerRegistrationKeys.LINK);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
@@ -403,13 +405,13 @@ export default async function seedJibbitData({ container }: ExecArgs) {
             shipping_profile_id: shippingProfile.id,
             type: {
               label: "Abholung",
-              description: `Abholung im Laden, ${PICKUP_ADDRESS_LINES.slice(1).join(", ")} – gratis`,
+              description: `Abholung im Laden, ${pickupAddress} – gratis`,
               code: PICKUP_TYPE_CODE,
             },
             data: {
               id: PICKUP_FULFILLMENT_OPTION_ID,
               pickup: true,
-              address: PICKUP_ADDRESS_LINES.slice(1).join(", "),
+              address: pickupAddress,
             },
             // Preis 0 für die Währung UND die Region: Medusa wählt den
             // Regionspreis, wenn es einen gibt, sonst den Währungspreis.
@@ -459,7 +461,7 @@ export default async function seedJibbitData({ container }: ExecArgs) {
       input: {
         api_keys: [
           {
-            title: "jibbit.ch Webshop",
+            title: `${shop.storeName} Webshop`,
             type: "publishable",
             created_by: "",
           },
@@ -795,5 +797,5 @@ export default async function seedJibbitData({ container }: ExecArgs) {
   }
 
   logger.info("Finished seeding inventory levels data.");
-  logger.info("jibbit.ch seed complete.");
+  logger.info(`${shop.storeName} seed complete.`);
 }

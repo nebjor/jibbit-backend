@@ -13,7 +13,7 @@ import {
 } from "@medusajs/medusa/core-flows"
 
 import {
-  AKTIONSPREISLISTE,
+  aktionspreisliste,
   basisPreis,
   metadataMitExtras,
   staffelAenderungen,
@@ -39,7 +39,7 @@ export const setzePreistabelleWorkflow = createWorkflow(
         input: {
           price_lists_data: [
             {
-              ...AKTIONSPREISLISTE,
+              ...aktionspreisliste(),
               status: PriceListStatus.ACTIVE,
             },
           ],

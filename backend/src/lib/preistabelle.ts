@@ -3,20 +3,29 @@
  *
  * Ein Produkt = eine Variante. Gespeichert wird in Medusas eigenen Preisen:
  *   - Basispreis der Variante  = regulärer Preis (eine Zeile, im Shop durchgestrichen)
- *   - Preisliste «Aktionspreise jibbit.ch» (Typ sale) = die Staffel
+ *   - Preisliste «Aktionspreise …» (Typ sale; Titel aus der Shop-Konfiguration) = die Staffel
  *     «ab Menge → Stückpreis» (price.min_quantity/max_quantity)
  * Medusa wählt pro Menge die passende Staffel und liefert original_amount
  * (regulär) und calculated_amount (Aktion) — der Warenkorb rechnet damit.
  */
+
+import { getShopConfig } from "./shop-config"
 
 export const PREISTABELLE_CURRENCY = "chf"
 export const PREISTABELLE_MAX_ZEILEN = 20
 export const PREISTABELLE_METADATA_KEY = "preistabelle"
 export const LABEL_MAX = 30
 
-export const AKTIONSPREISLISTE = {
-  title: "Aktionspreise jibbit.ch",
-  description: "Mengenstaffeln aus der Preistabelle der Produkte",
+/**
+ * Titel aus SHOP_PRICE_LIST_TITLE (jibbit-Default «Aktionspreise jibbit.ch»).
+ * Bestehende Preislisten werden per Titel gefunden — den Wert also nie ändern,
+ * ohne die Liste in der Datenbank mit umzubenennen.
+ */
+export function aktionspreisliste() {
+  return {
+    title: getShopConfig().priceListTitle,
+    description: "Mengenstaffeln aus der Preistabelle der Produkte",
+  }
 }
 
 export type PreisZeile = {
