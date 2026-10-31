@@ -1,7 +1,7 @@
 # jibbit.ch — Launch-Roadmap Medusa
 
 Stand: 21.09.2026 · Basis: `medusa-ecom` origin/main `67e947b`, `jibbit-frontend` origin/main `52fff49`.
-Ausführliche Befunde je Feature: [`audit.md`](./audit.md). SaaS-Architektur: [`multi-tenancy-architecture.md`](./multi-tenancy-architecture.md).
+Ausführliche Befunde je Feature (audit.md) und SaaS-Architektur (multi-tenancy-architecture.md): siehe nebjor/jibbit-internal (privat).
 
 ---
 

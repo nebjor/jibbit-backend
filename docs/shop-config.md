@@ -59,7 +59,7 @@ ersetzen:
 
 - Odoo-Migration: `backend/src/scripts/odoo-*.ts`, `import-customers.ts`,
   `scripts/odoo-export-*.mjs`, `data/odoo-redirects.json`, `docs/odoo-datenmigration.md`
-- Galaxus-Export: `src/scripts/galaxus-export.ts`, `docs/galaxus-marktplatz.md`,
+- Galaxus-Export: `src/scripts/galaxus-export.ts`, `nebjor/jibbit-internal (privat), galaxus-marktplatz.md`,
   `src/__tests__/galaxus.unit.spec.ts` (inkl. `provider=jibbit`)
 - Produktdaten und Bilder: `data/*.json`/`*.csv`, `backend/media`, `scripts/prepare-product-images.mjs`,
   `src/scripts/import-product-images.ts`, `docs/produktbilder.md`

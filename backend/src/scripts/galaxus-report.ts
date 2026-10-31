@@ -14,7 +14,7 @@
  *                als Arbeitsliste zum Nachpflegen der Daten.
  *
  * Der Bericht liest NUR und schreibt nie in die Datenbank. Nachgepflegt
- * werden die Daten im Admin — siehe docs/galaxus-marktplatz.md.
+ * werden die Daten im Admin — siehe nebjor/jibbit-internal (privat), galaxus-marktplatz.md.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs"
@@ -77,7 +77,7 @@ export default async function galaxusReport({ container, args }: ExecArgs) {
     logger.info(
       "  Nachpflegen im Admin: EAN und Gewicht an der Variante, Marke " +
         "(brand) in den Produkt-Metadaten, Bestand im Lager. " +
-        "Details: docs/galaxus-marktplatz.md"
+        "Details: nebjor/jibbit-internal (privat), galaxus-marktplatz.md"
     )
   }
 

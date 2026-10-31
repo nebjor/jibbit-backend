@@ -258,7 +258,7 @@ export function buildGalaxusExport(
   // sind Endpreise ohne ausgewiesene MwSt. Deshalb VatRatePercentage 0.0
   // und SalesPriceExcludingVat == SalesPriceIncludingVat. Ob Galaxus das
   // für Händler so akzeptiert, muss der Betreiber schriftlich klären —
-  // siehe docs/galaxus-marktplatz.md.
+  // siehe nebjor/jibbit-internal (privat), galaxus-marktplatz.md.
   const priceColumns = [
     "ProviderKey",
     "VatRatePercentage",
