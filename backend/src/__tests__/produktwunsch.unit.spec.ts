@@ -88,6 +88,18 @@ describe("clientKey", () => {
   it("bevorzugt den Hinweis der Storefront", () => {
     expect(clientKey(req({ "x-jibbit-client-ip": "203.0.113.5", "x-forwarded-for": "1.1.1.1" }))).toBe("203.0.113.5")
   })
+  it("liest den konfigurierbaren Header und kennt den alten weiterhin", () => {
+    expect(clientKey(req({ "x-client-ip": "203.0.113.7" }))).toBe("203.0.113.7")
+    const prev = process.env.CLIENT_IP_HEADER
+    process.env.CLIENT_IP_HEADER = "X-Shop-Ip"
+    try {
+      expect(clientKey(req({ "x-shop-ip": "198.51.100.1" }))).toBe("198.51.100.1")
+      expect(clientKey(req({ "x-jibbit-client-ip": "203.0.113.5" }))).toBe("203.0.113.5")
+    } finally {
+      if (prev === undefined) delete process.env.CLIENT_IP_HEADER
+      else process.env.CLIENT_IP_HEADER = prev
+    }
+  })
   it("nimmt sonst den letzten Eintrag von x-forwarded-for", () => {
     expect(clientKey(req({ "x-forwarded-for": "9.9.9.9, 10.0.0.2" }))).toBe("10.0.0.2")
   })

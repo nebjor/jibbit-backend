@@ -7,9 +7,10 @@
  */
 
 import type { EmailContent } from "./notify"
+import { getShopConfig } from "./shop-config"
 import { escapeHtml, formatChf } from "./email-format"
 import { toAmount } from "./order-canceled-notification"
-import { CONTACT_EMAIL, type OrderView, htmlDocument, orderNumber } from "./order-notification"
+import { type OrderView, htmlDocument, orderNumber } from "./order-notification"
 
 /**
  * So weit zurück gilt eine Rückerstattung als «gehört zu diesem Event». Deckt
@@ -102,7 +103,7 @@ export function renderRefundConfirmation(
     ``,
     method,
     ``,
-    `Fragen zur Rückerstattung? Schreib uns an ${CONTACT_EMAIL}.`,
+    `Fragen zur Rückerstattung? Schreib uns an ${getShopConfig().contactEmail}.`,
     ``,
     `Liebe Grüsse`,
     store,
@@ -113,7 +114,7 @@ export function renderRefundConfirmation(
 <h1 style="font-size:18px;margin:24px 0 8px">Bestellung ${escapeHtml(nr)}</h1>
 <p style="margin:0 0 16px"><strong>Rückerstatteter Betrag: ${escapeHtml(amount)}</strong></p>
 <p>${escapeHtml(method)}</p>
-<p>Fragen zur Rückerstattung? Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
+<p>Fragen zur Rückerstattung? Schreib uns an <a href="mailto:${getShopConfig().contactEmail}">${getShopConfig().contactEmail}</a>.</p>
 <p>Liebe Grüsse<br>${escapeHtml(store)}</p>`)
 
   return { subject, text, html }

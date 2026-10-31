@@ -1,7 +1,7 @@
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { MedusaContainer } from "@medusajs/framework/types"
 
-import { AKTIONSPREISLISTE, PreisRow } from "./preistabelle"
+import { aktionspreisliste, PreisRow } from "./preistabelle"
 
 export type PreistabelleDaten = {
   product_id: string
@@ -37,7 +37,7 @@ export async function ladePreistabelleDaten(
     query.graph({
       entity: "price_list",
       fields: ["id", "status", "rules_count"],
-      filters: { title: AKTIONSPREISLISTE.title },
+      filters: { title: aktionspreisliste().title },
     }),
   ])
 

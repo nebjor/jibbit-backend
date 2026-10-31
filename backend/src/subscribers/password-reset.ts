@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework/subscribers"
+import { getShopConfig } from "../lib/shop-config"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import type { EmailContent } from "../lib/notify"
 import { describeError, sendEmail } from "../lib/notify"
@@ -51,7 +52,7 @@ export default async function passwordResetHandler({
     return
   }
 
-  const storeName = process.env.STORE_NAME || "jibbit"
+  const storeName = getShopConfig().storeName
   let content: EmailContent
   try {
     content =

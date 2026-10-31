@@ -9,9 +9,9 @@
  */
 
 import type { EmailContent } from "./notify"
+import { getShopConfig } from "./shop-config"
 import { escapeHtml, formatChf } from "./email-format"
 import {
-  CONTACT_EMAIL,
   type OrderMailSettings,
   type OrderView,
   STYLE_CELL,
@@ -132,7 +132,7 @@ export function renderOrderCanceled(
     ``,
     payment,
     ``,
-    `Fragen zur Stornierung? Schreib uns an ${CONTACT_EMAIL}.`,
+    `Fragen zur Stornierung? Schreib uns an ${getShopConfig().contactEmail}.`,
     ``,
     `Liebe Grüsse`,
     store,
@@ -150,7 +150,7 @@ ${items.map((line) => `<tr><td style="${STYLE_CELL}">${line.quantity} × ${escap
 `
     : ""
 }<p>${escapeHtml(payment)}</p>
-<p>Fragen zur Stornierung? Schreib uns an <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
+<p>Fragen zur Stornierung? Schreib uns an <a href="mailto:${getShopConfig().contactEmail}">${getShopConfig().contactEmail}</a>.</p>
 <p>Liebe Grüsse<br>${escapeHtml(store)}</p>`)
 
   return { subject, text, html }

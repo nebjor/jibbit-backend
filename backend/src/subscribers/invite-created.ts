@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework/subscribers"
+import { getShopConfig } from "../lib/shop-config"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { renderInviteEmail } from "../lib/invite-email"
 import type { EmailContent } from "../lib/notify"
@@ -71,7 +72,7 @@ export default async function inviteCreatedHandler({
   try {
     content = renderInviteEmail({
       backendUrl: process.env.MEDUSA_BACKEND_URL,
-      storeName: process.env.STORE_NAME || "jibbit",
+      storeName: getShopConfig().storeName,
       token: invite.token,
       expiresAt: invite.expires_at,
     })

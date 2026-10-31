@@ -1,4 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework/subscribers"
+import { getShopConfig } from "../lib/shop-config"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { describeError, sendEmail } from "../lib/notify"
 import {
@@ -97,7 +98,7 @@ export default async function orderCanceledHandler({
         ...mail,
         to: current.email as string,
         template: "order-canceled",
-        content: renderOrderCanceled(current, { storeName: process.env.STORE_NAME || "jibbit" }),
+        content: renderOrderCanceled(current, { storeName: getShopConfig().storeName }),
         // Eine Bestellung wird nur einmal storniert; ein wiederholtes Event
         // löst keine zweite Mail aus.
         idempotencyKey: `order-canceled:${current.id}`,

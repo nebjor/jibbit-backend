@@ -1,5 +1,5 @@
 /**
- * Abholung im Laden («Abholung im Laden», Unterwegli 1, 8404 Winterthur).
+ * Abholung im Laden («Abholung im Laden»).
  *
  * Die Abholung ist in Medusa eine gewöhnliche Shipping Option mit Preis 0
  * (flat) auf derselben Service-Zone wie der Versand. Erkannt wird sie NIE am
@@ -17,7 +17,7 @@
  *      im Admin ohne `data` neu anlegt — dafür braucht es eine zweite Abfrage
  *      (`resolvePickup`).
  *
- * Adresse und Abholzeiten stehen hier als Konstanten, weil die Mails sie
+ * Adresse und Abholzeiten stehen in der Shop-Konfiguration (Env), weil die Mails sie
  * brauchen und die Option in der Datenbank nur eine Zeile Freitext trägt. Die
  * Storefront hält dieselben Angaben in `lib/config.ts` (`PICKUP`, `BUSINESS`).
  * Ändert sich eine davon, müssen beide Orte mit — wie beim Versandtarif.
@@ -30,10 +30,8 @@ export const PICKUP_TYPE_CODE = "pickup"
 /** Fulfillment-Option des swiss-shipping-Providers, siehe getFulfillmentOptions(). */
 export const PICKUP_FULFILLMENT_OPTION_ID = "swiss-pickup"
 
-export const PICKUP_ADDRESS_LINES = ["jibbit (Neber Import)", "Unterwegli 1", "8404 Winterthur"] as const
-
-/** Öffnungszeiten des Ladens, identisch mit dem Google-Unternehmensprofil. */
-export const PICKUP_HOURS = "Mo–Sa 09:00–17:00"
+// Adresse und Öffnungszeiten kommen aus der Shop-Konfiguration
+// (SHOP_PICKUP_ADDRESS, SHOP_PICKUP_HOURS), siehe ./shop-config.ts.
 
 export interface PickupShippingMethod {
   shipping_option_id?: string | null
