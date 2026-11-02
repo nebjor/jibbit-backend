@@ -26,7 +26,7 @@ weiterer Shop: stecklingspost.ch.
 | `SHOP_CONTACT_EMAIL` | ja | «Schreib uns an …» in Kundenmails | `info@jibbit.ch` |
 | `ORDER_NOTIFICATION_TO` | ja | Betreiber-Mail bei neuer Bestellung, kommagetrennt | `joris@jibbit.ch` |
 | `SHOP_PICKUP_ADDRESS` | nein | Abholadresse, Zeilen mit `\|` getrennt; leer = keine Abholung | `jibbit (Neber Import)\|Unterwegli 1\|8404 Winterthur` |
-| `SHOP_PICKUP_HOURS` | nein | Abholzeiten | `Mo–Sa 09:00–17:00` |
+| `SHOP_PICKUP_HOURS` | nein | Abholzeiten | `Mo–Fr 09:00–17:00` |
 | `SHOP_VAT_NOTE` | nein | MWST-Hinweis in der Bestellbestätigung; leer = keine Zeile | `keine MWST ausgewiesen (nicht mehrwertsteuerpflichtig)` |
 | `SHOP_PRICE_LIST_TITLE` | nein | Titel der Preisliste für Mengenstaffeln | `Aktionspreise jibbit.ch` |
 | `CLIENT_IP_HEADER` | nein | Header, in dem die Storefront die Besucher-IP mitschickt | `x-client-ip` |
