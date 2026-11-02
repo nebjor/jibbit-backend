@@ -47,7 +47,7 @@ export const JIBBIT_DEFAULTS = {
   contactEmail: "info@jibbit.ch",
   orderNotificationTo: "joris@jibbit.ch",
   pickupAddress: "jibbit (Neber Import)|Unterwegli 1|8404 Winterthur",
-  pickupHours: "Mo–Sa 09:00–17:00",
+  pickupHours: "Mo–Fr 09:00–17:00",
   vatNote: "keine MWST ausgewiesen (nicht mehrwertsteuerpflichtig)",
   priceListTitle: "Aktionspreise jibbit.ch",
 } as const

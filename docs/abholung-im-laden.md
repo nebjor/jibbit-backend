@@ -1,6 +1,6 @@
 # Abholung im Laden
 
-jibbit hat ein Ladenlokal: **Unterwegli 1, 8404 Winterthur**, Mo–Sa 09:00–17:00 (identisch mit dem
+jibbit hat ein Ladenlokal: **Unterwegli 1, 8404 Winterthur**, Mo–Fr 09:00–17:00 (identisch mit dem
 Google-Unternehmensprofil). Onlinebestellungen können dort gratis abgeholt werden. Entscheid des Inhabers vom
 2026-10-05.
 
